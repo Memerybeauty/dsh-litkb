@@ -2,8 +2,10 @@
 
 > 装进 DeepSeek Harness 的本地文献知识库：收文 → 精读/七段卡 → 证据链 → 横向对比/图谱 → 可追溯问答 → 写作。
 
-**版本**：**0.1.0**  
+**版本**：**0.1.1**  
 **状态**：P0–P4.11 完成，场景补齐（链接导入 / 横向精读 / 9 个 Agent 工具）已收口。
+
+**代码仓库**：https://github.com/Memerybeauty/dsh-litkb（private）
 
 ## 核心场景
 
@@ -36,9 +38,9 @@
 ## 运行
 
 - 数据目录：默认 `~/Documents/文献库`，可用 `LITKB_LIBRARY` 覆盖；
-- 安装：把 `dsh-litkb-0.1.0.tgz` 安装到 DSH profile（当前工作区为 link 安装），**完全重启 DSH**；
+- 安装：把 `dsh-litkb-0.1.1.tgz` 安装到 DSH profile（当前工作区为 link 安装），**完全重启 DSH**；
 - 前端缓存：重启后 `Cmd+Shift+R`；
-- 健康检查：`GET /api/litkb/health` 应显示 `0.1.0`。
+- 健康检查：`GET /api/litkb/health` 应显示 `0.1.1`。
 
 ## 开发
 
@@ -46,13 +48,15 @@
 npm run build     # 从 src/ 生成 lib/
 npm test          # 116 项
 npm run check     # 所有服务端模块语法检查
-npm pack          # 产出 dsh-litkb-0.1.0.tgz
+npm pack          # 产出 dsh-litkb-0.1.1.tgz
 ```
 
 目录：
 
 ```text
-lib/         服务端 + 客户端（单文件 React，无构建步骤）
+lib/         生成产物（服务端 + 客户端；由 src/ 拼接生成）
+src/         客户端/服务端源码分片 + 构建脚本
+scripts/     build-client.mjs / build-server.mjs
 prompts/     prompt 版本化
 tests/       假 React / 临时库 / 真实库干跑
 docs/        方案、交付单、验收记录、对照图
@@ -74,6 +78,11 @@ docs/assets/ 截图与架构图
 | [功能清单](docs/19_功能清单.md) | 当前模块状态、接口、数据、验收与未做项 |
 | [P4.11 交付单](docs/26_P4.11_链增强与检索交付单.md) | 自动建链、跨论文链、检索、Agent、场景补齐与版本记录 |
 | [正式交付说明](docs/27_正式交付说明.md) | 安装、验收步骤、已知边界、维护入口 |
+| [文档索引](docs/README.md) | 当前文档 / 历史文档边界 |
+| [API 参考](docs/28_API参考.md) | 63 条路由分组与关键请求/响应 |
+| [安装升级与发布](docs/29_安装升级与发布.md) | 安装、重启、版本检查、GitHub 发布流程 |
+| [数据模型与迁移](docs/30_数据模型与迁移.md) | 库结构、链/历史/导入字段、备份 |
+| [故障排查](docs/31_故障排查.md) | 404、主题、概念图、端口、Git push |
 | [插件技术方案](docs/05_插件技术方案.md) | 架构、路由、工具、库结构 |
 | [PRD](docs/06_PRD.md) / [需求规格](docs/07_需求规格书.md) | 产品需求与 FR/NFR |
 | [UI 优化方案](docs/25_UI全面优化方案.md) | 设计令牌、页面重排、P0–P4 记录 |

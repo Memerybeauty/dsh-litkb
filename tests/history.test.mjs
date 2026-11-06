@@ -21,6 +21,10 @@ assert.ok(items[0].chainIds.length === 1)
 
 recordSearch({ q: '   ' })
 assert.equal(listSearchHistory(20).length, 12, '空查询不写入')
+recordSearch({ q: '别名', mode: 'chain-answer', chains: ['c-alias'], evidence: ['q-alias'], citations: 1 })
+const alias = listSearchHistory(1)[0]
+assert.deepEqual(alias.chainIds, ['c-alias'])
+assert.deepEqual(alias.evidenceIds, ['q-alias'])
 
 for (let i = 0; i < 55; i += 1) recordSearch({ q: `批量 ${i}` })
 const capped = listSearchHistory(100)
@@ -32,4 +36,5 @@ assert.equal(listSearchHistory(10).length, 0)
 console.log('  ✓ 最近 10 条可读、最新在前')
 console.log('  ✓ 落盘 cache/search-history.json')
 console.log('  ✓ 空查询忽略、上限 50、可清空')
+console.log('  ✓ chains/evidence 别名写入保留 ID')
 console.log('\n3 passed')
