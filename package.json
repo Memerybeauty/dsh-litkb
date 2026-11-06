@@ -1,0 +1,52 @@
+{
+  "name": "dsh-litkb",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "文献知识库：收文、三轴归类、结构化精读、证据链、知识图谱",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "check": "node --check lib/index.js && node --check lib/client.js && node --check lib/layout.js && node --check lib/paddle.js && node --check lib/settings.js && node --check lib/blocks.js && node --check lib/render.js && node --check lib/cardgen.js && node --check lib/cards.js && node --check lib/sections.js && node --check lib/evidence.js && node --check lib/pdftext.js && node --check lib/concepts.js && node --check lib/graph.js && node --check lib/ask.js && node --check lib/export.js && node --check lib/deepread.js && node --check lib/drafts.js && node --check lib/chains.js && node --check lib/search.js && node --check lib/answer.js && node --check lib/agent-tools.js && node --check lib/chain-cross.js && node --check lib/search-history.js && node --check lib/link-import.js",
+    "test": "node tests/plugin-smoke.mjs && node tests/core.test.mjs && node tests/layout.test.mjs && node tests/paddle.test.mjs && node tests/cardgen.test.mjs && node tests/translate.test.mjs && node tests/cardops.test.mjs && node tests/evidence.test.mjs && node tests/cardui.test.mjs && node tests/graph.test.mjs && node tests/ask.test.mjs && node tests/graphui.test.mjs && node tests/shellui.test.mjs && node tests/export.test.mjs && node tests/writing.test.mjs && node tests/deepread.test.mjs && node tests/chain.test.mjs && node tests/chain-routes.test.mjs && node tests/search.test.mjs && node tests/answer.test.mjs && node tests/search-routes.test.mjs && node tests/tools.test.mjs && node tests/scale.test.mjs && node tests/cross.test.mjs && node tests/history.test.mjs && node tests/link-import.test.mjs && node tests/compare.test.mjs",
+    "build:client": "node scripts/build-client.mjs",
+    "build:server": "node scripts/build-server.mjs",
+    "build": "npm run build:client && npm run build:server",
+    "pretest": "npm run build",
+    "precheck": "npm run build",
+    "prepack": "npm run build"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-primitives",
+        "@deepseek-ai/dsh-client-locale"
+      ]
+    }
+  },
+  "dependencies": {
+    "pdfjs-dist": "^4.10.38",
+    "@napi-rs/canvas": "^0.1.100"
+  },
+  "files": [
+    "lib",
+    "src",
+    "scripts",
+    "prompts",
+    "docs",
+    "cordis.patch.yml",
+    "dsh.plugin.json",
+    "README.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md"
+  ]
+}

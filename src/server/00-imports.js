@@ -1,0 +1,42 @@
+/**
+ * dsh-litkb · 服务端插件（v0.3.0 / P2.1）
+ * 大类（知网 12 类）+ 扁平标签 + 七段卡（章节切分 / 证据块 / 卡片页）。
+ */
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import {
+  PATHS, TYPES, ensureLibrary, findByHash, readIndex, readTags, sha256, stats, upsert,
+  writeIndex, writeTags,
+} from './library.js'
+import { addAnnotation, cardSummary, listVersions, readCard, readVersion, recomputeCardStatus, renderCardMarkdown, writeCard } from './cards.js'
+import { blocksSummary, ensureBlocks, findBlockForQuote, readBlocks, renderParsedMarkdown, repairEvidenceBlocks } from './blocks.js'
+import { renderPagePng } from './render.js'
+import { publicSettings, writeSettings } from './settings.js'
+import { glossaryHash, readGlossary, writeGlossary } from './glossary.js'
+import { readTranslation, translateDocument, translationSummary } from './translate.js'
+import { evidenceCsv, evidenceRows, findBacklinks } from './evidence-scan.js'
+import { applySection, generateCard, generateCardSection, llmStatus, SECTION_DEFS } from './cardgen.js'
+import { mergeConcepts, readConcepts, readEdges, rebuildEdges, updateConcept, writeConcepts } from './concepts.js'
+import { buildAll, compareGroups, conceptOverview, readGraph } from './graph.js'
+import { askPaper } from './ask.js'
+import { exportBibtex, exportCanvas, exportCardMarkdown, exportGbt, exportMermaid } from './export.js'
+import { assistDraft, createDraft, deleteDraft, draftCitations, exportDraft, listDrafts, readDraft, saveDraft, searchEvidence } from './drafts.js'
+import { loadPaperPages } from './pdftext.js'
+import { buildDeepRead, readDeepRead } from './deepread.js'
+import { appendChainToDraft, autoChainDrafts, chainGraph, chainParagraph, claimCandidates, deleteChain, listChains, proposeChain, readChain, saveChain, suggestClaim, writeChainLayout } from './chains.js'
+import { searchLibrary } from './search.js'
+import { answerQuestion } from './answer.js'
+import { AGENT_TOOL_NAMES, registerAgentTools } from './agent-tools.js'
+import { autoCrossPaperDrafts } from './chain-cross.js'
+import { listSearchHistory, recordSearch } from './search-history.js'
+import { resolveLink } from './link-import.js'
+import { extractPdf } from './pdf.js'
+import { classify, matchTags } from './classify.js'
+
+const HERE = dirname(fileURLToPath(import.meta.url))
+const pkg = JSON.parse(readFileSync(join(HERE, '..', 'package.json'), 'utf8'))
+
+export const name = 'dsh-litkb'
+export const inject = ['webServer']
+

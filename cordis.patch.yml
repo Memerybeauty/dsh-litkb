@@ -1,0 +1,4 @@
+# dsh-litkb：服务端注册 /api/litkb/*，客户端注入侧边栏入口与文献库工作区
+- insert:
+    - id: dsh-litkb
+      name: dsh-litkb

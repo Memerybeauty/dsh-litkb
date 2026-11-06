@@ -1,0 +1,12 @@
+{
+  "name": "dsh-litkb",
+  "description": "文献知识库：自动归位、证据链、可追溯检索与问答",
+  "version": "0.1.0",
+  "entry": {
+    "name": "dsh-litkb",
+    "inject": []
+  },
+  "client": {
+    "platform": "web"
+  }
+}

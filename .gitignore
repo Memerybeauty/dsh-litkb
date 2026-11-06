@@ -1,0 +1,5 @@
+node_modules/
+*.tgz
+data/
+.chrome-*/
+.DS_Store
