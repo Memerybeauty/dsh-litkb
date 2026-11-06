@@ -1,6 +1,6 @@
 {
   "name": "dsh-litkb",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": false,
   "type": "module",
   "description": "文献知识库：收文、三轴归类、结构化精读、证据链、知识图谱",

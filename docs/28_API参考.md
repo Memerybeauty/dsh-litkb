@@ -1,4 +1,4 @@
-# API 参考（v0.1.1）
+# API 参考（v0.1.2）
 
 所有接口前缀：`/api/litkb`；v0.1.x 共注册 **63** 条。请求/响应均为 JSON；PDF 上传为原始 body + `x-filename`；错误统一为：
 

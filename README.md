@@ -2,7 +2,7 @@
 
 > 装进 DeepSeek Harness 的本地文献知识库：收文 → 精读/七段卡 → 证据链 → 横向对比/图谱 → 可追溯问答 → 写作。
 
-**版本**：**0.1.1**  
+**版本**：**0.1.2**  
 **状态**：P0–P4.11 完成，场景补齐（链接导入 / 横向精读 / 9 个 Agent 工具）已收口。
 
 **代码仓库**：https://github.com/Memerybeauty/dsh-litkb（private）
@@ -38,9 +38,9 @@
 ## 运行
 
 - 数据目录：默认 `~/Documents/文献库`，可用 `LITKB_LIBRARY` 覆盖；
-- 安装：把 `dsh-litkb-0.1.1.tgz` 安装到 DSH profile（当前工作区为 link 安装），**完全重启 DSH**；
+- 安装：把 `dsh-litkb-0.1.2.tgz` 安装到 DSH profile（当前工作区为 link 安装），**完全重启 DSH**；
 - 前端缓存：重启后 `Cmd+Shift+R`；
-- 健康检查：`GET /api/litkb/health` 应显示 `0.1.1`。
+- 健康检查：`GET /api/litkb/health` 应显示 `0.1.2`。
 
 ## 开发
 
@@ -48,7 +48,7 @@
 npm run build     # 从 src/ 生成 lib/
 npm test          # 116 项
 npm run check     # 所有服务端模块语法检查
-npm pack          # 产出 dsh-litkb-0.1.1.tgz
+npm pack          # 产出 dsh-litkb-0.1.2.tgz
 ```
 
 目录：
