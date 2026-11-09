@@ -1,6 +1,6 @@
 # API 参考（v0.2.0）
 
-所有接口前缀：`/api/litkb`；v0.2.0 共注册 **74** 条。请求/响应均为 JSON；PDF 上传为原始 body + `x-filename`；错误统一为：
+所有接口前缀：`/api/litkb`；v0.2.4 共注册 **75** 条。请求/响应均为 JSON；PDF 上传为原始 body + `x-filename`；错误统一为：
 
 ```json
 { "ok": false, "code": "error_code", "error": "人类可读信息" }
@@ -114,6 +114,7 @@
 | POST | `/themes/delete` | 删除研究（链与文稿保留） |
 | POST | `/themes/match` | 匹配预览；`persist:true` 写 lastMatch |
 | POST | `/themes/chain` | 生成主题链草稿（任务），返回 job |
+| POST | `/themes/explore` | 一次完成匹配 + 建链，返回 match 与 job |
 | GET | `/themes/jobs?id=` | 任务进度；不带 id 返回最近 20 条 |
 | POST | `/themes/papers` | 手动加入/移出/恢复论文（`action`） |
 | POST | `/themes/outline` | 生成提纲；`mode`=new/append/replace 写入文稿 |

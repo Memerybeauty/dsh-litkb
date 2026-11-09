@@ -141,6 +141,14 @@ assert.ok(review.data.chains[0].themeTitle === '视盘分割综述')
 const otherReview = await call('/api/litkb/chains/review')
 assert.ok(otherReview.data.chains.length >= review.data.chains.length)
 
+const explore = await call('/api/litkb/themes/explore', { method: 'POST', body: { id: themeId } })
+assert.equal(explore.code, 200)
+assert.ok(explore.data.match.results.length >= 2)
+const exploreJob = await waitJob(explore.data.job.id)
+assert.equal(exploreJob.status, 'done')
+assert.ok(exploreJob.created >= 2)
+assert.match(exploreJob.items[0].chainId, /^c-/)
+
 const excepted = await call('/api/litkb/themes/papers', {
   method: 'POST', body: { id: themeId, paperId: 'p-r1', action: 'exclude' },
 })

@@ -36,7 +36,7 @@ mod.apply({ effect: (fn) => fn(), slots: { inject: () => {}, register: () => {} 
 function render(states) {
   globalThis.__i = 0
   globalThis.__s = states
-  return JSON.stringify(mod.__test.ThemePage({ papers: [{ id: 'p-1', title: 'Polar paper' }], tags: [] }))
+  return JSON.stringify(mod.__test.ThemePage({ papers: [{ id: 'p-1', title: 'Polar paper' }], tags: [], onOpenChain: () => {}, onOpenPaper: () => {}, onOpenDraft: () => {} }))
 }
 
 const chain = {
@@ -45,7 +45,7 @@ const chain = {
   provenance: { facetKey: 'f1', themeId: 't-1', matcher: 'theme-match.v1' },
   warnings: ['只有 1 篇论文支撑'],
   nodes: [{
-    paperId: 'p-1', paperTitle: 'Polar paper', title: 'Polar paper', page: 3, block: 'b-1',
+    paperId: 'p-1', title: 'Polar paper', page: 3, block: 'b-1',
     evidenceId: 'q-11112222', quote: 'Polar transform improves Dice to 0.95.', relation: 'supports',
   }],
 }
@@ -56,7 +56,6 @@ const detail = {
     summary: { text: '' }, papers: { include: [], exclude: [] },
   },
   chains: [chain],
-  facetChains: [{ facetKey: 'f1', chain: { id: 'c-1', status: 'draft', confidence: 0.7, nodes: 1, title: '极坐标' } }],
   stats: { papers: 1, facets: 1, confirmed: 0, drafts: 1, gaps: 0 },
   papers: [{
     paperId: 'p-1', title: 'Polar paper', year: 2024, score: 3.2, facets: ['f1'],
@@ -70,42 +69,44 @@ const listTheme = {
   stats: { facets: 1, papers: 1, confirmed: 1, drafts: 0, gaps: 0 },
 }
 
-const empty = render([[], '', null, '', '', '', null, null, null, '', false, '', '', false])
+const empty = render([[], '', null, '', '', '', null, null, null, '', false, '', false, null])
 assert.ok(empty.includes('个人工作台'))
 assert.ok(empty.includes('还没有研究'))
-assert.ok(empty.includes('新建研究'))
 
-const cards = render([[listTheme], '', null, '', '', '', null, null, null, '', false, '', '', false])
+const cards = render([[listTheme], '', null, '', '', '', null, null, null, '', false, '', false, null])
 assert.ok(cards.includes('视盘研究'))
 assert.ok(cards.includes('1/1 条链'))
-assert.ok(cards.includes('未开始写作'))
 
-const selected = render([[listTheme], 't-1', detail, '', '', '', null, null, null, '', false, 'f1', 'c-1', false])
-assert.ok(selected.includes('研究总览'))
-assert.ok(selected.includes('证据链'))
-assert.ok(selected.includes('链详情'))
-assert.ok(selected.includes('极坐标变换改善边界'))
-assert.ok(selected.includes('Polar transform improves Dice'))
-assert.ok(selected.includes('确认这条链'))
-assert.ok(selected.includes('去写作'))
+const selected = render([[listTheme], 't-1', detail, '', '', '', null, null, null, '', false, '', false, null])
+assert.ok(selected.includes('① 匹配论文'))
+assert.ok(selected.includes('② 证据链'))
+assert.ok(selected.includes('③ 研究结论'))
+assert.ok(selected.includes('开始探索'))
 assert.ok(selected.includes('Polar paper'))
+assert.ok(selected.includes('精读'))
+assert.ok(selected.includes('极坐标变换改善边界'))
+assert.ok(selected.includes('重新探索'))
 
-const confirmedDetail = { ...detail, chains: [{ ...chain, status: 'confirmed' }] }
-const confirmed = render([[listTheme], 't-1', confirmedDetail, '', '', '', null, null, null, '', false, 'f1', 'c-1', false])
-assert.ok(confirmed.includes('插入写作'))
-assert.ok(confirmed.includes('已确认'))
+const drawer = render([[listTheme], 't-1', detail, '', '', '', null, null, null, '', false, 'c-1', false, null])
+assert.ok(drawer.includes('链详情'))
+assert.ok(drawer.includes('确认这条链'))
+assert.ok(drawer.includes('Polar transform improves Dice'))
+assert.ok(drawer.includes('完整编辑'))
+
+const deep = render([[listTheme], 't-1', detail, '', '', '', null, null, null, '', false, '', false, { id: 'p-1', title: 'Polar paper' }])
+assert.ok(deep.includes('精读：Polar paper'))
 
 const editing = render([
   [], '', null, '', '', '', null, null,
   { title: '新研究', description: '', tags: '', facets: [{ title: '', description: '', keywords: '' }] },
-  '', false, '', '', false,
+  '', false, '', false, null,
 ])
 assert.ok(editing.includes('新建研究'))
 assert.ok(editing.includes('细分描述'))
 assert.ok(editing.includes('AI 帮我拆'))
 
-console.log('  ✓ 卡片总览：空态 / 统计 / 进度')
-console.log('  ✓ 三栏：研究总览 / 证据链 / 链详情')
-console.log('  ✓ 链操作：确认 / 插入写作')
-console.log('  ✓ 新建研究弹窗')
+console.log('  ✓ 卡片总览')
+console.log('  ✓ 线性探索：匹配论文 → 证据链 → 结论')
+console.log('  ✓ 链详情抽屉：确认 / 精读 / 原文')
+console.log('  ✓ 内嵌精读抽屉 + 新建弹窗')
 console.log('\n4 passed')
