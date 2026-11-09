@@ -306,9 +306,9 @@
       const groupChains = (facetKey) => visibleChains.filter((chain) => (chain.provenance?.facetKey || '') === facetKey)
       const statusOfFacet = (facetKey) => {
         const list = facetChainsAll(facetKey)
-        if (list.some((chain) => chain.status === 'confirmed')) return { label: '已确认', tone: 'is-ok' }
+        if (list.some((chain) => chain.status === 'confirmed')) return { label: '✓ 已确认', tone: 'is-ok' }
         if (list.length) return { label: '草稿', tone: 'is-warn' }
-        return { label: '缺口', tone: 'is-muted' }
+        return { label: '! 缺口', tone: 'is-danger' }
       }
       const confirmedChains = chains.filter((chain) => chain.status === 'confirmed')
       const progress = facets.length ? Math.round(((stats.confirmed || 0) / facets.length) * 100) : 0
@@ -387,7 +387,7 @@
                 const done = item.stats.confirmed || 0
                 const percent = total ? Math.round((done / total) * 100) : 0
                 const tone = item.stats.gaps ? 'is-warn' : (total && done === total ? 'is-ok' : 'is-muted')
-                const stateLabel = item.stats.gaps ? `${item.stats.gaps} 个缺口` : (total && done === total ? '已确认完' : '进行中')
+                const stateLabel = item.stats.gaps ? `⚠ ${item.stats.gaps} 个缺口` : (total && done === total ? '✓ 已确认完' : '进行中')
                 return h('button', {
                   key: item.id, type: 'button', className: 'litkb-themeCard',
                   onClick: () => openTheme(item.id),
@@ -441,7 +441,7 @@
           })))
 
       const seg = h('div', { className: 'litkb-wbSeg', role: 'tablist' },
-        [['papers', `参考论文 ${papersInTheme.length}`], ['chains', `证据链 ${chains.length}`], ['summary', '研究结论']]
+        [['papers', `▤ 参考论文 ${papersInTheme.length}`], ['chains', `☷ 证据链 ${chains.length}`], ['summary', '✎ 研究结论']]
           .map(([key, label]) => h('button', {
             key, type: 'button', role: 'tab', 'aria-selected': section === key,
             className: 'litkb-wbSegBtn' + (section === key ? ' is-on' : ''),
@@ -473,7 +473,7 @@
               className: 'litkb-rpItem' + (item.paper.id === activePaper?.id ? ' is-on' : ''),
             },
               h('button', {
-                type: 'button', className: 'litkb-rpMain',
+                type: 'button', className: 'litkb-rpMain', title: item.paper.title,
                 onClick: () => setPaperId(item.paper.id),
               },
                 h('span', { className: 'litkb-rpTitle' }, item.paper.title),
@@ -574,7 +574,8 @@
               list.length
                 ? list.map((chain) => h('button', {
                     key: chain.id, type: 'button',
-                    className: 'litkb-exChain' + (activeChain?.id === chain.id ? ' is-on' : ''),
+                    className: 'litkb-exChain is-' + chain.status + (activeChain?.id === chain.id ? ' is-on' : ''),
+                    title: chain.claim?.text || chain.title || '',
                     onClick: () => setSelectedChain(chain.id),
                   },
                   h('span', { className: 'litkb-exChainClaim' }, chain.claim?.text || chain.title || ''),
@@ -583,7 +584,9 @@
                 : h('div', { className: 'litkb-exGap' }, '未匹配到证据'))
           }),
           !chains.length
-            ? h('div', { className: 'litkb-exEmpty' }, '还没有证据链。点「开始探索」。')
+            ? h('div', { className: 'litkb-exEmpty' },
+                h('span', null, '还没有证据链。'),
+                h('button', { type: 'button', className: 'litkb-miniBtn', disabled: running, onClick: runExplore }, '▶ 开始探索'))
             : (visibleChains.length ? null : h('div', { className: 'litkb-exEmpty' }, '当前筛选下没有链。'))),
         h('div', { className: 'litkb-col' },
           activeChain
@@ -625,7 +628,9 @@
                   chain.nodes?.length
                     ? ` · ${[...new Set(chain.nodes.map((node) => node.title || node.paperId))].slice(0, 2).join(' / ')}`
                     : '')))
-            : h('div', { className: 'litkb-exEmpty' }, '还没有已确认的链。在「证据链」里确认后再生成结论。')))
+            : h('div', { className: 'litkb-exEmpty' },
+                h('span', null, '还没有已确认的链。'),
+                h('button', { type: 'button', className: 'litkb-miniBtn', onClick: () => setSection('chains') }, '去确认链'))))
 
       const body = section === 'papers'
         ? papersView
@@ -651,15 +656,15 @@
       return h('div', { className: 'litkb-wbPage is-detail' },
         h('div', { className: 'litkb-wbDetailHead' },
           h('button', { type: 'button', className: 'litkb-miniBtn', onClick: backToCards }, '← 全部研究'),
-          h('span', { className: 'litkb-wbDetailTitle' }, theme.title),
+          h('span', { className: 'litkb-wbDetailTitle', title: theme.title }, theme.title),
           (theme.tags || []).length
             ? h('span', { className: 'litkb-chips' }, theme.tags.map((tag) => h('span', { key: tag, className: 'litkb-chip' }, tag)))
             : null,
           spacer(),
           h('button', { type: 'button', className: 'litkb-btn', disabled: busy === 'explore' || running, onClick: runExplore },
-            running ? '探索中…' : '开始探索'),
+            running ? '探索中…' : (chains.length ? '↻ 重新探索' : '▶ 开始探索')),
           h('button', { type: 'button', className: 'litkb-miniBtn', disabled: busy === 'outline', onClick: makeOutline },
-            busy === 'outline' ? '生成中…' : '生成提纲'),
+            busy === 'outline' ? '生成中…' : '✎ 生成提纲'),
           h('button', { type: 'button', className: 'litkb-miniBtn', onClick: () => onOpenDraft && onOpenDraft({ themeId: theme.id, draftId: detail.draft?.id || '' }) }, '去写作')),
         err ? h('div', { className: 'litkb-error' }, err) : null,
         notice ? h('div', { className: 'litkb-themeNotice' }, notice) : null,
