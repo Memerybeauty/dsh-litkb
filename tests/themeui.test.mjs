@@ -36,7 +36,14 @@ mod.apply({ effect: (fn) => fn(), slots: { inject: () => {}, register: () => {} 
 function render(states) {
   globalThis.__i = 0
   globalThis.__s = states
-  return JSON.stringify(mod.__test.ThemePage({ papers: [{ id: 'p-1', title: 'Polar paper' }], tags: [], onOpenChain: () => {}, onOpenPaper: () => {}, onOpenDraft: () => {} }))
+  return JSON.stringify(mod.__test.ThemePage({
+    papers: [{ id: 'p-1', title: 'Polar paper', year: 2024 }],
+    tags: [],
+    paperActions: {},
+    onOpenChain: () => {},
+    onOpenPaper: () => {},
+    onOpenDraft: () => {},
+  }))
 }
 
 const chain = {
@@ -69,44 +76,45 @@ const listTheme = {
   stats: { facets: 1, papers: 1, confirmed: 1, drafts: 0, gaps: 0 },
 }
 
-const empty = render([[], '', null, '', '', '', null, null, null, '', false, '', false, null])
+const empty = render([[], '', null, '', '', '', null, null, '', false, '', false, null, 'papers', ''])
 assert.ok(empty.includes('个人工作台'))
 assert.ok(empty.includes('还没有研究'))
 
-const cards = render([[listTheme], '', null, '', '', '', null, null, null, '', false, '', false, null])
+const cards = render([[listTheme], '', null, '', '', '', null, null, '', false, '', false, null, 'papers', ''])
 assert.ok(cards.includes('视盘研究'))
 assert.ok(cards.includes('1/1 条链'))
 
-const selected = render([[listTheme], 't-1', detail, '', '', '', null, null, null, '', false, '', false, null])
-assert.ok(selected.includes('① 匹配论文'))
-assert.ok(selected.includes('② 证据链'))
-assert.ok(selected.includes('③ 研究结论'))
-assert.ok(selected.includes('开始探索'))
-assert.ok(selected.includes('Polar paper'))
-assert.ok(selected.includes('精读'))
-assert.ok(selected.includes('极坐标变换改善边界'))
-assert.ok(selected.includes('重新探索'))
+const papersTab = render([[listTheme], 't-1', detail, '', '', '', null, null, '', false, 'c-1', false, null, 'papers', 'p-1'])
+assert.ok(papersTab.includes('参考论文 1'))
+assert.ok(papersTab.includes('证据链 1'))
+assert.ok(papersTab.includes('研究结论'))
+assert.ok(papersTab.includes('开始探索'))
+assert.ok(papersTab.includes('本研究论文 1'))
+assert.ok(papersTab.includes('Polar paper'))
+assert.ok(papersTab.includes('"initialView":"deep"'), '论文详情默认打开精读页签')
+assert.ok(papersTab.includes('"paper":{"id":"p-1"'))
 
-const drawer = render([[listTheme], 't-1', detail, '', '', '', null, null, null, '', false, 'c-1', false, null])
-assert.ok(drawer.includes('链详情'))
-assert.ok(drawer.includes('确认这条链'))
-assert.ok(drawer.includes('Polar transform improves Dice'))
-assert.ok(drawer.includes('完整编辑'))
+const chainsTab = render([[listTheme], 't-1', detail, '', '', '', null, null, '', false, 'c-1', false, null, 'chains', 'p-1'])
+assert.ok(chainsTab.includes('确认这条链'))
+assert.ok(chainsTab.includes('极坐标变换改善边界'))
+assert.ok(chainsTab.includes('Polar transform improves Dice'))
 
-const deep = render([[listTheme], 't-1', detail, '', '', '', null, null, null, '', false, '', false, { id: 'p-1', title: 'Polar paper' }])
-assert.ok(deep.includes('精读：Polar paper'))
+const confirmedDetail = { ...detail, chains: [{ ...chain, status: 'confirmed' }] }
+const summaryTab = render([[listTheme], 't-1', confirmedDetail, '', '', '', null, null, '', false, 'c-1', false, null, 'summary', 'p-1'])
+assert.ok(summaryTab.includes('支撑结论的证据链'))
+assert.ok(summaryTab.includes('在证据链中查看'))
 
 const editing = render([
-  [], '', null, '', '', '', null, null,
+  [], '', null, '', '', '', null,
   { title: '新研究', description: '', tags: '', facets: [{ title: '', description: '', keywords: '' }] },
-  '', false, '', false, null,
+  '', false, '', false, null, 'papers', '',
 ])
 assert.ok(editing.includes('新建研究'))
 assert.ok(editing.includes('细分描述'))
 assert.ok(editing.includes('AI 帮我拆'))
 
-console.log('  ✓ 卡片总览')
-console.log('  ✓ 线性探索：匹配论文 → 证据链 → 结论')
-console.log('  ✓ 链详情抽屉：确认 / 精读 / 原文')
-console.log('  ✓ 内嵌精读抽屉 + 新建弹窗')
+console.log('  ✓ 卡片总览 / 空态')
+console.log('  ✓ 顶部总览 + 三视图切换')
+console.log('  ✓ 参考论文：筛选列表 + 精读详情')
+console.log('  ✓ 证据链分栏 / 结论左结论右链')
 console.log('\n4 passed')

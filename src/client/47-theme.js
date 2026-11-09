@@ -1,14 +1,13 @@
-    /* ---------------- 个人工作台（v0.2.4：线性探索流） ---------------- */
+    /* ---------------- 个人工作台（v0.2.5：总览 + 三视图） ---------------- */
     function spacer() { return h('span', { className: 'litkb-spacer' }) }
 
-    function ThemePage({ papers = [], tags = [], onOpenPaper, onOpenChain, onOpenDraft }) {
+    function ThemePage({ papers = [], tags = [], paperActions = {}, onOpenPaper, onOpenChain, onOpenDraft }) {
       const [themes, setThemes] = useState([])
       const [selectedId, setSelectedId] = useState('')
       const [detail, setDetail] = useState(null)
       const [err, setErr] = useState('')
       const [notice, setNotice] = useState('')
       const [busy, setBusy] = useState('')
-      const [match, setMatch] = useState(null)
       const [job, setJob] = useState(null)
       const [editing, setEditing] = useState(null)
       const [summaryDraft, setSummaryDraft] = useState('')
@@ -16,6 +15,8 @@
       const [selectedChain, setSelectedChain] = useState('')
       const [confirmDelete, setConfirmDelete] = useState(false)
       const [deepreadPaper, setDeepreadPaper] = useState(null)
+      const [section, setSection] = useState('papers')
+      const [paperId, setPaperId] = useState('')
 
       const refreshList = useCallback(async () => {
         try {
@@ -26,17 +27,21 @@
         }
       }, [])
 
-      const openTheme = useCallback(async (id) => {
+      const openTheme = useCallback(async (id, keepView = false) => {
         if (!id) return
-        setMatch(null)
-        setSelectedChain('')
         setErr('')
         try {
           const data = await api(`/api/litkb/themes/read?id=${encodeURIComponent(id)}`)
+          const list = data.chains || []
+          const first = list.find((chain) => chain.status === 'confirmed') || list[0] || null
           setDetail(data)
           setSelectedId(id)
           setSummaryDraft(data.theme.summary?.text || '')
           setSummaryEditing(false)
+          setSelectedChain(first?.id || '')
+          setSection((current) => (keepView ? current : 'papers'))
+          setPaperId((current) => (keepView && current ? current : (data.papers?.[0]?.paperId || '')))
+          if (!keepView) setDeepreadPaper(null)
         } catch (e) {
           setErr(String(e.message || e))
         }
@@ -46,8 +51,9 @@
         setSelectedId('')
         setDetail(null)
         setJob(null)
-        setMatch(null)
         setSelectedChain('')
+        setSection('papers')
+        setPaperId('')
       }
 
       useEffect(() => { refreshList() }, [refreshList])
@@ -60,7 +66,7 @@
             setJob(data.job)
             if (data.job.status === 'done') {
               await refreshList()
-              await openTheme(selectedId)
+              await openTheme(selectedId, true)
               setNotice(`探索完成：${data.job.created} 条证据链${data.job.gaps.length ? `，${data.job.gaps.length} 条缺口` : ''}`)
             }
             if (data.job.status === 'failed') {
@@ -168,7 +174,6 @@
         setErr('')
         try {
           const data = await post('/api/litkb/themes/explore', { id: selectedId })
-          setMatch(data.match)
           setJob(data.job)
           setNotice(`探索中：匹配 ${data.match.papers.length} 篇论文，正在建链…`)
         } catch (e) {
@@ -178,9 +183,9 @@
         }
       }
 
-      const setPaper = async (paperId, action) => {
+      const setPaper = async (pid, action) => {
         try {
-          const data = await post('/api/litkb/themes/papers', { id: selectedId, paperId, action })
+          const data = await post('/api/litkb/themes/papers', { id: selectedId, paperId: pid, action })
           setDetail((current) => (current ? { ...current, theme: data.theme, papers: data.papers, stats: data.stats } : current))
           refreshList()
         } catch (e) {
@@ -197,6 +202,7 @@
           const data = await post('/api/litkb/themes/outline', { id: selectedId, mode })
           if (data.draft) {
             await openTheme(selectedId)
+            setSection('summary')
             setNotice('提纲已写入文稿；点「去写作」编辑')
           } else {
             setNotice(data.warnings[0] || '已生成提纲')
@@ -212,6 +218,7 @@
         try {
           await post('/api/litkb/chains/review', { id: chain.id, action })
           await openTheme(selectedId)
+          setSection('chains')
           setSelectedChain(action === 'accept' ? chain.id : '')
           await refreshList()
           setNotice(action === 'accept' ? '已确认，进入检索与图谱' : '已拒绝并删除草稿')
@@ -280,10 +287,12 @@
         if (list.length) return { label: '草稿', tone: 'is-warn' }
         return { label: '缺口', tone: 'is-muted' }
       }
-      const activeChain = chainById.get(selectedChain) || null
-      const recordOf = (paperId) => papers.find((paper) => paper.id === paperId) || { id: paperId, title: paperId, authors: '', year: '' }
-      const openDeepRead = (paperId) => setDeepreadPaper(recordOf(paperId))
+      const confirmedChains = chains.filter((chain) => chain.status === 'confirmed')
+      const activeChain = chainById.get(selectedChain) || confirmedChains[0] || chains[0] || null
+      const recordOf = (pid) => papers.find((paper) => paper.id === pid) || { id: pid, title: pid, authors: '', year: '' }
+      const openDeepRead = (pid) => setDeepreadPaper(recordOf(pid))
       const running = Boolean(job && ['queued', 'running'].includes(job.status))
+      const facetTitle = (key) => (facets.find((facet) => facet.key === key)?.title) || ''
 
       const modal = editing ? h('div', { className: 'litkb-themeModalWrap', role: 'dialog', 'aria-modal': 'true' },
         h('div', { className: 'litkb-themeModal' },
@@ -343,7 +352,7 @@
           h('div', { className: 'litkb-wbHead' },
             h('div', null,
               h('div', { className: 'litkb-wbTitle' }, '个人工作台'),
-              h('div', { className: 'litkb-wbSub' }, '每个研究是一张卡片；点进去从主题开始探索论文与证据链。')),
+              h('div', { className: 'litkb-wbSub' }, '每个研究是一张卡片；点进去看参考论文、证据链与研究结论。')),
             h('button', { type: 'button', className: 'litkb-btn', onClick: startNew }, '＋ 新建研究')),
           err ? h('div', { className: 'litkb-error' }, err) : null,
           notice ? h('div', { className: 'litkb-themeNotice' }, notice) : null,
@@ -376,131 +385,195 @@
           modal)
       }
 
-      const papersSection = h('div', { className: 'litkb-exSection' },
-        h('div', { className: 'litkb-exHead' },
-          h('span', { className: 'litkb-exTitle' }, `① 匹配论文 ${papersInTheme.length}`),
-          h('span', { className: 'litkb-exHint' }, '自动按细分描述匹配；点「精读」直接看 11 板块'),
-          spacer(),
+      const overview = h('div', { className: 'litkb-wbOverview' },
+        h('div', { className: 'litkb-wbOverviewMain' },
+          theme.description ? h('div', { className: 'litkb-wbDesc' }, theme.description) : null,
+          h('div', { className: 'litkb-wbOverviewStats' },
+            `论文 ${stats.papers || 0} · 细分 ${stats.facets || 0} · 已确认 ${stats.confirmed || 0} · 草稿 ${stats.drafts || 0} · 缺口 ${stats.gaps || 0}`)),
+        h('div', { className: 'litkb-wbOverviewFacets' },
+          facets.map((facet) => h('span', {
+            key: facet.key, className: 'litkb-chip' + (facet.enabled ? '' : ' is-off'),
+            title: facet.description || facet.title,
+          }, facet.title))))
+
+      const seg = h('div', { className: 'litkb-wbSeg', role: 'tablist' },
+        [['papers', `参考论文 ${papersInTheme.length}`], ['chains', `证据链 ${chains.length}`], ['summary', '研究结论']]
+          .map(([key, label]) => h('button', {
+            key, type: 'button', role: 'tab', 'aria-selected': section === key,
+            className: 'litkb-wbSegBtn' + (section === key ? ' is-on' : ''),
+            onClick: () => setSection(key),
+          }, label)))
+
+      const filteredPapers = papersInTheme
+        .map((row) => ({ row, paper: papers.find((paper) => paper.id === row.paperId) }))
+        .filter((item) => item.paper)
+      const activePaper = filteredPapers.find((item) => item.paper.id === paperId)?.paper
+        || filteredPapers[0]?.paper
+        || null
+      const scoreOf = (pid) => papersInTheme.find((row) => row.paperId === pid)?.score || 0
+
+      const papersView = h('div', { className: 'litkb-rp' },
+        h('div', { className: 'litkb-rpList' },
+          h('div', { className: 'litkb-rpHead' },
+            h('span', { className: 'litkb-rpHeadTitle' }, `本研究论文 ${filteredPapers.length}`),
+            h('span', { className: 'litkb-exHint' }, '列表只含匹配到的论文')),
+          h('div', { className: 'litkb-rpItems' },
+            filteredPapers.map((item) => h('div', {
+              key: item.paper.id,
+              className: 'litkb-rpItem' + (item.paper.id === activePaper?.id ? ' is-on' : ''),
+            },
+              h('button', {
+                type: 'button', className: 'litkb-rpMain',
+                onClick: () => setPaperId(item.paper.id),
+              },
+                h('span', { className: 'litkb-rpTitle' }, item.paper.title),
+                h('span', { className: 'litkb-rpMeta' },
+                  [item.paper.year, item.paper.venue].filter(Boolean).join(' · ') || '元数据缺失',
+                  ` · 匹配 ${scoreOf(item.paper.id) || '—'}`)),
+              h('button', {
+                type: 'button', className: 'litkb-rpDel', title: '从本研究中移出',
+                onClick: () => setPaper(item.paper.id, 'exclude'),
+              }, '×')))),
           h('select', {
-            className: 'litkb-input litkb-exAdd', value: '',
+            className: 'litkb-input litkb-rpAdd', value: '',
             onChange: (e) => { if (e.target.value) setPaper(e.target.value, 'include') },
           },
             h('option', { value: '' }, '手动加入论文…'),
             papers.filter((paper) => !papersInTheme.some((row) => row.paperId === paper.id))
               .map((paper) => h('option', { key: paper.id, value: paper.id }, paper.title || paper.id)))),
-        papersInTheme.length
-          ? h('div', { className: 'litkb-exTable' },
-              h('div', { className: 'litkb-exRow is-head' },
-                ['论文', '年', '匹配分', '命中细分', '证据', '操作'].map((label) => h('span', { key: label }, label))),
-              papersInTheme.map((row) => h('div', { key: row.paperId, className: 'litkb-exRow' },
-                h('button', {
-                  type: 'button', className: 'litkb-exPaper', title: row.title,
-                  onClick: () => onOpenPaper && onOpenPaper(row.paperId),
-                }, row.title),
-                h('span', null, row.year || '—'),
-                h('span', null, row.score || '—'),
-                h('span', { className: 'litkb-exFacets' }, (row.facets || []).map((key) => {
-                  const facet = facets.find((item) => item.key === key)
-                  return facet ? facet.title : key
-                }).join(' / ') || '—'),
-                h('span', null, row.evidence || 0),
-                h('span', { className: 'litkb-exOps' },
-                  h('button', { type: 'button', className: 'litkb-miniBtn', onClick: () => openDeepRead(row.paperId) }, '精读'),
-                  h('button', { type: 'button', className: 'litkb-miniBtn', onClick: () => onOpenPaper && onOpenPaper(row.paperId) }, '原文'),
-                  h('button', { type: 'button', className: 'litkb-miniBtn', onClick: () => setPaper(row.paperId, 'exclude') }, '移出')))))
-          : h('div', { className: 'litkb-exEmpty' }, '还没有匹配到论文。点右上角「开始探索」。'))
+        h('div', { className: 'litkb-rpDetail' },
+          activePaper
+            ? h(Detail, {
+                key: activePaper.id,
+                paper: activePaper,
+                tags: paperActions.tags || tags,
+                types: paperActions.types || [],
+                inline: true,
+                initialView: 'deep',
+                onClose: () => {},
+                onSaved: paperActions.onSaved,
+                onRefresh: paperActions.refresh,
+                onOpenPdf: (page, blockId) => paperActions.onOpenPdf
+                  ? paperActions.onOpenPdf(activePaper.id, page, blockId)
+                  : onOpenPaper && onOpenPaper(activePaper.id, page, blockId),
+                onCite: paperActions.onCite,
+                onBuildChain: paperActions.onBuildChain,
+                cardRevision: paperActions.cardRevision || 0,
+              })
+            : h('div', { className: 'litkb-exEmpty' }, '还没有匹配到论文。点右上角「开始探索」。')))
 
-      const evidenceSection = h('div', { className: 'litkb-exSection' },
-        h('div', { className: 'litkb-exHead' },
-          h('span', { className: 'litkb-exTitle' }, `② 证据链 ${chains.length}`),
-          h('span', { className: 'litkb-exHint' }, '按细分自动生成；点一条在右侧看详情'),
+      const chainDetail = (chain) => h('div', { className: 'litkb-cd' },
+        h('div', { className: 'litkb-cdTop' },
+          h('span', { className: 'litkb-badge ' + (chain.status === 'confirmed' ? 'is-ok' : 'is-warn') },
+            chain.status === 'confirmed' ? '已确认' : '草稿'),
+          facetTitle(chain.provenance?.facetKey)
+            ? h('span', { className: 'litkb-cdFacet' }, facetTitle(chain.provenance.facetKey))
+            : null,
           spacer(),
-          h('button', { type: 'button', className: 'litkb-btn', disabled: busy === 'explore' || running, onClick: runExplore },
-            running ? '探索中…' : '重新探索')),
-        facets.map((facet) => {
-          const list = groupChains(facet.key)
-          const status = statusOfFacet(facet.key)
-          return h('div', { key: facet.key, className: 'litkb-exGroup' },
-            h('div', { className: 'litkb-exGroupHead' },
-              h('span', { className: 'litkb-exGroupTitle' }, facet.title),
-              h('span', { className: 'litkb-badge ' + status.tone }, status.label)),
-            list.length
-              ? list.map((chain) => h('button', {
-                  key: chain.id, type: 'button', className: 'litkb-exChain',
-                  onClick: () => setSelectedChain(chain.id),
-                },
-                h('span', { className: 'litkb-exChainClaim' }, chain.claim?.text || chain.title || ''),
-                h('span', { className: 'litkb-exChainMeta' },
-                  `${(chain.nodes || []).length} 条证据 · 置信度 ${chain.confidence}`,
-                  chain.status === 'confirmed' ? ' · 已确认' : ' · 草稿')))
-              : h('div', { className: 'litkb-exGap' }, '未匹配到证据，建议放宽关键词或在编辑里改细分描述。'))
-        }),
-        !chains.length
-          ? h('div', { className: 'litkb-exEmpty' }, '还没有证据链。点「开始探索」一次完成匹配与建链。')
-          : null)
+          onOpenChain
+            ? h('button', { type: 'button', className: 'litkb-miniBtn', onClick: () => onOpenChain(chain.id) }, '完整编辑')
+            : null),
+        h('div', { className: 'litkb-wbClaim' }, chain.claim?.text || chain.title || ''),
+        h('div', { className: 'litkb-wbDetailMeta' },
+          `${(chain.nodes || []).length} 条证据 · 置信度 ${chain.confidence}`,
+          chain.provenance?.matcher ? ` · ${chain.provenance.matcher}` : ''),
+        (chain.warnings || []).length
+          ? h('div', { className: 'litkb-wbWarn' }, chain.warnings.join('；'))
+          : null,
+        h('div', { className: 'litkb-exNodes' },
+          (chain.nodes || []).map((node) => h('div', { key: node.evidenceId, className: 'litkb-exNode' },
+            h('div', { className: 'litkb-exNodeTop' },
+              h('span', { className: 'litkb-exNodeTitle' }, node.title || node.paperId),
+              h('span', { className: 'litkb-exNodePage' }, `p.${node.page}`)),
+            h('div', { className: 'litkb-exNodeQuote' }, String(node.quote || '').slice(0, 200)),
+            h('div', { className: 'litkb-exNodeOps' },
+              h('button', { type: 'button', className: 'litkb-miniBtn', onClick: () => openDeepRead(node.paperId) }, '精读'),
+              h('button', {
+                type: 'button', className: 'litkb-miniBtn',
+                onClick: () => onOpenPaper && onOpenPaper(node.paperId, node.page, node.block),
+              }, '原文'))))),
+        h('div', { className: 'litkb-wbActions' },
+          chain.status === 'draft'
+            ? h('button', { type: 'button', className: 'litkb-btn', onClick: () => reviewChain(chain, 'accept') }, '确认这条链')
+            : null,
+          chain.status === 'draft'
+            ? h('button', { type: 'button', className: 'litkb-btnGhost', onClick: () => reviewChain(chain, 'reject') }, '拒绝')
+            : null,
+          chain.status === 'confirmed'
+            ? h('button', { type: 'button', className: 'litkb-btn', onClick: () => insertChain(chain) }, '插入写作')
+            : null))
 
-      const summarySection = h('div', { className: 'litkb-exSection' },
-        h('div', { className: 'litkb-exHead' },
-          h('span', { className: 'litkb-exTitle' }, '③ 研究结论'),
-          h('span', { className: 'litkb-exHint' }, `基于 ${stats.confirmed || 0} 条已确认链`),
-          spacer(),
-          h('button', { type: 'button', className: 'litkb-miniBtn', onClick: generateSummary }, '生成'),
+      const chainsView = h('div', { className: 'litkb-cols' },
+        h('div', { className: 'litkb-col is-narrow' },
+          h('div', { className: 'litkb-colHead' },
+            h('span', { className: 'litkb-colTitle' }, '证据链'),
+            h('span', { className: 'litkb-exHint' }, '按细分分组')),
+          facets.map((facet) => {
+            const list = groupChains(facet.key)
+            const status = statusOfFacet(facet.key)
+            return h('div', { key: facet.key, className: 'litkb-exGroup' },
+              h('div', { className: 'litkb-exGroupHead' },
+                h('span', { className: 'litkb-exGroupTitle' }, facet.title),
+                h('span', { className: 'litkb-badge ' + status.tone }, status.label)),
+              list.length
+                ? list.map((chain) => h('button', {
+                    key: chain.id, type: 'button',
+                    className: 'litkb-exChain' + (activeChain?.id === chain.id ? ' is-on' : ''),
+                    onClick: () => setSelectedChain(chain.id),
+                  },
+                  h('span', { className: 'litkb-exChainClaim' }, chain.claim?.text || chain.title || ''),
+                  h('span', { className: 'litkb-exChainMeta' },
+                    `${(chain.nodes || []).length} 条证据 · 置信度 ${chain.confidence}`)))
+                : h('div', { className: 'litkb-exGap' }, '未匹配到证据'))
+          }),
+          !chains.length
+            ? h('div', { className: 'litkb-exEmpty' }, '还没有证据链。点「开始探索」。')
+            : null),
+        h('div', { className: 'litkb-col' },
+          activeChain
+            ? chainDetail(activeChain)
+            : h('div', { className: 'litkb-exEmpty' }, '从左边选一条链，看它的论点与证据。')))
+
+      const summaryView = h('div', { className: 'litkb-cols' },
+        h('div', { className: 'litkb-col' },
+          h('div', { className: 'litkb-colHead' },
+            h('span', { className: 'litkb-colTitle' }, '研究结论'),
+            spacer(),
+            h('button', { type: 'button', className: 'litkb-miniBtn', onClick: generateSummary }, '生成'),
+            summaryEditing
+              ? h('button', { type: 'button', className: 'litkb-miniBtn', onClick: saveSummary }, '保存')
+              : h('button', { type: 'button', className: 'litkb-miniBtn', onClick: () => setSummaryEditing(true) }, '编辑')),
           summaryEditing
-            ? h('button', { type: 'button', className: 'litkb-miniBtn', onClick: saveSummary }, '保存')
-            : h('button', { type: 'button', className: 'litkb-miniBtn', onClick: () => setSummaryEditing(true) }, '编辑')),
-        summaryEditing
-          ? h('textarea', {
-              className: 'litkb-textarea', rows: 5, value: summaryDraft,
-              placeholder: '点「生成」汇总已确认链，或直接写',
-              onChange: (e) => setSummaryDraft(e.target.value),
-            })
-          : h('div', { className: 'litkb-wbSummary' }, theme.summary?.text || '还没有结论。确认几条链后，点「生成」。'))
-
-      const chainDrawer = activeChain ? h('div', {
-        className: 'litkb-drawerWrap',
-        onMouseDown: (e) => { if (e.target === e.currentTarget) setSelectedChain('') },
-      },
-        h('div', { className: 'litkb-drawer is-wide' },
-          h('div', { className: 'litkb-drawerHead' },
-            h('span', { className: 'litkb-blockTitle' }, '链详情'),
-            h('span', { className: 'litkb-badge ' + (activeChain.status === 'confirmed' ? 'is-ok' : 'is-warn') },
-              activeChain.status === 'confirmed' ? '已确认' : '草稿'),
-            h('span', { className: 'litkb-spacer' }),
-            h('button', { type: 'button', className: 'litkb-close', onClick: () => setSelectedChain(''), 'aria-label': '关闭' }, '×')),
-          h('div', { className: 'litkb-drawerBody' },
-            h('div', { className: 'litkb-wbClaim' }, activeChain.claim?.text || activeChain.title || ''),
-            h('div', { className: 'litkb-wbDetailMeta' },
-              `${(activeChain.nodes || []).length} 条证据 · 置信度 ${activeChain.confidence}`,
-              activeChain.provenance?.matcher ? ` · ${activeChain.provenance.matcher}` : ''),
-            (activeChain.warnings || []).length
-              ? h('div', { className: 'litkb-wbWarn' }, activeChain.warnings.join('；'))
-              : null,
-            h('div', { className: 'litkb-exNodes' },
-              (activeChain.nodes || []).map((node) => h('div', { key: node.evidenceId, className: 'litkb-exNode' },
-                h('div', { className: 'litkb-exNodeTop' },
-                  h('span', { className: 'litkb-exNodeTitle' }, node.title || node.paperId),
-                  h('span', { className: 'litkb-exNodePage' }, `p.${node.page}`)),
-                h('div', { className: 'litkb-exNodeQuote' }, String(node.quote || '').slice(0, 200)),
-                h('div', { className: 'litkb-exNodeOps' },
-                  h('button', { type: 'button', className: 'litkb-miniBtn', onClick: () => openDeepRead(node.paperId) }, '精读'),
+            ? h('textarea', {
+                className: 'litkb-textarea', rows: 10, value: summaryDraft,
+                placeholder: '点「生成」汇总已确认链，或直接写',
+                onChange: (e) => setSummaryDraft(e.target.value),
+              })
+            : h('div', { className: 'litkb-cdSummary' }, theme.summary?.text || '还没有结论。确认几条链后，点「生成」。')),
+        h('div', { className: 'litkb-col' },
+          h('div', { className: 'litkb-colHead' },
+            h('span', { className: 'litkb-colTitle' }, '支撑结论的证据链'),
+            h('span', { className: 'litkb-exHint' }, `${confirmedChains.length} 条已确认`)),
+          confirmedChains.length
+            ? confirmedChains.map((chain) => h('div', { key: chain.id, className: 'litkb-cdChain' },
+                h('div', { className: 'litkb-cdChainTop' },
+                  h('span', { className: 'litkb-cdFacet' }, facetTitle(chain.provenance?.facetKey) || '其他'),
+                  spacer(),
                   h('button', {
                     type: 'button', className: 'litkb-miniBtn',
-                    onClick: () => onOpenPaper && onOpenPaper(node.paperId, node.page, node.block),
-                  }, '原文'))))),
-            h('div', { className: 'litkb-wbActions' },
-              activeChain.status === 'draft'
-                ? h('button', { type: 'button', className: 'litkb-btn', onClick: () => reviewChain(activeChain, 'accept') }, '确认这条链')
-                : null,
-              activeChain.status === 'draft'
-                ? h('button', { type: 'button', className: 'litkb-btnGhost', onClick: () => reviewChain(activeChain, 'reject') }, '拒绝')
-                : null,
-              activeChain.status === 'confirmed'
-                ? h('button', { type: 'button', className: 'litkb-btn', onClick: () => insertChain(activeChain) }, '插入写作')
-                : null,
-              onOpenChain
-                ? h('button', { type: 'button', className: 'litkb-btnGhost', onClick: () => { setSelectedChain(''); onOpenChain(activeChain.id) } }, '完整编辑')
-                : null))))
-        : null
+                    onClick: () => { setSection('chains'); setSelectedChain(chain.id) },
+                  }, '在证据链中查看')),
+                h('div', { className: 'litkb-cdChainClaim' }, chain.claim?.text || chain.title || ''),
+                h('div', { className: 'litkb-wbDetailMeta' },
+                  `${(chain.nodes || []).length} 条证据`,
+                  chain.nodes?.length
+                    ? ` · ${[...new Set(chain.nodes.map((node) => node.title || node.paperId))].slice(0, 2).join(' / ')}`
+                    : '')))
+            : h('div', { className: 'litkb-exEmpty' }, '还没有已确认的链。在「证据链」里确认后再生成结论。')))
+
+      const body = section === 'papers'
+        ? papersView
+        : (section === 'chains' ? chainsView : summaryView)
 
       const deepreadDrawer = deepreadPaper ? h('div', {
         className: 'litkb-drawerWrap',
@@ -534,17 +607,14 @@
           h('button', { type: 'button', className: 'litkb-miniBtn', onClick: () => onOpenDraft && onOpenDraft({ themeId: theme.id, draftId: detail.draft?.id || '' }) }, '去写作'),
           h('button', { type: 'button', className: 'litkb-miniBtn', onClick: startEdit }, '编辑'),
           h('button', { type: 'button', className: 'litkb-miniBtn', onClick: () => setConfirmDelete(true) }, '删除')),
-        theme.description ? h('div', { className: 'litkb-wbDesc' }, theme.description) : null,
         err ? h('div', { className: 'litkb-error' }, err) : null,
         notice ? h('div', { className: 'litkb-themeNotice' }, notice) : null,
         running
           ? h('div', { className: 'litkb-exProgress' }, `探索中 · 已生成 ${job.created || 0} 条 · ${job.step || ''}`)
           : null,
-        h('div', { className: 'litkb-explore' },
-          papersSection,
-          evidenceSection,
-          summarySection),
-        chainDrawer,
+        overview,
+        seg,
+        h('div', { className: 'litkb-wbBody' }, body),
         deepreadDrawer,
         confirmDelete
           ? h('div', { className: 'litkb-themeModalWrap', role: 'dialog', 'aria-modal': 'true' },

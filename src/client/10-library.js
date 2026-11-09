@@ -429,6 +429,22 @@
         setWritingFocus(payload || null)
         setTab('写作')
       }
+      const paperActions = {
+        tags: tagNames,
+        types,
+        cardRevision,
+        onSaved: (paper) => { setSelected(paper); refreshCard() },
+        refresh: refreshCard,
+        onOpenPdf: (pid, page, blockId) => {
+          const target = papers.find((paper) => paper.id === pid)
+          if (!target) return
+          setSelected(target)
+          goLibrary()
+          openPdf(target, page || 1, blockId)
+        },
+        onCite: (request) => { setInsertRequest(request); openWriting() },
+        onBuildChain: (request) => setChainDialog({ ...request, nonce: Date.now() }),
+      }
       const railPage = pdfView && pdfView.paper?.id === reader?.id ? pdfView.page : 1
       const railBlock = pdfView && pdfView.paper?.id === reader?.id ? pdfView.blockId : null
       const pdfWidth = showList
@@ -632,95 +648,97 @@
       h('main', { className: 'litkb-body' + (splitTab ? ' is-split' : '') + (tab === '写作' ? ' is-writing' : '') },
         busy ? h('div', { className: 'litkb-progress' }, `正在解析 ${busy.done}/${busy.total} …`) : null,
         error ? h('div', { className: 'litkb-error' }, error) : null,
-        tab === '论文库'
-          ? (libraryView === '横向精读'
-              ? h(ComparePanel, {
-                  papers,
-                  onOpenPaper: (paperId, page, blockId) => {
-                    const target = papers.find((paper) => paper.id === paperId)
-                    if (!target) return
-                    setFilter('全部')
+        h('div', { className: 'litkb-module' + (tab === '个人工作台' ? '' : ' is-hidden') },
+          h(ThemePage, {
+            papers,
+            tags,
+            paperActions,
+            onOpenPaper: (paperId, page, blockId) => {
+              const target = papers.find((paper) => paper.id === paperId)
+              if (!target) return
+              setFilter('全部')
+              setSelected(target)
+              goLibrary()
+              if (page) openPdf(target, page, blockId)
+            },
+            onOpenChain: (id) => setChainDialog({ chainId: id, paperId: '', nonce: Date.now() }),
+            onOpenDraft: (payload) => openWriting(payload),
+          })),
+        h('div', { className: 'litkb-module' + (tab === '论文库' ? '' : ' is-hidden') },
+          libraryView === '横向精读'
+            ? h(ComparePanel, {
+                papers,
+                onOpenPaper: (paperId, page, blockId) => {
+                  const target = papers.find((paper) => paper.id === paperId)
+                  if (!target) return
+                  setFilter('全部')
+                  setSelected(target)
+                  goLibrary()
+                  if (page) openPdf(target, page, blockId)
+                },
+                onBuildCompareChain: ({ claim, evidenceIds, paperId, sectionKey }) => setChainDialog({
+                  mode: 'evidence', claim, evidenceIds, paperId, sectionKey, nonce: Date.now(),
+                }),
+                onSaveCompare: async (text, title) => {
+                  const data = await api('/api/litkb/drafts', {
+                    method: 'POST', headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({ title, body: text }),
+                  })
+                  openWriting({ draftId: data.draft?.id })
+                },
+              })
+            : libraryView === '图谱'
+            ? h(GraphPanel, {
+                chainRevision,
+                onOpenPaper: (id) => { setManaging(false); setFilter('全部'); setSelected(papers.find((p) => p.id === id) || null); goLibrary() },
+                onOpenPdf: (paperId, page, blockId) => {
+                  const target = papers.find((p) => p.id === paperId)
+                  if (target) {
                     setSelected(target)
                     goLibrary()
-                    if (page) openPdf(target, page, blockId)
-                  },
-                  onBuildCompareChain: ({ claim, evidenceIds, paperId, sectionKey }) => setChainDialog({
-                    mode: 'evidence', claim, evidenceIds, paperId, sectionKey, nonce: Date.now(),
-                  }),
-                  onSaveCompare: async (text, title) => {
-                    const data = await api('/api/litkb/drafts', {
-                      method: 'POST', headers: { 'content-type': 'application/json' },
-                      body: JSON.stringify({ title, body: text }),
-                    })
-                    openWriting({ draftId: data.draft?.id })
-                  },
-                })
-              : libraryView === '图谱'
-              ? h(GraphPanel, {
-                  chainRevision,
-                  onOpenPaper: (id) => { setManaging(false); setFilter('全部'); setSelected(papers.find((p) => p.id === id) || null); goLibrary() },
-                  onOpenPdf: (paperId, page, blockId) => {
-                    const target = papers.find((p) => p.id === paperId)
-                    if (target) {
-                      setSelected(target)
-                      goLibrary()
-                      openPdf(target, page, blockId)
-                    }
-                  },
-                  onOpenChain: (id) => setChainDialog({ chainId: id, paperId: '', nonce: Date.now() }),
-                  onGoLibrary: goLibrary,
-                })
-              : libraryView === '检索'
-              ? h(SearchPage, {
-                  papers,
-                  tags,
-                  onOpenPaper: (paperId, page, blockId) => {
-                    const target = papers.find((paper) => paper.id === paperId)
-                    if (!target) return
-                    setFilter('全部')
-                    setSelected(target)
-                    goLibrary()
-                    if (page) openPdf(target, page, blockId)
-                  },
-                  onOpenChain: (id) => setChainDialog({ chainId: id, paperId: '', nonce: Date.now() }),
-                  onSaveAnswer: async (text, question) => {
-                    const data = await api('/api/litkb/drafts', {
-                      method: 'POST', headers: { 'content-type': 'application/json' },
-                      body: JSON.stringify({ title: `检索：${String(question || '').slice(0, 40)}`, body: text }),
-                    })
-                    openWriting({ draftId: data.draft?.id })
-                    return data.draft
-                  },
-                })
-              : splitView)
-          : tab === '写作'
-          ? h(WritingPage, {
-              insertRequest,
-              focus: writingFocus,
-              onConsumed: () => setInsertRequest(null),
-              onOpenPaper: (paperId, page, blockId) => {
-                const target = papers.find((paper) => paper.id === paperId)
-                if (!target) return
-                setFilter('全部')
-                setSelected(target)
-                goLibrary()
-                if (page) openPdf(target, page, blockId)
-              },
-            })
-          : h(ThemePage, {
-              papers,
-              tags,
-              onOpenPaper: (paperId, page, blockId) => {
-                const target = papers.find((paper) => paper.id === paperId)
-                if (!target) return
-                setFilter('全部')
-                setSelected(target)
-                goLibrary()
-                if (page) openPdf(target, page, blockId)
-              },
-              onOpenChain: (id) => setChainDialog({ chainId: id, paperId: '', nonce: Date.now() }),
-              onOpenDraft: (payload) => openWriting(payload),
-            })),
+                    openPdf(target, page, blockId)
+                  }
+                },
+                onOpenChain: (id) => setChainDialog({ chainId: id, paperId: '', nonce: Date.now() }),
+                onGoLibrary: goLibrary,
+              })
+            : libraryView === '检索'
+            ? h(SearchPage, {
+                papers,
+                tags,
+                onOpenPaper: (paperId, page, blockId) => {
+                  const target = papers.find((paper) => paper.id === paperId)
+                  if (!target) return
+                  setFilter('全部')
+                  setSelected(target)
+                  goLibrary()
+                  if (page) openPdf(target, page, blockId)
+                },
+                onOpenChain: (id) => setChainDialog({ chainId: id, paperId: '', nonce: Date.now() }),
+                onSaveAnswer: async (text, question) => {
+                  const data = await api('/api/litkb/drafts', {
+                    method: 'POST', headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({ title: `检索：${String(question || '').slice(0, 40)}`, body: text }),
+                  })
+                  openWriting({ draftId: data.draft?.id })
+                  return data.draft
+                },
+              })
+            : splitView),
+        h('div', { className: 'litkb-module' + (tab === '写作' ? '' : ' is-hidden') },
+          h(WritingPage, {
+            insertRequest,
+            focus: writingFocus,
+            onConsumed: () => setInsertRequest(null),
+            onOpenPaper: (paperId, page, blockId) => {
+              const target = papers.find((paper) => paper.id === paperId)
+              if (!target) return
+              setFilter('全部')
+              setSelected(target)
+              goLibrary()
+              if (page) openPdf(target, page, blockId)
+            },
+          }))),
       h('footer', { className: 'litkb-foot' },
         h('span', { className: 'litkb-dot ' + (error ? 'is-err' : 'is-ok'), 'aria-hidden': 'true' }),
         h('span', { className: 'litkb-health' },
@@ -903,8 +921,8 @@
     }
 
     /* ---------------- 详情（资料 / 七段卡） ---------------- */
-    function Detail({ paper, tags, types, onClose, onSaved, onRefresh, onOpenPdf, onAsk, onCite, onBuildChain, cardRevision = 0, inline = false }) {
-      const [view, setView] = useState(inline ? 'card' : 'info')
+    function Detail({ paper, tags, types, onClose, onSaved, onRefresh, onOpenPdf, onAsk, onCite, onBuildChain, cardRevision = 0, inline = false, initialView = '' }) {
+      const [view, setView] = useState(initialView || (inline ? 'card' : 'info'))
       const [form, setForm] = useState({
         title: paper.title || '',
         year: paper.year ?? '',
@@ -924,7 +942,8 @@
         })
         setNewTag('')
         setErr('')
-      }, [paper.id])
+        if (initialView) setView(initialView)
+      }, [paper.id, initialView])
 
       const toggle = (value) => setForm((f) => ({
         ...f,
