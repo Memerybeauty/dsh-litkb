@@ -212,6 +212,49 @@ assert.ok(parse.includes('正文内容'))
 assert.ok(parse.includes('导出 MD'))
 assert.ok(!parse.includes('access token'))
 
+const groupDoc = {
+  ...parseDoc,
+  pages: [
+    {
+      ...parseDoc.pages[0],
+      blocks: [
+        parseDoc.pages[0].blocks[0],
+        { id: 'b-2', role: 'paragraph', section: 'method', text: '第二块', bbox: [0, 0.2, 1, 0.4] },
+      ],
+    },
+  ],
+  paragraphs: [
+    {
+      page: 1,
+      pageEnd: 1,
+      role: 'paragraph',
+      text: '整段内容',
+      blockIds: ['b-1', 'b-2'],
+      firstBlockId: 'b-1',
+    },
+  ],
+}
+const groupParse = render('ParsePanel', { paper: { id: 'p-1' }, flat: true, onOpenPdf() {} }, [
+  groupDoc,
+  null,
+  { paddle: { configured: true, model: 'PaddleOCR-VL-1.6' } },
+  null,
+  null,
+  'source',
+  'summary',
+  '',
+  false,
+  false,
+  '',
+  'b-1',
+  false,
+  true,
+  true,
+  null,
+])
+assert.ok(groupParse.includes('整段内容'))
+assert.equal((groupParse.match(/2px solid var\(--litkb-accent\)/g) || []).length >= 2, true)
+
 const blockChainReqs = []
 globalThis.__i = 0
 globalThis.__s = [

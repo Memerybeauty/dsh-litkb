@@ -903,7 +903,6 @@
       const [active, setActive] = useState('')
       const [showHeaders, setShowHeaders] = useState(false)
       const [byPara, setByPara] = useState(true)
-      const [activeGroup, setActiveGroup] = useState([])
       const [showPage, setShowPage] = useState(!flat)
       const [selHint, setSelHint] = useState(null)
 
@@ -998,7 +997,6 @@
 
       const focus = (block, from) => {
         setActive(block.id)
-        setActiveGroup(Array.isArray(block.blockIds) ? block.blockIds : [])
         const targetId = from === 'parse' ? 'pg-' + block.page : 'blk-' + block.id
         const target = document.getElementById(targetId)
         if (target && typeof target.scrollIntoView === 'function') {
@@ -1039,7 +1037,8 @@
       const isPageNumber = (block) => block.role === 'paragraph' && /^\d{1,4}$/.test(String(block.text || '').trim())
       const visible = (block) => (showHeaders || (block.role !== 'header' && block.role !== 'footer')) && !isPageNumber(block)
       const pages = doc?.pages || []
-      const focusGroup = Array.isArray(activeGroup) ? activeGroup : []
+      const activeParagraph = (doc?.paragraphs || []).find((item) => (item.blockIds || []).includes(active))
+      const focusGroup = activeParagraph?.blockIds || (active ? [active] : [])
       const paragraphMode = byPara && !showHeaders && mode === 'source'
         && Array.isArray(doc?.paragraphs) && doc.paragraphs.length > 0
       const paragraphPages = []
