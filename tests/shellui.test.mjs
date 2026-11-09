@@ -234,7 +234,7 @@ const groupDoc = {
     },
   ],
 }
-const groupParse = render('ParsePanel', { paper: { id: 'p-1' }, flat: true, onOpenPdf() {} }, [
+const groupStates = [
   groupDoc,
   null,
   { paddle: { configured: true, model: 'PaddleOCR-VL-1.6' } },
@@ -251,9 +251,59 @@ const groupParse = render('ParsePanel', { paper: { id: 'p-1' }, flat: true, onOp
   true,
   true,
   null,
-])
+]
+const groupParse = render('ParsePanel', { paper: { id: 'p-1' }, flat: true, onOpenPdf() {} }, groupStates)
 assert.ok(groupParse.includes('整段内容'))
 assert.equal((groupParse.match(/2px solid var\(--litkb-accent\)/g) || []).length >= 2, true)
+
+function findBy(node, predicate) {
+  if (!node || typeof node !== 'object') return null
+  if (predicate(node)) return node
+  for (const child of node.children || []) {
+    const hit = findBy(child, predicate)
+    if (hit) return hit
+  }
+  return null
+}
+const located = []
+globalThis.__i = 0
+globalThis.__s = groupStates
+const parseTree = mod.__test.ParsePanel({
+  paper: { id: 'p-1' },
+  flat: true,
+  onLocate: (page, blockId, blockIds) => located.push({ page, blockId, blockIds }),
+})
+findBy(parseTree, (node) => node.props?.id === 'blk-b-1').props.onClick()
+assert.equal(located.length, 1)
+assert.equal(located[0].page, 1)
+assert.equal(located[0].blockId, 'b-1')
+assert.deepEqual(located[0].blockIds, ['b-1', 'b-2'])
+
+const railDoc = {
+  pages: [
+    {
+      page: 1,
+      width: 1000,
+      height: 1000,
+      blocks: [
+        { id: 'b-1', role: 'paragraph', text: '整段开始', bbox: [0, 0, 1, 0.2] },
+        { id: 'b-2', role: 'paragraph', text: '整段结束', bbox: [0, 0.2, 1, 0.4] },
+      ],
+    },
+  ],
+}
+const railStates = [railDoc, null, 'pdf', 1, 'b-1', null, '', '', 1.35, 'evidence', []]
+const groupRail = render(
+  'PdfRail',
+  {
+    paper: { id: 'p-1' },
+    page: 1,
+    blockId: 'b-1',
+    blockIds: ['b-1', 'b-2'],
+  },
+  railStates,
+)
+assert.equal((groupRail.match(/2px solid var\(--litkb-accent\)/g) || []).length >= 2, true)
 
 const blockChainReqs = []
 globalThis.__i = 0

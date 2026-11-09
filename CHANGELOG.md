@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.4.3 — 解析稿点击联动右侧 PDF 高亮（2026-11-09）
+
+- 定位到根因：解析视图与右侧 PDF 是两个组件，点击解析稿只改了左侧 `active`，从未通知 `PdfRail`；
+- `ParsePanel` 新增 `onLocate`，点击时把 `page + blockId + 整段 blockIds` 传给 `Detail → PdfRail`；
+- `PdfRail` 接收 `blockIds`，整段所有版面块一起高亮（背景/边框/阴影/可点击区域）；
+- 补测试：点击解析段落必须带上整段 blockIds；PdfRail 用 blockIds 必须出现 2 个高亮框。
+
 ## v0.4.2 — 段落整段高亮修复（2026-11-09）
 
 - 高亮改为从当前激活块反推所在段落，不再依赖单独的组状态（原状态在点击后被重置，导致只亮第一块）；

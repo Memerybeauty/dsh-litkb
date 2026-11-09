@@ -504,7 +504,7 @@
     }
 
     /* ---------------- 右栏原文（P4.2） ---------------- */
-    function PdfRail({ paper, page = 1, blockId, nonce, askSelection, onClearAsk, cardRevision = 0, chainRevision = 0, onChanged, onBuildChain, onOpenChain }) {
+    function PdfRail({ paper, page = 1, blockId, blockIds = [], nonce, askSelection, onClearAsk, cardRevision = 0, chainRevision = 0, onChanged, onBuildChain, onOpenChain }) {
       const [doc, setDoc] = useState(null)
       const [card, setCard] = useState(null)
       const [tab, setTab] = useState('pdf')
@@ -657,16 +657,18 @@
             }),
             (pageDoc.blocks || []).map((block) => h('div', {
               key: block.id,
-              className: 'litkb-box' + (block.id === focusBlock ? ' litkb-focus' : ''),
+              className: 'litkb-box' + (block.id === focusBlock || blockIds.includes(block.id) ? ' litkb-focus' : ''),
               style: {
                 left: `${block.bbox[0] * 100}%`,
                 top: `${block.bbox[1] * 100}%`,
                 width: `${(block.bbox[2] - block.bbox[0]) * 100}%`,
                 height: `${(block.bbox[3] - block.bbox[1]) * 100}%`,
-                background: block.id === focusBlock ? 'rgba(79,142,247,.16)' : 'transparent',
-                border: block.id === focusBlock ? '2px solid var(--litkb-accent)' : '1px solid transparent',
-                boxShadow: block.id === focusBlock ? '0 0 0 2px rgba(79,142,247,.2)' : 'none',
-                pointerEvents: block.id === focusBlock ? 'auto' : 'none',
+                background: block.id === focusBlock || blockIds.includes(block.id) ? 'rgba(79,142,247,.16)' : 'transparent',
+                border: block.id === focusBlock || blockIds.includes(block.id)
+                  ? '2px solid var(--litkb-accent)' : '1px solid transparent',
+                boxShadow: block.id === focusBlock || blockIds.includes(block.id)
+                  ? '0 0 0 2px rgba(79,142,247,.2)' : 'none',
+                pointerEvents: block.id === focusBlock || blockIds.includes(block.id) ? 'auto' : 'none',
               },
               title: String(block.text || '').slice(0, 90),
             })))
@@ -888,7 +890,7 @@
             saving ? '保存中…' : '保存术语表')))
     }
 
-    function ParsePanel({ paper, onOpenPdf, onAsk, onDeep, onBuildChain, flat = false }) {
+    function ParsePanel({ paper, onOpenPdf, onLocate, onAsk, onDeep, onBuildChain, flat = false }) {
       const [doc, setDoc] = useState(null)
       const [job, setJob] = useState(null)
       const [settings, setSettings] = useState(null)
@@ -997,6 +999,7 @@
 
       const focus = (block, from) => {
         setActive(block.id)
+        if (onLocate) onLocate(block.page, block.id, block.blockIds || [block.id])
         const targetId = from === 'parse' ? 'pg-' + block.page : 'blk-' + block.id
         const target = document.getElementById(targetId)
         if (target && typeof target.scrollIntoView === 'function') {

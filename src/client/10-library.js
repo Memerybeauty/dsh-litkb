@@ -420,8 +420,8 @@
         toolbar: true,
         selectedId: reader?.id,
       })
-      const openPdf = (paper, page, blockId) => {
-        setPdfView({ paper, page, blockId, nonce: Date.now() })
+      const openPdf = (paper, page, blockId, blockIds = []) => {
+        setPdfView({ paper, page, blockId, blockIds, nonce: Date.now() })
         if (narrow) setRailDrawer(true)
       }
       const goLibrary = () => { setTab('论文库'); setLibraryView('论文') }
@@ -447,6 +447,7 @@
       }
       const railPage = pdfView && pdfView.paper?.id === reader?.id ? pdfView.page : 1
       const railBlock = pdfView && pdfView.paper?.id === reader?.id ? pdfView.blockId : null
+      const railBlockIds = pdfView && pdfView.paper?.id === reader?.id ? (pdfView.blockIds || []) : []
       const pdfWidth = showList
         ? rightWidth
         : Math.max(320, Math.min(rightWidth, (panelWidth || 1200) - 432))
@@ -457,7 +458,7 @@
       }
       const railNode = showRail
         ? h(PdfRail, {
-            paper: reader, page: railPage, blockId: railBlock, nonce: pdfView?.nonce,
+            paper: reader, page: railPage, blockId: railBlock, blockIds: railBlockIds, nonce: pdfView?.nonce,
             askSelection, onClearAsk: () => setAskSelection(null), cardRevision,
             chainRevision,
             onChanged: refreshCard,
@@ -1072,7 +1073,7 @@
           ? h('div', { className: 'litkb-drawerBody' }, h(CardPanel, { key: paper.id, paper, onChanged: onRefresh, onOpenPdf, onAsk, onCite, cardRevision }))
           : view === 'deep'
             ? h('div', { className: 'litkb-drawerBody' }, h(DeepReadPanel, { key: paper.id, paper, onOpenPdf, onBuildChain }))
-            : h('div', { className: 'litkb-drawerBody is-flush' }, h(ParsePanel, { key: paper.id, paper, onOpenPdf, onAsk, onBuildChain, onDeep: () => setView('deep'), flat: inline }))
+            : h('div', { className: 'litkb-drawerBody is-flush' }, h(ParsePanel, { key: paper.id, paper, onOpenPdf, onLocate: (page, blockId, blockIds) => openPdf(paper, page, blockId, blockIds), onAsk, onBuildChain, onDeep: () => setView('deep'), flat: inline }))
       const foot = view === 'info'
         ? h('div', { className: 'litkb-drawerFoot' },
             h('button', { type: 'button', className: 'litkb-btn', disabled: saving, onClick: () => save() },
