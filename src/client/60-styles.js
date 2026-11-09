@@ -1135,5 +1135,8 @@
       '.litkb-viewLabel{font-size:12.5px;font-weight:600;color:var(--litkb-text-2)}',
       '.litkb-viewHint{margin-left:auto;font-size:11px;color:var(--litkb-text-3);white-space:nowrap}',
       '@media (max-width:900px){.litkb-statRow,.litkb-viewCards{grid-template-columns:1fr}.litkb-wbPage,.litkb-wbPage.is-detail{padding:18px 18px 24px}}',
+      '.litkb-btn,.litkb-btnGhost,.litkb-miniBtn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;padding:0 12px;font-size:12px;line-height:1;border-radius:999px;white-space:nowrap}',
+      '.litkb-btn svg,.litkb-miniBtn svg{width:14px;height:14px}',
+      '.litkb-deepHead .litkb-btn,.litkb-deepHead .litkb-miniBtn,.litkb-headTop .litkb-btn,.litkb-headTop .litkb-miniBtn,.litkb-wbDetailHead .litkb-btn,.litkb-wbDetailHead .litkb-miniBtn{height:32px;padding:0 14px;font-size:12.5px}',
     ].join('\n')
 

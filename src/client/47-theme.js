@@ -396,7 +396,7 @@
               h('span', { className: 'litkb-statMain' },
                 h('span', { className: 'litkb-statValue' }, String(paperCount)),
                 h('span', { className: 'litkb-statLabel' }, '论文库')),
-              h('span', { className: 'litkb-statHint' }, '全库论文')),
+              h('span', { className: 'litkb-statHint' }, '全库论文 →')),
             h('button', {
               type: 'button', className: 'litkb-statCard is-blue',
               onClick: () => onOpenWriting && onOpenWriting(),
@@ -405,7 +405,7 @@
               h('span', { className: 'litkb-statMain' },
                 h('span', { className: 'litkb-statValue' }, String(themes.filter((item) => item.draftId).length)),
                 h('span', { className: 'litkb-statLabel' }, '写作')),
-              h('span', { className: 'litkb-statHint' }, '已绑定文稿'))),
+              h('span', { className: 'litkb-statHint' }, '已绑定文稿 →'))),
           themes.length
             ? h('div', { className: 'litkb-themeCards' }, themes.map((item) => {
                 const total = item.stats.facets || 0

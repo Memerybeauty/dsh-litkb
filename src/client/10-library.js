@@ -682,6 +682,9 @@
             },
             onOpenChain: (id) => setChainDialog({ chainId: id, paperId: '', nonce: Date.now() }),
             onOpenDraft: (payload) => openWriting(payload),
+            onOpenLibrary: () => goLibrary(),
+            onOpenWriting: () => openWriting(null),
+            paperCount: papers.length,
           })),
         h('div', { className: 'litkb-module' + (tab === '论文库' ? '' : ' is-hidden') },
           libraryView === '横向精读'
