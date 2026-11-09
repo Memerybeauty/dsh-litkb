@@ -575,32 +575,17 @@
         onDragLeave: (e) => { if (e.target === e.currentTarget) setDragging(false) },
         onDrop,
       },
-      h('div', { className: 'litkb-shell' },
-        h('aside', { className: 'litkb-nav' },
-          h('div', { className: 'litkb-brand' },
-            h('span', { className: 'litkb-brandMark', 'aria-hidden': 'true' }, '文'),
-            h('span', { className: 'litkb-brandText' },
-              h('span', { className: 'litkb-brandName' }, '文献工作台'),
-              h('span', { className: 'litkb-brandSub' }, 'Literature Workbench'))),
-          h('nav', { className: 'litkb-navList', role: 'navigation', 'aria-label': '主导航' },
-            TABS.map((label) => h('button', {
-              key: label, type: 'button',
-              className: 'litkb-navItem' + (tab === label ? ' is-on' : ''),
-              onClick: () => {
-                setTab(label); setManaging(false); setWritingFocus(null)
-                if (label === '论文库') setLibraryView('论文')
-              },
-            },
-              h('span', { className: 'litkb-navIcon' }, navIcon(label === '个人工作台' ? 'home' : (label === '论文库' ? 'library' : 'write'))),
-              h('span', { className: 'litkb-navLabel' }, label)))),
-          h('div', { className: 'litkb-navFoot' },
-            h('span', { className: 'litkb-navStat' }, `${papers.length} 篇论文`),
-            h('span', { className: 'litkb-navStat' }, `${tags.length} 个标签`))),
-        h('div', { className: 'litkb-shellMain' },
       h('header', { className: 'litkb-head' },
         h('div', { className: 'litkb-headTop' },
           h('div', { className: 'litkb-pageTitle' },
-            h('span', { className: 'litkb-title' }, tab)),
+            h('span', { className: 'litkb-brandMark', 'aria-hidden': 'true' }, '文'),
+            h('span', { className: 'litkb-title' }, tab === '个人工作台' ? '文献工作台' : tab),
+            tab !== '个人工作台'
+              ? h('button', {
+                  type: 'button', className: 'litkb-miniBtn',
+                  onClick: () => { setTab('个人工作台'); setWritingFocus(null) },
+                }, '← 工作台')
+              : null),
           splitTab
             ? h('div', { className: 'litkb-headSearch' },
                 h('input', {
@@ -778,7 +763,6 @@
         h('span', { className: 'litkb-health' },
           error ? `出错：${error}` : `库 ${library || '未初始化'} · ${stats.total ?? 0} 篇 · 未归类 ${stats.untagged ?? 0}`),
         h('button', { type: 'button', className: 'litkb-link', onClick: load }, '刷新')),
-      )),
       h('input', {
         ref: fileRef, type: 'file', accept: 'application/pdf,.pdf', multiple: true,
         style: { display: 'none' },

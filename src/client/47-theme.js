@@ -1,7 +1,7 @@
     /* ---------------- 个人工作台（v0.2.5：总览 + 三视图） ---------------- */
     function spacer() { return h('span', { className: 'litkb-spacer' }) }
 
-    function ThemePage({ papers = [], tags = [], paperActions = {}, onOpenPaper, onOpenChain, onOpenDraft }) {
+    function ThemePage({ papers = [], tags = [], paperActions = {}, paperCount = 0, onOpenPaper, onOpenChain, onOpenDraft, onOpenLibrary, onOpenWriting }) {
       const [themes, setThemes] = useState([])
       const [selectedId, setSelectedId] = useState('')
       const [detail, setDetail] = useState(null)
@@ -311,7 +311,6 @@
         return { label: '! 缺口', tone: 'is-danger' }
       }
       const confirmedChains = chains.filter((chain) => chain.status === 'confirmed')
-      const progress = facets.length ? Math.round(((stats.confirmed || 0) / facets.length) * 100) : 0
       const needle = paperQuery.trim().toLowerCase()
       const activeChain = chainById.get(selectedChain) || confirmedChains[0] || chains[0] || null
       const recordOf = (pid) => papers.find((paper) => paper.id === pid) || { id: pid, title: pid, authors: '', year: '' }
@@ -382,6 +381,31 @@
             h('button', { type: 'button', className: 'litkb-btn', onClick: startNew }, '＋ 新建研究')),
           err ? h('div', { className: 'litkb-error' }, err) : null,
           notice ? h('div', { className: 'litkb-themeNotice' }, notice) : null,
+          h('div', { className: 'litkb-statRow' },
+            h('div', { className: 'litkb-statCard is-violet' },
+              h('span', { className: 'litkb-statIcon', 'aria-hidden': 'true' }, '◧'),
+              h('span', { className: 'litkb-statMain' },
+                h('span', { className: 'litkb-statValue' }, String(themes.length)),
+                h('span', { className: 'litkb-statLabel' }, '研究主题')),
+              h('span', { className: 'litkb-statHint' }, '在研')),
+            h('button', {
+              type: 'button', className: 'litkb-statCard is-green',
+              onClick: () => onOpenLibrary && onOpenLibrary(),
+            },
+              h('span', { className: 'litkb-statIcon', 'aria-hidden': 'true' }, '▤'),
+              h('span', { className: 'litkb-statMain' },
+                h('span', { className: 'litkb-statValue' }, String(paperCount)),
+                h('span', { className: 'litkb-statLabel' }, '论文库')),
+              h('span', { className: 'litkb-statHint' }, '全库论文')),
+            h('button', {
+              type: 'button', className: 'litkb-statCard is-blue',
+              onClick: () => onOpenWriting && onOpenWriting(),
+            },
+              h('span', { className: 'litkb-statIcon', 'aria-hidden': 'true' }, '✎'),
+              h('span', { className: 'litkb-statMain' },
+                h('span', { className: 'litkb-statValue' }, String(themes.filter((item) => item.draftId).length)),
+                h('span', { className: 'litkb-statLabel' }, '写作')),
+              h('span', { className: 'litkb-statHint' }, '已绑定文稿'))),
           themes.length
             ? h('div', { className: 'litkb-themeCards' }, themes.map((item) => {
                 const total = item.stats.facets || 0
@@ -415,47 +439,21 @@
           modal)
       }
 
-      const overview = h('div', { className: 'litkb-wbOverview' },
-        h('div', { className: 'litkb-wbOverviewHead' },
-          h('span', { className: 'litkb-wbOverviewTitle' }, '研究总览'),
-          h('span', { className: 'litkb-wbOverviewStats' },
-            `论文 ${stats.papers || 0} · 已确认 ${stats.confirmed || 0}/${stats.facets || 0} · 草稿 ${stats.drafts || 0} · 缺口 ${stats.gaps || 0}`),
-          spacer(),
-          h('button', { type: 'button', className: 'litkb-miniBtn', onClick: startEdit }, '编辑'),
-          h('button', { type: 'button', className: 'litkb-miniBtn', onClick: () => setConfirmDelete(true) }, '删除')),
-        theme.description ? h('div', { className: 'litkb-wbDesc' }, theme.description) : null,
-        h('div', { className: 'litkb-wbOverviewFacets' },
-          facets.map((facet) => {
-            const state = statusOfFacet(facet.key)
-            return h('button', {
-              key: facet.key, type: 'button',
-              className: 'litkb-chip ' + state.tone + (facet.enabled ? '' : ' is-off'),
-              title: facet.description || facet.title,
-              onClick: () => {
-                setSection('chains')
-                const first = facetChainsAll(facet.key)[0]
-                if (first) setSelectedChain(first.id)
-              },
-            }, facet.title)
-          })),
-        h('div', { className: 'litkb-wbDonut', title: `完成度 ${progress}%` },
-          h('svg', { width: 66, height: 66, viewBox: '0 0 66 66', 'aria-hidden': 'true' },
-            h('circle', { cx: 33, cy: 33, r: 27, fill: 'none', stroke: 'var(--litkb-fill-2)', strokeWidth: 7 }),
-            h('circle', {
-              cx: 33, cy: 33, r: 27, fill: 'none', stroke: 'var(--litkb-accent)', strokeWidth: 7,
-              strokeLinecap: 'round', transform: 'rotate(-90 33 33)',
-              strokeDasharray: `${Math.round((progress / 100) * 169.6 * 10) / 10} 169.6`,
-            })),
-          h('span', { className: 'litkb-wbDonutText' }, `${progress}%`),
-          h('span', { className: 'litkb-wbDonutLabel' }, '完成度')))
-
-      const seg = h('div', { className: 'litkb-wbSeg', role: 'tablist' },
-        [['papers', `▤ 参考论文 ${papersInTheme.length}`], ['chains', `☷ 证据链 ${chains.length}`], ['summary', '✎ 研究结论']]
-          .map(([key, label]) => h('button', {
-            key, type: 'button', role: 'tab', 'aria-selected': section === key,
-            className: 'litkb-wbSegBtn' + (section === key ? ' is-on' : ''),
-            onClick: () => setSection(key),
-          }, label)))
+      const views = h('div', { className: 'litkb-viewCards' },
+        [
+          ['papers', '▤', '参考论文', papersInTheme.length, '匹配论文'],
+          ['chains', '☷', '证据链', chains.length, `${stats.confirmed || 0} 条已确认`],
+          ['summary', '✎', '研究结论', confirmedChains.length, '条支撑链'],
+        ].map(([key, icon, label, value, hint]) => h('button', {
+          key, type: 'button',
+          className: 'litkb-viewCard' + (section === key ? ' is-on' : ''),
+          onClick: () => setSection(key),
+        },
+          h('span', { className: 'litkb-viewIcon', 'aria-hidden': 'true' }, icon),
+          h('span', { className: 'litkb-viewMain' },
+            h('span', { className: 'litkb-viewValue' }, String(value)),
+            h('span', { className: 'litkb-viewLabel' }, label)),
+          h('span', { className: 'litkb-viewHint' }, hint))))
 
       const filteredPapers = papersInTheme
         .map((row) => ({ row, paper: papers.find((paper) => paper.id === row.paperId) }))
@@ -680,8 +678,7 @@
         running
           ? h('div', { className: 'litkb-exProgress' }, `探索中 · 已生成 ${job.created || 0} 条 · ${job.step || ''}`)
           : null,
-        overview,
-        seg,
+        views,
         h('div', { className: 'litkb-wbBody' }, body),
         deepreadDrawer,
         confirmDelete
