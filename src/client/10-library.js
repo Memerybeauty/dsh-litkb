@@ -931,10 +931,6 @@
           h('span', { className: 'litkb-muted' },
             `${papers.length} 篇 · ${papers.filter((p) => p.card).length} 张七段卡`),
           h('span', { className: 'litkb-spacer' }),
-          h('a', {
-            className: 'litkb-btn litkb-btnGhost',
-            href: '/api/litkb/export?format=bibtex', download: 'litkb.bib',
-          }, 'BibTeX'),
           h('button', { type: 'button', className: 'litkb-btn litkb-btnGhost', onClick: onManage }, '标签与术语')) : null,
         loading && !papers.length
           ? h(SkeletonRows, { rows: 5 })
