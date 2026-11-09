@@ -302,6 +302,22 @@
         }
       }
 
+      const dedupeChains = async () => {
+        if (!selectedId || busy) return
+        setBusy('dedupe')
+        setErr('')
+        try {
+          const data = await post('/api/litkb/chains/dedupe', { themeId: selectedId })
+          await openTheme(selectedId)
+          await refreshList()
+          setNotice(`已合并 ${data.groups} 组重复链，移除 ${data.removed} 条`)
+        } catch (e) {
+          setErr(String(e.message || e))
+        } finally {
+          setBusy('')
+        }
+      }
+
       const confirmMerge = async () => {
         if (!mergeOpen?.sourceId || !mergeOpen?.targetId) return
         try {
@@ -395,6 +411,13 @@
       }
       const confirmedChains = chains.filter((chain) => chain.status === 'confirmed')
       const summaryInfo = detail?.summaryState || null
+      const confirmedGroups = new Map()
+      for (const chain of chains) {
+        if (chain.status !== 'confirmed') continue
+        const key = chain.provenance?.facetKey || `__${chain.id}`
+        confirmedGroups.set(key, (confirmedGroups.get(key) || 0) + 1)
+      }
+      const duplicateGroups = [...confirmedGroups.values()].filter((count) => count > 1).length
       const needle = paperQuery.trim().toLowerCase()
       const activeChain = chainById.get(selectedChain) || confirmedChains[0] || chains[0] || null
       const recordOf = (pid) => papers.find((paper) => paper.id === pid) || { id: pid, title: pid, authors: '', year: '' }
@@ -781,6 +804,12 @@
               className: 'litkb-miniBtn' + (chainFilter === key ? ' is-on' : ''),
               onClick: () => setChainFilter(key),
             }, label))),
+          duplicateGroups
+            ? h('div', { className: 'litkb-stale' },
+                h('span', null, `有 ${duplicateGroups} 组细分存在多条已确认链`),
+                h('button', { type: 'button', className: 'litkb-miniBtn', disabled: busy === 'dedupe', onClick: dedupeChains },
+                  busy === 'dedupe' ? '合并中…' : '合并重复'))
+            : null,
           h('div', { className: 'litkb-batchBar' },
             h('span', { className: 'litkb-batchCount' }, `已选 ${picked.length}`),
             h('button', {

@@ -1,6 +1,6 @@
 # API 参考（v0.2.0）
 
-所有接口前缀：`/api/litkb`；v0.3.0 共注册 **76** 条。请求/响应均为 JSON；PDF 上传为原始 body + `x-filename`；错误统一为：
+所有接口前缀：`/api/litkb`；v0.6.0 共注册 **77** 条。请求/响应均为 JSON；PDF 上传为原始 body + `x-filename`；错误统一为：
 
 ```json
 { "ok": false, "code": "error_code", "error": "人类可读信息" }
@@ -80,6 +80,7 @@
 | GET | `/chains/auto/jobs?id=` | 任务进度 |
 | GET | `/chains/review` | 待审核 draft 链（`?origin=topic` 只看主题链） |
 | POST | `/chains/review/batch` | `{ids,action:'accept'|'reject'}`，逐条结果 |
+| POST | `/chains/dedupe` | `{themeId}`，按 facet 合并重复 confirmed |
 | POST | `/chains/review` | `{id,action:'accept'|'reject'|'merge',targetId?}` |
 | GET | `/chains/graph` | 证据链知识库图 |
 | POST | `/chains/layout` | 保存图坐标 |

@@ -284,6 +284,52 @@ assert.equal(rejectBatch.data.failed, 0)
 const emptyBatch = await call('/api/litkb/chains/review/batch', { method: 'POST', body: { ids: [], action: 'accept' } })
 assert.equal(emptyBatch.code, 400)
 
+const confirmedBase = (
+  await call('/api/litkb/themes/read', { url: `/api/litkb/themes/read?id=${themeId}` })
+).data.chains.find((chain) => chain.status === 'confirmed')
+const duplicated = await call('/api/litkb/chains/save', {
+  method: 'POST',
+  body: {
+    ...confirmedBase,
+    id: undefined,
+    title: '重复链',
+    createdAt: undefined,
+    updatedAt: undefined,
+    review: undefined,
+  },
+})
+assert.equal(duplicated.code, 200)
+const dedupe = await call('/api/litkb/chains/dedupe', { method: 'POST', body: { themeId } })
+assert.equal(dedupe.code, 200)
+assert.ok(dedupe.data.groups >= 1)
+assert.ok(dedupe.data.removed >= 1)
+
+const primary = (
+  await call('/api/litkb/themes/read', { url: `/api/litkb/themes/read?id=${themeId}` })
+).data.chains.find((chain) => chain.status === 'confirmed')
+const supplement = await call('/api/litkb/chains/save', {
+  method: 'POST',
+  body: {
+    ...primary,
+    id: undefined,
+    status: 'draft',
+    title: '补充草稿',
+    provenance: { ...primary.provenance, previousChainId: primary.id },
+    createdAt: undefined,
+    updatedAt: undefined,
+    review: undefined,
+  },
+})
+assert.equal(supplement.code, 200)
+const mergedAccept = await call('/api/litkb/chains/review', {
+  method: 'POST',
+  body: { id: supplement.data.chain.id, action: 'accept' },
+})
+assert.equal(mergedAccept.code, 200)
+assert.equal(mergedAccept.data.merged, true)
+const afterMerge = await call('/api/litkb/themes/read', { url: `/api/litkb/themes/read?id=${themeId}` })
+assert.ok(!afterMerge.data.chains.some((chain) => chain.id === supplement.data.chain.id))
+
 const deleted = await call('/api/litkb/themes/delete', { method: 'POST', body: { id: themeId } })
 assert.equal(deleted.code, 200)
 assert.ok(deleted.data.chainsKept >= 1)

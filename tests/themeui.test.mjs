@@ -230,6 +230,39 @@ assert.ok(chainsTab.includes('极坐标变换改善边界'))
 assert.ok(chainsTab.includes('Polar transform improves Dice'))
 
 const confirmedDetail = { ...detail, chains: [{ ...chain, status: 'confirmed' }] }
+const dupDetail = {
+  ...detail,
+  chains: [
+    ...confirmedDetail.chains,
+    {
+      ...confirmedDetail.chains[0],
+      id: 'c-dup',
+      title: '重复链',
+      claim: { text: '重复论点' },
+    },
+  ],
+}
+const dupTab = render([
+  [listTheme],
+  't-1',
+  dupDetail,
+  '',
+  '',
+  '',
+  null,
+  null,
+  '',
+  false,
+  'c-1',
+  false,
+  null,
+  'chains',
+  'p-1',
+  '',
+  'all',
+])
+assert.ok(dupTab.includes('合并重复'))
+
 const summaryTab = render([
   [listTheme],
   't-1',
