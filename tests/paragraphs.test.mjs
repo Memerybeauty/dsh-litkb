@@ -48,7 +48,9 @@ assert.equal(paragraphForQuote(doc, '在下一页继续并结束', 2).firstBlock
 
 const md = renderParsedMarkdown(doc, { id: 'p-1', title: '测试' })
 assert.ok(md.includes('这是第一段被拆成两块的正文。'))
-assert.equal((md.match(/<!-- b:b-3 /g) || []).length, 0)
+assert.equal((md.match(/<!-- b:b-3 /g) || []).length, 1)
 assert.equal((md.match(/<!-- b:b-2 /g) || []).length, 1)
+assert.equal((md.match(/这是第一段被拆成两块的正文。/g) || []).length, 1)
+assert.ok(!md.includes('<!-- b:b-10 '))
 
 console.log('\n4 passed')

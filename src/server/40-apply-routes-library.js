@@ -321,6 +321,7 @@ export function apply(ctx) {
           return
         }
         const doc = readBlocks(id)
+        if (doc) doc.paragraphs = documentParagraphs(doc)
         json(res, 200, {
           ok: true,
           doc,

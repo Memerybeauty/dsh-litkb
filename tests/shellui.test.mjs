@@ -204,7 +204,8 @@ const parse = render('ParsePanel', { paper: { id: 'p-1' }, flat: true, onOpenPdf
   '',
   false,
   false,
-  null,
+  [],
+  false,
   null,
 ])
 assert.ok(parse.includes('正文内容'))
