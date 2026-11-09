@@ -1,0 +1,9 @@
+node_modules
+coverage
+lib
+src/client
+src/server
+docs
+*.md
+*.tgz
+package-lock.json

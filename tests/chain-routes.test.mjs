@@ -13,53 +13,160 @@ const { writeCard } = await import('../lib/cards.js')
 
 ensureLibrary()
 const record = {
-  id: 'p-r1', citekey: 'p-r1', title: '极坐标视盘分割', authors: 'Wu B.', year: 2024,
-  venue: 'Journal', doi: '', type: '学术期刊', topics: [], status: '精读',
-  file: 'p-r1.pdf', pages: 5, chars: 1000, quality: 0.9, added: new Date().toISOString(),
+  id: 'p-r1',
+  citekey: 'p-r1',
+  title: '极坐标视盘分割',
+  authors: 'Wu B.',
+  year: 2024,
+  venue: 'Journal',
+  doi: '',
+  type: '学术期刊',
+  topics: [],
+  status: '精读',
+  file: 'p-r1.pdf',
+  pages: 5,
+  chars: 1000,
+  quality: 0.9,
+  added: new Date().toISOString(),
 }
 upsert(record)
-writeCard({
-  paperId: record.id, status: 'ready', model: 'fake', generatedAt: new Date().toISOString(),
-  sections: [{ key: 'oneLine', title: '一句话', text: '提出极坐标方法。', evidence: [] }],
-  evidence: [
-    { id: 'q-e1e1e1e1', page: 5, block: 'b-1', quote: 'Polar transform improves the optic disc boundary dice.', kind: 'author_claim', before: '', after: '' },
-    { id: 'q-e2e2e2e2', page: 3, block: 'b-2', quote: 'The evaluation is limited to a single public dataset.', kind: 'author_claim', before: '', after: '' },
-  ],
-  annotations: [], warnings: [], statusHistory: [],
-}, record)
-writeFileSync(join(PATHS.blocks, 'p-r1.json'), JSON.stringify({
-  schema: 1, parser: 'fake', numPages: 5,
-  pages: [{ page: 4, width: 1000, height: 1000, blocks: [{ id: 'b-200', role: 'paragraph', section: 'results', bbox: [0, 0, 1, 1], text: 'Polar transform reduces the cup-to-disc ratio error on REFUGE.' }] }],
-}), 'utf8')
-writeFileSync(join(PATHS.deepread, 'p-r1.json'), JSON.stringify({
-  paperId: 'p-r1', markdown: '', numbers: [], evidence: [],
-  sections: [{
-    key: 'conclusion', title: '结论', index: 7,
-    markdown: '极坐标变换改善视盘边界 [[p-r1#^q-e1e1e1e1|p.5]]。只在单一数据集上验证 [[p-r1#^q-e2e2e2e2|p.3]]。',
-  }],
-}), 'utf8')
+writeCard(
+  {
+    paperId: record.id,
+    status: 'ready',
+    model: 'fake',
+    generatedAt: new Date().toISOString(),
+    sections: [{ key: 'oneLine', title: '一句话', text: '提出极坐标方法。', evidence: [] }],
+    evidence: [
+      {
+        id: 'q-e1e1e1e1',
+        page: 5,
+        block: 'b-1',
+        quote: 'Polar transform improves the optic disc boundary dice.',
+        kind: 'author_claim',
+        before: '',
+        after: '',
+      },
+      {
+        id: 'q-e2e2e2e2',
+        page: 3,
+        block: 'b-2',
+        quote: 'The evaluation is limited to a single public dataset.',
+        kind: 'author_claim',
+        before: '',
+        after: '',
+      },
+    ],
+    annotations: [],
+    warnings: [],
+    statusHistory: [],
+  },
+  record,
+)
+writeFileSync(
+  join(PATHS.blocks, 'p-r1.json'),
+  JSON.stringify({
+    schema: 1,
+    parser: 'fake',
+    numPages: 5,
+    pages: [
+      {
+        page: 4,
+        width: 1000,
+        height: 1000,
+        blocks: [
+          {
+            id: 'b-200',
+            role: 'paragraph',
+            section: 'results',
+            bbox: [0, 0, 1, 1],
+            text: 'Polar transform reduces the cup-to-disc ratio error on REFUGE.',
+          },
+        ],
+      },
+    ],
+  }),
+  'utf8',
+)
+writeFileSync(
+  join(PATHS.deepread, 'p-r1.json'),
+  JSON.stringify({
+    paperId: 'p-r1',
+    markdown: '',
+    numbers: [],
+    evidence: [],
+    sections: [
+      {
+        key: 'conclusion',
+        title: '结论',
+        index: 7,
+        markdown: '极坐标变换改善视盘边界 [[p-r1#^q-e1e1e1e1|p.5]]。只在单一数据集上验证 [[p-r1#^q-e2e2e2e2|p.3]]。',
+      },
+    ],
+  }),
+  'utf8',
+)
 
 const autoRecord = {
-  id: 'p-r2', citekey: 'p-r2', title: '自动建链测试论文', authors: 'Li C.', year: 2025,
-  venue: 'Journal', doi: '', type: '学术期刊', topics: ['分割'], status: '精读',
-  file: 'p-r2.pdf', pages: 4, chars: 900, quality: 0.9, added: new Date().toISOString(),
+  id: 'p-r2',
+  citekey: 'p-r2',
+  title: '自动建链测试论文',
+  authors: 'Li C.',
+  year: 2025,
+  venue: 'Journal',
+  doi: '',
+  type: '学术期刊',
+  topics: ['分割'],
+  status: '精读',
+  file: 'p-r2.pdf',
+  pages: 4,
+  chars: 900,
+  quality: 0.9,
+  added: new Date().toISOString(),
 }
 upsert(autoRecord)
-writeCard({
-  paperId: autoRecord.id, status: 'ready', model: 'fake', generatedAt: new Date().toISOString(),
-  sections: [{ key: 'oneLine', title: '一句话', text: '自动建链。', evidence: [] }],
-  evidence: [
-    { id: 'q-a1a1a1a1', page: 4, block: 'b-3', quote: 'The proposed polar method improves boundary Dice by 0.04.', kind: 'author_claim', before: '', after: '' },
-  ],
-  annotations: [], warnings: [], statusHistory: [],
-}, autoRecord)
-writeFileSync(join(PATHS.deepread, 'p-r2.json'), JSON.stringify({
-  paperId: 'p-r2', markdown: '', numbers: [], evidence: [],
-  sections: [{
-    key: 'conclusion', title: '结论', index: 7,
-    markdown: '极坐标方法把边界 Dice 提高了 0.04 [[p-r2#^q-a1a1a1a1|p.4]]。',
-  }],
-}), 'utf8')
+writeCard(
+  {
+    paperId: autoRecord.id,
+    status: 'ready',
+    model: 'fake',
+    generatedAt: new Date().toISOString(),
+    sections: [{ key: 'oneLine', title: '一句话', text: '自动建链。', evidence: [] }],
+    evidence: [
+      {
+        id: 'q-a1a1a1a1',
+        page: 4,
+        block: 'b-3',
+        quote: 'The proposed polar method improves boundary Dice by 0.04.',
+        kind: 'author_claim',
+        before: '',
+        after: '',
+      },
+    ],
+    annotations: [],
+    warnings: [],
+    statusHistory: [],
+  },
+  autoRecord,
+)
+writeFileSync(
+  join(PATHS.deepread, 'p-r2.json'),
+  JSON.stringify({
+    paperId: 'p-r2',
+    markdown: '',
+    numbers: [],
+    evidence: [],
+    sections: [
+      {
+        key: 'conclusion',
+        title: '结论',
+        index: 7,
+        markdown: '极坐标方法把边界 Dice 提高了 0.04 [[p-r2#^q-a1a1a1a1|p.4]]。',
+      },
+    ],
+  }),
+  'utf8',
+)
 
 const server = await import('../lib/index.js')
 const routes = []
@@ -91,8 +198,13 @@ function makeRes() {
     code: 0,
     headers: null,
     body: '',
-    writeHead(code, headers) { this.code = code; this.headers = headers },
-    end(body) { this.body = String(body || '') },
+    writeHead(code, headers) {
+      this.code = code
+      this.headers = headers
+    },
+    end(body) {
+      this.body = String(body || '')
+    },
   }
 }
 
@@ -106,14 +218,27 @@ async function call(path, { method = 'GET', body = null, url = null } = {}) {
 
 let passed = 0
 const pending = []
-function test(name, fn) { pending.push({ name, fn }) }
+function test(name, fn) {
+  pending.push({ name, fn })
+}
 
 test('路由已注册', () => {
-  for (const path of ['/api/litkb/chains', '/api/litkb/chains/read', '/api/litkb/chains/claims',
-    '/api/litkb/chains/propose', '/api/litkb/chains/save', '/api/litkb/chains/delete',
-    '/api/litkb/chains/insert', '/api/litkb/chains/auto/run', '/api/litkb/chains/auto/jobs',
-    '/api/litkb/chains/review']) {
-    assert.ok(routes.some((route) => route.path === path), path)
+  for (const path of [
+    '/api/litkb/chains',
+    '/api/litkb/chains/read',
+    '/api/litkb/chains/claims',
+    '/api/litkb/chains/propose',
+    '/api/litkb/chains/save',
+    '/api/litkb/chains/delete',
+    '/api/litkb/chains/insert',
+    '/api/litkb/chains/auto/run',
+    '/api/litkb/chains/auto/jobs',
+    '/api/litkb/chains/review',
+  ]) {
+    assert.ok(
+      routes.some((route) => route.path === path),
+      path,
+    )
   }
 })
 
@@ -124,7 +249,8 @@ test('论点候选 + 提议 + 保存 + 读取', async () => {
   const target = claims.data.claims.find((item) => item.text.includes('单一数据集')) || claims.data.claims[0]
 
   const proposal = await call('/api/litkb/chains/propose', {
-    method: 'POST', body: { mode: 'claim', paperId: 'p-r1', claim: target.text },
+    method: 'POST',
+    body: { mode: 'claim', paperId: 'p-r1', claim: target.text },
   })
   assert.equal(proposal.code, 200)
   assert.ok(proposal.data.nodes.length >= 1)
@@ -134,7 +260,9 @@ test('论点候选 + 提议 + 保存 + 读取', async () => {
     method: 'POST',
     body: {
       claim: { text: target.text, paperId: 'p-r1', sectionKey: 'conclusion', source: 'deepread' },
-      origin: 'claim', question: '极坐标是否改善边界？', nodes: proposal.data.nodes,
+      origin: 'claim',
+      question: '极坐标是否改善边界？',
+      nodes: proposal.data.nodes,
     },
   })
   assert.equal(saved.code, 200)
@@ -150,7 +278,8 @@ test('论点候选 + 提议 + 保存 + 读取', async () => {
 
 test('自动建链任务 + 审核通过/拒绝', async () => {
   const started = await call('/api/litkb/chains/auto/run', {
-    method: 'POST', body: { paperIds: ['p-r2'], scope: 'paper' },
+    method: 'POST',
+    body: { paperIds: ['p-r2'], scope: 'paper' },
   })
   assert.equal(started.code, 200)
   assert.ok(started.data.job.id)
@@ -171,7 +300,8 @@ test('自动建链任务 + 审核通过/拒绝', async () => {
   assert.equal(draft.confidence > 0, true)
 
   const accepted = await call('/api/litkb/chains/review', {
-    method: 'POST', body: { action: 'accept', id: draft.id },
+    method: 'POST',
+    body: { action: 'accept', id: draft.id },
   })
   assert.equal(accepted.code, 200)
   assert.equal(accepted.data.chain.status, 'confirmed')
@@ -179,7 +309,8 @@ test('自动建链任务 + 审核通过/拒绝', async () => {
   assert.ok(!afterAccept.data.chains.some((chain) => chain.id === draft.id))
 
   const second = await call('/api/litkb/chains/auto/run', {
-    method: 'POST', body: { paperIds: ['p-r2'], scope: 'paper' },
+    method: 'POST',
+    body: { paperIds: ['p-r2'], scope: 'paper' },
   })
   let job2 = second.data.job
   for (let i = 0; i < 100 && job2.status !== 'done'; i += 1) {
@@ -189,7 +320,8 @@ test('自动建链任务 + 审核通过/拒绝', async () => {
   }
   assert.equal(job2.created, 0, '重跑不覆盖/重复已确认链')
   const rejected = await call('/api/litkb/chains/review', {
-    method: 'POST', body: { action: 'reject', id: accepted.data.chain.id },
+    method: 'POST',
+    body: { action: 'reject', id: accepted.data.chain.id },
   })
   assert.equal(rejected.code, 200)
   const gone = await call('/api/litkb/chains/read', { url: '/api/litkb/chains/read?id=' + accepted.data.chain.id })
@@ -198,7 +330,8 @@ test('自动建链任务 + 审核通过/拒绝', async () => {
 
 test('跨论文自动链任务：mode=cross 可运行', async () => {
   const started = await call('/api/litkb/chains/auto/run', {
-    method: 'POST', body: { mode: 'cross', scope: 'library', paperIds: ['p-r1', 'p-r2'] },
+    method: 'POST',
+    body: { mode: 'cross', scope: 'library', paperIds: ['p-r1', 'p-r2'] },
   })
   assert.equal(started.code, 200)
   assert.equal(started.data.job.mode, 'cross')
@@ -220,7 +353,8 @@ test('证据链图 + 布局 + 图引擎静态文件', async () => {
   assert.ok(graph.data.graph.stats.chains >= 1)
 
   const layout = await call('/api/litkb/chains/layout', {
-    method: 'POST', body: { positions: { 'claim:test': { x: 10, y: 20 }, 'bad id!': { x: 1, y: 2 } } },
+    method: 'POST',
+    body: { positions: { 'claim:test': { x: 10, y: 20 }, 'bad id!': { x: 1, y: 2 } } },
   })
   assert.equal(layout.code, 200)
   assert.equal(layout.data.count, 1)
@@ -235,7 +369,8 @@ test('证据链图 + 布局 + 图引擎静态文件', async () => {
 
 test('原文段落建链：propose mode=block 自动补证据', async () => {
   const proposal = await call('/api/litkb/chains/propose', {
-    method: 'POST', body: { mode: 'block', paperId: 'p-r1', blockId: 'b-200' },
+    method: 'POST',
+    body: { mode: 'block', paperId: 'p-r1', blockId: 'b-200' },
   })
   assert.equal(proposal.code, 200)
   assert.equal(proposal.data.origin, 'block')
@@ -245,20 +380,28 @@ test('原文段落建链：propose mode=block 自动补证据', async () => {
   assert.ok(proposal.data.claim.includes('Polar transform'))
   const saved = await call('/api/litkb/chains/save', {
     method: 'POST',
-    body: { claim: { text: proposal.data.claim, paperId: 'p-r1', source: 'parse' }, origin: 'block', nodes: proposal.data.nodes },
+    body: {
+      claim: { text: proposal.data.claim, paperId: 'p-r1', source: 'parse' },
+      origin: 'block',
+      nodes: proposal.data.nodes,
+    },
   })
   assert.equal(saved.code, 200)
   const inserted = await call('/api/litkb/chains/insert', { method: 'POST', body: { id: saved.data.chain.id } })
   assert.equal(inserted.code, 200)
   assert.ok(inserted.data.text.includes('[[p-r1#^' + proposal.data.nodes[0].evidenceId))
 
-  const appended = await call('/api/litkb/chains/insert', { method: 'POST', body: { id: saved.data.chain.id, append: true } })
+  const appended = await call('/api/litkb/chains/insert', {
+    method: 'POST',
+    body: { id: saved.data.chain.id, append: true },
+  })
   assert.equal(appended.code, 200)
   assert.ok(appended.data.draft?.id, 'append=true 自动新建文稿')
   const draftRead = await call('/api/litkb/drafts/read', { url: '/api/litkb/drafts/read?id=' + appended.data.draft.id })
   assert.ok(draftRead.data.draft.body.includes('[[p-r1#^' + proposal.data.nodes[0].evidenceId))
   const appendedAgain = await call('/api/litkb/chains/insert', {
-    method: 'POST', body: { id: saved.data.chain.id, append: true, draftId: appended.data.draft.id },
+    method: 'POST',
+    body: { id: saved.data.chain.id, append: true, draftId: appended.data.draft.id },
   })
   assert.equal(appendedAgain.data.draft.id, appended.data.draft.id)
   await call('/api/litkb/chains/delete', { method: 'POST', body: { id: saved.data.chain.id } })

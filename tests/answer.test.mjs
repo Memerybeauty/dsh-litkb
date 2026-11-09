@@ -12,24 +12,60 @@ const { answerQuestion } = await import('../lib/answer.js')
 
 ensureLibrary()
 const record = {
-  id: 'p-a1', citekey: 'p-a1', title: '极坐标视盘分割', authors: 'Wu B.', year: 2024,
-  venue: 'Journal', doi: '', type: '学术期刊', topics: ['分割'], status: '精读',
-  file: 'p-a1.pdf', pages: 5, chars: 900, quality: 0.9, added: new Date().toISOString(),
+  id: 'p-a1',
+  citekey: 'p-a1',
+  title: '极坐标视盘分割',
+  authors: 'Wu B.',
+  year: 2024,
+  venue: 'Journal',
+  doi: '',
+  type: '学术期刊',
+  topics: ['分割'],
+  status: '精读',
+  file: 'p-a1.pdf',
+  pages: 5,
+  chars: 900,
+  quality: 0.9,
+  added: new Date().toISOString(),
 }
 upsert(record)
-writeCard({
-  paperId: record.id, status: 'ready', model: 'fake', generatedAt: new Date().toISOString(),
-  sections: [{ key: 'oneLine', title: '一句话', text: '方法。', evidence: [] }],
-  evidence: [
-    { id: 'q-abc12345', page: 5, block: 'b-1', quote: 'Polar transform improves the optic disc boundary Dice.', kind: 'author_claim' },
-  ],
-  annotations: [], warnings: [], statusHistory: [],
-}, record)
+writeCard(
+  {
+    paperId: record.id,
+    status: 'ready',
+    model: 'fake',
+    generatedAt: new Date().toISOString(),
+    sections: [{ key: 'oneLine', title: '一句话', text: '方法。', evidence: [] }],
+    evidence: [
+      {
+        id: 'q-abc12345',
+        page: 5,
+        block: 'b-1',
+        quote: 'Polar transform improves the optic disc boundary Dice.',
+        kind: 'author_claim',
+      },
+    ],
+    annotations: [],
+    warnings: [],
+    statusHistory: [],
+  },
+  record,
+)
 saveChain({
   title: '极坐标改善边界',
   claim: { text: '极坐标变换改善视盘边界。', paperId: record.id, source: 'manual' },
-  origin: 'claim', status: 'confirmed',
-  nodes: [{ paperId: record.id, evidenceId: 'q-abc12345', page: 5, block: 'b-1', quote: 'Polar transform improves the optic disc boundary Dice.', relation: 'supports' }],
+  origin: 'claim',
+  status: 'confirmed',
+  nodes: [
+    {
+      paperId: record.id,
+      evidenceId: 'q-abc12345',
+      page: 5,
+      block: 'b-1',
+      quote: 'Polar transform improves the optic disc boundary Dice.',
+      relation: 'supports',
+    },
+  ],
 })
 
 const answer = await answerQuestion({ ctx: null, question: '极坐标 视盘边界 效果' })

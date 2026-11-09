@@ -12,22 +12,43 @@ const { ensureLibrary, upsert } = await import('../lib/library.js')
 const { writeCard } = await import('../lib/cards.js')
 const { blocksPath, findBlockForQuote } = await import('../lib/blocks.js')
 const {
-  ANALYSIS_DIR, EDGES_PATH, conceptId, ensureConcept, findConcept, mergeConcepts,
-  normalizeTerm, readConcepts, readEdges, rebuildEdges, updateConcept, writeAnalysis, writeConcepts,
+  EDGES_PATH,
+  conceptId,
+  ensureConcept,
+  findConcept,
+  mergeConcepts,
+  normalizeTerm,
+  readConcepts,
+  readEdges,
+  rebuildEdges,
+  updateConcept,
+  writeAnalysis,
+  writeConcepts,
 } = await import('../lib/concepts.js')
-const {
-  buildAll, compareGroups, looksSimilar, normalizeExtraction, readGraph,
-} = await import('../lib/graph.js')
+const { buildAll, compareGroups, looksSimilar, normalizeExtraction, readGraph } = await import('../lib/graph.js')
 
 ensureLibrary()
 const record = {
-  id: 'p-aaaaaaaa', citekey: 'p-aaaaaaaa', title: 'CA-UNet on REFUGE', authors: '',
-  year: 2024, type: '学术期刊', topics: ['分割骨干'], status: '精读',
-  file: 'p-aaaaaaaa.pdf', pages: 6, chars: 2000, quality: 0.9, added: new Date().toISOString(),
+  id: 'p-aaaaaaaa',
+  citekey: 'p-aaaaaaaa',
+  title: 'CA-UNet on REFUGE',
+  authors: '',
+  year: 2024,
+  type: '学术期刊',
+  topics: ['分割骨干'],
+  status: '精读',
+  file: 'p-aaaaaaaa.pdf',
+  pages: 6,
+  chars: 2000,
+  quality: 0.9,
+  added: new Date().toISOString(),
 }
 upsert(record)
 const card = {
-  paperId: record.id, status: 'ready', model: 'fake', generatedAt: new Date().toISOString(),
+  paperId: record.id,
+  status: 'ready',
+  model: 'fake',
+  generatedAt: new Date().toISOString(),
   sections: [
     { key: 'oneLine', title: '一句话', text: '提出 CA-UNet。', evidence: ['q-11111111'] },
     { key: 'problem', title: '问题与动机', text: 'U-Net 边界差。', evidence: ['q-22222222'] },
@@ -42,18 +63,24 @@ const card = {
     { id: 'q-22222222', page: 2, quote: 'U-Net suffers from blurry boundaries.', block: 'b-2' },
     { id: 'q-33333333', page: 5, quote: 'On REFUGE, our method achieves OC Dice 0.8937.', block: 'b-3' },
   ],
-  annotations: [], warnings: [],
+  annotations: [],
+  warnings: [],
 }
 writeCard(card, record)
-writeFileSync(blocksPath(record.id), JSON.stringify({
-  pages: [{
-    page: 5,
-    blocks: [
-      { id: 'b-r', text: 'On REFUGE, our method achieves OC Dice 0.8937.' },
-      { id: 'b-table', text: '<table><tr><td>w/o SAAG</td><td>69.88</td><td>55.26</td></tr></table>' },
+writeFileSync(
+  blocksPath(record.id),
+  JSON.stringify({
+    pages: [
+      {
+        page: 5,
+        blocks: [
+          { id: 'b-r', text: 'On REFUGE, our method achieves OC Dice 0.8937.' },
+          { id: 'b-table', text: '<table><tr><td>w/o SAAG</td><td>69.88</td><td>55.26</td></tr></table>' },
+        ],
+      },
     ],
-  }],
-}))
+  }),
+)
 
 const extraction = {
   concepts: [
@@ -99,7 +126,9 @@ function fakeCtx(text) {
 
 let passed = 0
 const pending = []
-function test(name, fn) { pending.push({ name, fn }) }
+function test(name, fn) {
+  pending.push({ name, fn })
+}
 
 test('概念归一：大小写/连字符/别名同名，ID 稳定', () => {
   assert.equal(normalizeTerm('U-Net'), 'unet')
@@ -153,16 +182,31 @@ test('边校验：丢无证据/无目标/无数字，页码以证据为准', () 
 
 test('版面块回贴：HTML 表格与跨块前缀也能定位', () => {
   const doc = {
-    pages: [{
-      page: 59,
-      blocks: [
-        { id: 'b-table', text: '<table><tr><td>w/o SAAG</td><td>69.88</td><td>55.26</td><td>60.60</td><td>67.14</td></tr></table>' },
-        { id: 'b-long', text: 'SuperRev-Fusion achieves the best results on five metrics, including SF, AG and SCD.' },
-      ],
-    }],
+    pages: [
+      {
+        page: 59,
+        blocks: [
+          {
+            id: 'b-table',
+            text: '<table><tr><td>w/o SAAG</td><td>69.88</td><td>55.26</td><td>60.60</td><td>67.14</td></tr></table>',
+          },
+          {
+            id: 'b-long',
+            text: 'SuperRev-Fusion achieves the best results on five metrics, including SF, AG and SCD.',
+          },
+        ],
+      },
+    ],
   }
   assert.equal(findBlockForQuote(doc, 59, 'w/o SAAG 69.88 55.26 60.60 67.14').id, 'b-table')
-  assert.equal(findBlockForQuote(doc, 59, 'SuperRev-Fusion achieves the best results on five metrics, including SF,\none MRI-PET image pair').id, 'b-long')
+  assert.equal(
+    findBlockForQuote(
+      doc,
+      59,
+      'SuperRev-Fusion achieves the best results on five metrics, including SF,\none MRI-PET image pair',
+    ).id,
+    'b-long',
+  )
 })
 
 test('构建图谱：落盘、证据覆盖 100%、增量跳过', async () => {
@@ -192,11 +236,22 @@ test('待归一并列合并：边重指到目标概念并重建', () => {
   const unet = findConcept(store, 'method', 'U-Net')
   const pending = ensureConcept(store, { kind: 'method', name: 'UNet++ + CA', status: 'pending' })
   writeAnalysis('p-bbbbbbbb', {
-    paperId: 'p-bbbbbbbb', title: 'pending', year: 2025,
-    edges: [{
-      id: 'e-pending001', source: 'p-bbbbbbbb', target: pending.id, type: 'uses',
-      paper: 'p-bbbbbbbb', evidence: 'q-11111111', page: 1, quote: 'x', confidence: 0.7,
-    }],
+    paperId: 'p-bbbbbbbb',
+    title: 'pending',
+    year: 2025,
+    edges: [
+      {
+        id: 'e-pending001',
+        source: 'p-bbbbbbbb',
+        target: pending.id,
+        type: 'uses',
+        paper: 'p-bbbbbbbb',
+        evidence: 'q-11111111',
+        page: 1,
+        quote: 'x',
+        confidence: 0.7,
+      },
+    ],
     candidates: [],
   })
   const merged = mergeConcepts(store, pending.id, unet.id)
@@ -206,18 +261,49 @@ test('待归一并列合并：边重指到目标概念并重建', () => {
   assert.ok(edges.some((edge) => edge.id === 'e-pending001' && edge.target === unet.id))
   assert.ok(!edges.some((edge) => edge.target === pending.id))
   assert.ok(readConcepts().concepts.every((concept) => concept.id !== pending.id))
-  assert.ok(readConcepts().concepts.find((concept) => concept.id === unet.id).aliases.includes('UNet++ + CA'))
+  assert.ok(
+    readConcepts()
+      .concepts.find((concept) => concept.id === unet.id)
+      .aliases.includes('UNet++ + CA'),
+  )
 })
 
 test('可比组：同数据集同指标分组，按数值降序、同篇取最新', () => {
   const store = readConcepts()
   const metric = findConcept(store, 'metric', 'OC Dice')
-  const dataset = findConcept(store, 'dataset', 'REFUGE')
   writeAnalysis('p-cccccccc', {
-    paperId: 'p-cccccccc', title: 'better', year: 2025,
+    paperId: 'p-cccccccc',
+    title: 'better',
+    year: 2025,
     edges: [
-      { id: 'e-r1', source: 'p-cccccccc', target: metric.id, type: 'reports', paper: 'p-cccccccc', evidence: 'q-1', page: 4, quote: 'q', metric: 'OC Dice', value: 0.91, dataset: 'REFUGE', at: '2026-01-01T00:00:00Z' },
-      { id: 'e-r2', source: 'p-cccccccc', target: metric.id, type: 'reports', paper: 'p-cccccccc', evidence: 'q-2', page: 4, quote: 'q', metric: 'OC Dice', value: 0.95, dataset: 'REFUGE', at: '2026-02-01T00:00:00Z' },
+      {
+        id: 'e-r1',
+        source: 'p-cccccccc',
+        target: metric.id,
+        type: 'reports',
+        paper: 'p-cccccccc',
+        evidence: 'q-1',
+        page: 4,
+        quote: 'q',
+        metric: 'OC Dice',
+        value: 0.91,
+        dataset: 'REFUGE',
+        at: '2026-01-01T00:00:00Z',
+      },
+      {
+        id: 'e-r2',
+        source: 'p-cccccccc',
+        target: metric.id,
+        type: 'reports',
+        paper: 'p-cccccccc',
+        evidence: 'q-2',
+        page: 4,
+        quote: 'q',
+        metric: 'OC Dice',
+        value: 0.95,
+        dataset: 'REFUGE',
+        at: '2026-02-01T00:00:00Z',
+      },
     ],
     candidates: [],
   })

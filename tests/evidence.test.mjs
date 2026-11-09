@@ -15,25 +15,61 @@ const { cardJsonPath } = await import('../lib/cards.js')
 const server = await import('../lib/index.js')
 
 const record = {
-  id: 'p-x', citekey: 'p-x', title: '证据测试', authors: '', year: 2025, type: '学术期刊',
-  topics: [], status: '精读', file: 'p-x.pdf', pages: 1, chars: 100, quality: 0.9,
-  sha256: 'x', added: new Date().toISOString(),
+  id: 'p-x',
+  citekey: 'p-x',
+  title: '证据测试',
+  authors: '',
+  year: 2025,
+  type: '学术期刊',
+  topics: [],
+  status: '精读',
+  file: 'p-x.pdf',
+  pages: 1,
+  chars: 100,
+  quality: 0.9,
+  sha256: 'x',
+  added: new Date().toISOString(),
 }
 writeFileSync(PATHS.index, JSON.stringify(record) + '\n')
-writeFileSync(blocksPath('p-x'), JSON.stringify({
-  schema: 1, pages: [{ page: 1, width: 1000, height: 1000, blocks: [
-    { id: 'b-other', role: 'paragraph', bbox: [0, 0, 1, 1], text: '完全不同的内容' },
-  ] }],
-}))
-writeFileSync(cardJsonPath('p-x'), JSON.stringify({
-  schema: 1, paperId: 'p-x', status: 'ready', model: 'fake/m', promptVersion: 'seven-sections.v2',
-  sections: [{ key: 'oneLine', title: '一句话', text: '结论', evidence: ['q-1a2b3c4d'] }],
-  evidence: [{
-    id: 'q-1a2b3c4d', page: 1, block: 'b-old', quote: '找不到的引文',
-    before: '上一句', after: '下一句', section: 'oneLine',
-  }],
-  warnings: [], annotations: [], statusHistory: [],
-}))
+writeFileSync(
+  blocksPath('p-x'),
+  JSON.stringify({
+    schema: 1,
+    pages: [
+      {
+        page: 1,
+        width: 1000,
+        height: 1000,
+        blocks: [{ id: 'b-other', role: 'paragraph', bbox: [0, 0, 1, 1], text: '完全不同的内容' }],
+      },
+    ],
+  }),
+)
+writeFileSync(
+  cardJsonPath('p-x'),
+  JSON.stringify({
+    schema: 1,
+    paperId: 'p-x',
+    status: 'ready',
+    model: 'fake/m',
+    promptVersion: 'seven-sections.v2',
+    sections: [{ key: 'oneLine', title: '一句话', text: '结论', evidence: ['q-1a2b3c4d'] }],
+    evidence: [
+      {
+        id: 'q-1a2b3c4d',
+        page: 1,
+        block: 'b-old',
+        quote: '找不到的引文',
+        before: '上一句',
+        after: '下一句',
+        section: 'oneLine',
+      },
+    ],
+    warnings: [],
+    annotations: [],
+    statusHistory: [],
+  }),
+)
 writeFileSync(join(PATHS.cards, 'p-x.md'), '> 找不到的引文 ^q-1a2b3c4d\n')
 writeFileSync(join(PATHS.exports, 'draft.md'), '参考 [[p-x#^q-1a2b3c4d|这条证据]]\n第二行\n')
 
@@ -43,15 +79,38 @@ server.apply({
   get: () => undefined,
   logger: { info() {}, warn() {} },
 })
-const call = (path) => new Promise((resolve) => {
-  const res = { code: 0, headers: {}, body: null, writeHead(c, h) { this.code = c; Object.assign(this.headers, h || {}) }, end(b) { this.body = b; resolve(this) } }
-  const req = { method: 'GET', url: path, headers: {}, on() { return this }, destroy() {} }
-  handlers.get(path.split('?')[0])(req, res)
-})
+const call = (path) =>
+  new Promise((resolve) => {
+    const res = {
+      code: 0,
+      headers: {},
+      body: null,
+      writeHead(c, h) {
+        this.code = c
+        Object.assign(this.headers, h || {})
+      },
+      end(b) {
+        this.body = b
+        resolve(this)
+      },
+    }
+    const req = {
+      method: 'GET',
+      url: path,
+      headers: {},
+      on() {
+        return this
+      },
+      destroy() {},
+    }
+    handlers.get(path.split('?')[0])(req, res)
+  })
 
 let passed = 0
 const pending = []
-function test(name, fn) { pending.push({ name, fn }) }
+function test(name, fn) {
+  pending.push({ name, fn })
+}
 
 test('卡片读取时标出块断链', async () => {
   const res = await call('/api/litkb/card?id=p-x')

@@ -21,19 +21,53 @@ const claims = {
   'p-x3': '极坐标变换仅在小样本上有效，Dice 为 0.80。',
 }
 for (let i = 0; i < papers.length; i += 1) {
-  const rec = { ...papers[i], citekey: papers[i].id, venue: 'Journal', doi: '', type: '学术期刊', status: '精读', file: `${papers[i].id}.pdf`, pages: 5, chars: 1000, quality: 0.9, added: new Date().toISOString() }
+  const rec = {
+    ...papers[i],
+    citekey: papers[i].id,
+    venue: 'Journal',
+    doi: '',
+    type: '学术期刊',
+    status: '精读',
+    file: `${papers[i].id}.pdf`,
+    pages: 5,
+    chars: 1000,
+    quality: 0.9,
+    added: new Date().toISOString(),
+  }
   upsert(rec)
   const qid = `q-${String(i + 1).repeat(8)}`
-  writeCard({
-    paperId: rec.id, status: 'ready', model: 'fake', generatedAt: new Date().toISOString(),
-    sections: [{ key: 'oneLine', title: '一句话', text: '方法。', evidence: [] }],
-    evidence: [{ id: qid, page: 5, block: 'b-1', quote: claims[rec.id], kind: 'author_claim' }],
-    annotations: [], warnings: [], statusHistory: [],
-  }, rec)
-  writeFileSync(join(PATHS.deepread, `${rec.id}.json`), JSON.stringify({
-    paperId: rec.id, markdown: '', numbers: [], evidence: [],
-    sections: [{ key: 'conclusion', title: '结论', index: 7, markdown: `${claims[rec.id].replace(/。$/, '')} [[${rec.id}#^${qid}|p.5]]。` }],
-  }), 'utf8')
+  writeCard(
+    {
+      paperId: rec.id,
+      status: 'ready',
+      model: 'fake',
+      generatedAt: new Date().toISOString(),
+      sections: [{ key: 'oneLine', title: '一句话', text: '方法。', evidence: [] }],
+      evidence: [{ id: qid, page: 5, block: 'b-1', quote: claims[rec.id], kind: 'author_claim' }],
+      annotations: [],
+      warnings: [],
+      statusHistory: [],
+    },
+    rec,
+  )
+  writeFileSync(
+    join(PATHS.deepread, `${rec.id}.json`),
+    JSON.stringify({
+      paperId: rec.id,
+      markdown: '',
+      numbers: [],
+      evidence: [],
+      sections: [
+        {
+          key: 'conclusion',
+          title: '结论',
+          index: 7,
+          markdown: `${claims[rec.id].replace(/。$/, '')} [[${rec.id}#^${qid}|p.5]]。`,
+        },
+      ],
+    }),
+    'utf8',
+  )
 }
 assert.ok(claimSimilarity(claims['p-x1'], claims['p-x2']) > 0.18)
 assert.equal(crossRelation(claims['p-x1'], claims['p-x3']), 'compares')
@@ -56,11 +90,24 @@ assert.ok(draft.warnings.some((item) => item.includes('人工确认')))
 const strong = autoCrossPaperDrafts({ minSimilarity: 0.99 })
 assert.ok(strong.drafts.length >= 1, '字面不相似也应能按主题强配对')
 assert.ok(strong.drafts.some((item) => item.provenance.strongPair?.kind === 'topic'))
-assert.ok(strong.drafts.every((item) => item.provenance.relation === 'compares' || item.provenance.relation === 'qualifies' || item.provenance.relation === 'contradicts'))
+assert.ok(
+  strong.drafts.every(
+    (item) =>
+      item.provenance.relation === 'compares' ||
+      item.provenance.relation === 'qualifies' ||
+      item.provenance.relation === 'contradicts',
+  ),
+)
 
 saveChain({ ...draft })
 const again = autoCrossPaperDrafts({ minSimilarity: 0.12 })
-assert.ok(!again.drafts.some((item) => item.provenance.claims[0]?.text === draft.provenance.claims[0]?.text && item.provenance.claims[1]?.text === draft.provenance.claims[1]?.text))
+assert.ok(
+  !again.drafts.some(
+    (item) =>
+      item.provenance.claims[0]?.text === draft.provenance.claims[0]?.text &&
+      item.provenance.claims[1]?.text === draft.provenance.claims[1]?.text,
+  ),
+)
 console.log('  ✓ 跨论文 claim 相似度/关系判断')
 console.log('  ✓ 双侧 q-id 锚定 + 合成 claim')
 console.log('  ✓ 已有跨论文链去重')

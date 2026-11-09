@@ -8,7 +8,9 @@ import { join } from 'node:path'
 
 const root = process.cwd()
 const srcDir = join(root, 'src', 'client')
-const parts = readdirSync(srcDir).filter((name) => name.endsWith('.js')).sort()
+const parts = readdirSync(srcDir)
+  .filter((name) => name.endsWith('.js'))
+  .sort()
 if (!parts.length) throw new Error('src/client has no parts')
 const body = parts.map((name) => readFileSync(join(srcDir, name), 'utf8')).join('\n')
 const banner = `/* eslint-disable */\n/* 由 scripts/build-client.mjs 从 src/client/*.js 生成；不要直接编辑本文件。 */\n`

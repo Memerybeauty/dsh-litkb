@@ -54,10 +54,12 @@ const record = { id: 'p-test', title: '测试论文', chars: 100, quality: 0.9, 
 
 test('生成参数：关闭思考 + 8192 输出上限', async () => {
   const calls = []
-  const ctx = fakeCtx(calls, [[
-    { type: 'text-delta', text: cardJson },
-    { type: 'finish', reason: { kind: 'stop' } },
-  ]])
+  const ctx = fakeCtx(calls, [
+    [
+      { type: 'text-delta', text: cardJson },
+      { type: 'finish', reason: { kind: 'stop' } },
+    ],
+  ])
   const card = await generateCard({ ctx, record, pages })
   assert.equal(calls.length, 1)
   assert.equal(calls[0].reasoningEffort, 'off')
@@ -82,7 +84,6 @@ test('第一次 max-tokens 截断：自动用紧凑提示重试一次', async ()
   assert.ok(calls[1].messages[0].content[0].text.includes('输出限制'))
   assert.equal(card.sections.length, 7)
 })
-
 
 test('单段重生成：只替换该段与证据，其他段不动', async () => {
   const sectionPages = [
@@ -129,7 +130,11 @@ test('单段重生成：只替换该段与证据，其他段不动', async () =>
   applySection(card, patch, '方法')
   assert.equal(card.sections.find((x) => x.key === 'method').text, '新方法描述，分为两阶段。')
   assert.equal(card.sections.find((x) => x.key === 'oneLine').text, '旧一句话')
-  assert.equal(card.evidence.some((e) => e.id === 'q-old'), false, '旧证据应被清理')
+  assert.equal(
+    card.evidence.some((e) => e.id === 'q-old'),
+    false,
+    '旧证据应被清理',
+  )
   assert.equal(card.sections.find((x) => x.key === 'method').evidence.length, 1)
 })
 

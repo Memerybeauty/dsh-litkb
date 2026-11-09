@@ -6,11 +6,18 @@ import { join } from 'node:path'
 
 process.env.LITKB_LIBRARY = mkdtempSync(join(tmpdir(), 'dsh-litkb-history-'))
 const { ensureLibrary, PATHS } = await import('../lib/library.js')
-const { recordSearch, listSearchHistory, clearSearchHistory, SEARCH_HISTORY_LIMIT } = await import('../lib/search-history.js')
+const { recordSearch, listSearchHistory, clearSearchHistory, SEARCH_HISTORY_LIMIT } =
+  await import('../lib/search-history.js')
 ensureLibrary()
 assert.ok(SEARCH_HISTORY_LIMIT >= 10)
 for (let i = 0; i < 12; i += 1) {
-  recordSearch({ q: `检索问题 ${i}`, mode: i % 2 ? 'chain-answer' : 'evidence', chainIds: [`c-${i}`], evidenceIds: [`q-${i}`], citations: i })
+  recordSearch({
+    q: `检索问题 ${i}`,
+    mode: i % 2 ? 'chain-answer' : 'evidence',
+    chainIds: [`c-${i}`],
+    evidenceIds: [`q-${i}`],
+    citations: i,
+  })
 }
 const items = listSearchHistory(10)
 assert.equal(items.length, 10)

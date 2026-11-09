@@ -2,7 +2,7 @@
  * P4.6 导出与反链：BibTeX / GB-T / 卡片 MD / Mermaid / Canvas / 反链路由。
  */
 import assert from 'node:assert/strict'
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -15,25 +15,42 @@ const { exportBibtex, exportCanvas, exportCardMarkdown, exportGbt, exportMermaid
 
 ensureLibrary()
 const record = {
-  id: 'p-aaaaaaaa', citekey: 'p-aaaaaaaa',
-  title: 'CA-UNet for Glaucoma', authors: 'Gao Z., Li M.', year: 2024,
-  venue: 'Scientific Reports', doi: '10.1038/s41598-024-1234-5',
-  type: '学术期刊', topics: ['分割骨干'], status: '精读',
-  file: 'p-aaaaaaaa.pdf', pages: 6, chars: 2000, quality: 0.9, added: new Date().toISOString(),
+  id: 'p-aaaaaaaa',
+  citekey: 'p-aaaaaaaa',
+  title: 'CA-UNet for Glaucoma',
+  authors: 'Gao Z., Li M.',
+  year: 2024,
+  venue: 'Scientific Reports',
+  doi: '10.1038/s41598-024-1234-5',
+  type: '学术期刊',
+  topics: ['分割骨干'],
+  status: '精读',
+  file: 'p-aaaaaaaa.pdf',
+  pages: 6,
+  chars: 2000,
+  quality: 0.9,
+  added: new Date().toISOString(),
 }
 upsert(record)
 const card = {
-  paperId: record.id, status: 'ready', model: 'fake', generatedAt: new Date().toISOString(),
+  paperId: record.id,
+  status: 'ready',
+  model: 'fake',
+  generatedAt: new Date().toISOString(),
   sections: [{ key: 'oneLine', title: '一句话', text: '提出方法。', evidence: ['q-11111111'] }],
   evidence: [{ id: 'q-11111111', page: 3, quote: 'we propose a method', block: 'b-1' }],
-  annotations: [], warnings: [], statusHistory: [],
+  annotations: [],
+  warnings: [],
+  statusHistory: [],
 }
 writeCard(card, record)
 writeFileSync(join(PATHS.exports, 'draft.md'), '引用 [[p-aaaaaaaa#^q-11111111|证据]]\n')
 
 let passed = 0
 const pending = []
-function test(name, fn) { pending.push({ name, fn }) }
+function test(name, fn) {
+  pending.push({ name, fn })
+}
 
 test('BibTeX：单篇/整库字段正确，缺字段省略', () => {
   const one = exportBibtex({ id: record.id })
@@ -82,10 +99,23 @@ test('导出路由：bibtex / gbt / card / mermaid / canvas', async () => {
     get: () => undefined,
     logger: { info() {}, warn() {} },
   })
-  const call = (url) => new Promise((resolve) => {
-    const res = { code: 0, headers: {}, body: '', writeHead(c, h) { this.code = c; Object.assign(this.headers, h || {}) }, end(b) { this.body = b; resolve(this) } }
-    routes.get('/api/litkb/export')({ method: 'GET', url, headers: {} }, res)
-  })
+  const call = (url) =>
+    new Promise((resolve) => {
+      const res = {
+        code: 0,
+        headers: {},
+        body: '',
+        writeHead(c, h) {
+          this.code = c
+          Object.assign(this.headers, h || {})
+        },
+        end(b) {
+          this.body = b
+          resolve(this)
+        },
+      }
+      routes.get('/api/litkb/export')({ method: 'GET', url, headers: {} }, res)
+    })
   const bib = await call('/api/litkb/export?format=bibtex')
   assert.equal(bib.code, 200)
   assert.ok(bib.headers['content-disposition'].includes('.bib'))
@@ -102,12 +132,27 @@ test('导出路由：bibtex / gbt / card / mermaid / canvas', async () => {
   const bad = await call('/api/litkb/export?format=nope')
   assert.equal(bad.code, 400)
   const back = await new Promise((resolve) => {
-    const res = { code: 0, headers: {}, body: '', writeHead(c, h) { this.code = c; Object.assign(this.headers, h || {}) }, end(b) { this.body = b; resolve(this) } }
-    routes.get('/api/litkb/evidence/backlinks')({
-      method: 'GET',
-      url: `/api/litkb/evidence/backlinks?id=q-11111111&paper=${record.id}`,
+    const res = {
+      code: 0,
       headers: {},
-    }, res)
+      body: '',
+      writeHead(c, h) {
+        this.code = c
+        Object.assign(this.headers, h || {})
+      },
+      end(b) {
+        this.body = b
+        resolve(this)
+      },
+    }
+    routes.get('/api/litkb/evidence/backlinks')(
+      {
+        method: 'GET',
+        url: `/api/litkb/evidence/backlinks?id=q-11111111&paper=${record.id}`,
+        headers: {},
+      },
+      res,
+    )
   })
   assert.equal(back.code, 200)
   assert.ok(JSON.parse(back.body).links.some((link) => link.file === 'exports/draft.md'))

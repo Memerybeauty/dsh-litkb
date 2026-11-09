@@ -12,53 +12,119 @@ const { ensureLibrary, upsert, PATHS } = await import('../lib/library.js')
 const { writeCard, readCard } = await import('../lib/cards.js')
 const { createDraft, parseCitations, readDraft, saveDraft } = await import('../lib/drafts.js')
 const {
-  extractClaims, claimCandidates, proposeFromClaim, proposeFromQuestion, proposeFromEvidence, proposeFromBlock,
-  saveChain, readChain, listChains, deleteChain, chainParagraph, normalizeClaimText,
-  chainGraph, writeChainLayout, readChainLayout, shortText, autoChainDrafts,
+  claimCandidates,
+  proposeFromClaim,
+  proposeFromQuestion,
+  proposeFromEvidence,
+  proposeFromBlock,
+  saveChain,
+  readChain,
+  listChains,
+  deleteChain,
+  chainParagraph,
+  normalizeClaimText,
+  chainGraph,
+  writeChainLayout,
+  readChainLayout,
+  shortText,
+  autoChainDrafts,
 } = await import('../lib/chains.js')
 
 ensureLibrary()
 
 const records = [
   {
-    id: 'p-c1', citekey: 'p-c1', title: '极坐标变换用于视盘边界分割', authors: 'Wu B.',
-    year: 2024, venue: 'Journal', doi: '', type: '学术期刊', topics: [], status: '精读',
-    file: 'p-c1.pdf', pages: 6, chars: 2000, quality: 0.9, added: new Date().toISOString(),
+    id: 'p-c1',
+    citekey: 'p-c1',
+    title: '极坐标变换用于视盘边界分割',
+    authors: 'Wu B.',
+    year: 2024,
+    venue: 'Journal',
+    doi: '',
+    type: '学术期刊',
+    topics: [],
+    status: '精读',
+    file: 'p-c1.pdf',
+    pages: 6,
+    chars: 2000,
+    quality: 0.9,
+    added: new Date().toISOString(),
   },
   {
-    id: 'p-c2', citekey: 'p-c2', title: '视盘边界的多中心验证', authors: 'Li C.',
-    year: 2025, venue: 'Conference', doi: '', type: '会议', topics: [], status: '精读',
-    file: 'p-c2.pdf', pages: 6, chars: 2000, quality: 0.9, added: new Date().toISOString(),
+    id: 'p-c2',
+    citekey: 'p-c2',
+    title: '视盘边界的多中心验证',
+    authors: 'Li C.',
+    year: 2025,
+    venue: 'Conference',
+    doi: '',
+    type: '会议',
+    topics: [],
+    status: '精读',
+    file: 'p-c2.pdf',
+    pages: 6,
+    chars: 2000,
+    quality: 0.9,
+    added: new Date().toISOString(),
   },
 ]
 
 const decks = {
   'p-c1': [
-    { id: 'q-aaaa1111', page: 5, block: 'b-011', quote: 'We propose a polar transform that improves the optic disc boundary segmentation.' },
+    {
+      id: 'q-aaaa1111',
+      page: 5,
+      block: 'b-011',
+      quote: 'We propose a polar transform that improves the optic disc boundary segmentation.',
+    },
     { id: 'q-bbbb2222', page: 3, block: 'b-022', quote: 'The evaluation is limited to a single public dataset.' },
-    { id: 'q-cccc3333', page: 2, block: 'b-033', quote: 'The polar transform improves Dice to 0.95 on the public dataset.' },
+    {
+      id: 'q-cccc3333',
+      page: 2,
+      block: 'b-033',
+      quote: 'The polar transform improves Dice to 0.95 on the public dataset.',
+    },
   ],
   'p-c2': [
-    { id: 'q-dddd4444', page: 4, block: 'b-044', quote: 'Our polar-based method also improves boundary Dice on REFUGE.' },
+    {
+      id: 'q-dddd4444',
+      page: 4,
+      block: 'b-044',
+      quote: 'Our polar-based method also improves boundary Dice on REFUGE.',
+    },
   ],
 }
 
 for (const record of records) {
   upsert(record)
-  writeCard({
-    paperId: record.id, status: 'ready', model: 'fake', generatedAt: new Date().toISOString(),
-    sections: record.id === 'p-c2'
-      ? [
-          { key: 'oneLine', title: '一句话', text: '极坐标方法在 REFUGE 多中心验证中改善视盘边界分割。', evidence: ['q-dddd4444'] },
-          { key: 'method', title: '方法', text: '采用极坐标变换处理边界。', evidence: ['q-dddd4444'] },
-        ]
-      : [
-          { key: 'oneLine', title: '一句话', text: '提出方法。', evidence: [] },
-          { key: 'method', title: '方法', text: '极坐标变换。', evidence: [] },
-        ],
-    evidence: decks[record.id].map((ev) => ({ ...ev, kind: 'author_claim', before: '', after: '' })),
-    annotations: [], warnings: [], statusHistory: [],
-  }, record)
+  writeCard(
+    {
+      paperId: record.id,
+      status: 'ready',
+      model: 'fake',
+      generatedAt: new Date().toISOString(),
+      sections:
+        record.id === 'p-c2'
+          ? [
+              {
+                key: 'oneLine',
+                title: '一句话',
+                text: '极坐标方法在 REFUGE 多中心验证中改善视盘边界分割。',
+                evidence: ['q-dddd4444'],
+              },
+              { key: 'method', title: '方法', text: '采用极坐标变换处理边界。', evidence: ['q-dddd4444'] },
+            ]
+          : [
+              { key: 'oneLine', title: '一句话', text: '提出方法。', evidence: [] },
+              { key: 'method', title: '方法', text: '极坐标变换。', evidence: [] },
+            ],
+      evidence: decks[record.id].map((ev) => ({ ...ev, kind: 'author_claim', before: '', after: '' })),
+      annotations: [],
+      warnings: [],
+      statusHistory: [],
+    },
+    record,
+  )
 }
 
 const deepread = {
@@ -69,30 +135,54 @@ const deepread = {
   sections: [
     { key: 'profile', title: '文献基本资料', index: 1, markdown: '- 标题：极坐标变换' },
     {
-      key: 'conclusion', title: '结论', index: 7,
-      markdown: '作者结论是：极坐标变换改善视盘边界分割 [[p-c1#^q-aaaa1111|p.5]]。适用范围仅限于单一公开数据集 [[p-c1#^q-bbbb2222|p.3]]。',
+      key: 'conclusion',
+      title: '结论',
+      index: 7,
+      markdown:
+        '作者结论是：极坐标变换改善视盘边界分割 [[p-c1#^q-aaaa1111|p.5]]。适用范围仅限于单一公开数据集 [[p-c1#^q-bbbb2222|p.3]]。',
     },
     {
-      key: 'takeaways', title: '核心要点', index: 11,
+      key: 'takeaways',
+      title: '核心要点',
+      index: 11,
       markdown: '- 极坐标变换把边界 Dice 提高到 0.95 [p.2]。\n- 需要更多数据集验证。',
     },
     { key: 'limitations', title: '局限性', index: 9, markdown: '仅在一个数据集上验证 [[p-c1#^q-bbbb2222|p.3]]。' },
   ],
 }
 writeFileSync(join(PATHS.deepread, 'p-c1.json'), JSON.stringify(deepread), 'utf8')
-writeFileSync(join(PATHS.blocks, 'p-c1.json'), JSON.stringify({
-  schema: 1, parser: 'fake', numPages: 5, pages: [{
-    page: 4, width: 1000, height: 1000,
-    blocks: [
-      { id: 'b-100', role: 'paragraph', section: 'results', bbox: [0, 0, 1, 1], text: 'The proposed polar transform also reduces the cup-to-disc ratio error on the REFUGE dataset.' },
-      { id: 'b-101', role: 'header', section: 'other', bbox: [0, 0, 1, 1], text: 'Journal header line' },
+writeFileSync(
+  join(PATHS.blocks, 'p-c1.json'),
+  JSON.stringify({
+    schema: 1,
+    parser: 'fake',
+    numPages: 5,
+    pages: [
+      {
+        page: 4,
+        width: 1000,
+        height: 1000,
+        blocks: [
+          {
+            id: 'b-100',
+            role: 'paragraph',
+            section: 'results',
+            bbox: [0, 0, 1, 1],
+            text: 'The proposed polar transform also reduces the cup-to-disc ratio error on the REFUGE dataset.',
+          },
+          { id: 'b-101', role: 'header', section: 'other', bbox: [0, 0, 1, 1], text: 'Journal header line' },
+        ],
+      },
     ],
-  }],
-}), 'utf8')
+  }),
+  'utf8',
+)
 
 let passed = 0
 const pending = []
-function test(name, fn) { pending.push({ name, fn }) }
+function test(name, fn) {
+  pending.push({ name, fn })
+}
 
 test('论点候选：切句、去引用、保留 q-id 与页码', () => {
   const claims = claimCandidates('p-c1')
@@ -140,12 +230,17 @@ test('证据先行：优先用引用这些证据的精读句子当论点', () =>
 
 test('保存/读取/列表：空论点或空证据拒绝落库', () => {
   assert.throws(() => saveChain({ claim: { text: '   ' }, nodes: [] }), /论点不能为空/)
-  assert.throws(() => saveChain({ claim: { text: '一个没有证据的论点' }, nodes: [{ evidenceId: 'q-ffffffff' }] }), /至少要有一个有效证据节点/)
+  assert.throws(
+    () => saveChain({ claim: { text: '一个没有证据的论点' }, nodes: [{ evidenceId: 'q-ffffffff' }] }),
+    /至少要有一个有效证据节点/,
+  )
   const claims = claimCandidates('p-c1')
   const target = claims.find((item) => item.text.includes('改善视盘边界分割'))
   const draftChain = {
     claim: { text: target.text, paperId: 'p-c1', sectionKey: 'conclusion', source: 'deepread' },
-    origin: 'claim', status: 'confirmed', question: '极坐标是否改善边界？',
+    origin: 'claim',
+    status: 'confirmed',
+    question: '极坐标是否改善边界？',
     nodes: [
       { paperId: 'p-c1', evidenceId: 'q-aaaa1111', relation: 'supports' },
       { paperId: 'p-c1', evidenceId: 'q-bbbb2222', relation: 'qualifies' },
@@ -247,7 +342,11 @@ test('证据链图：claim→evidence→paper，关系与 stale 保留', () => {
   assert.ok(unchained)
   assert.equal(unchained.data.chains, 0)
   const claim = graph.nodes.find((node) => node.data.kind === 'claim')
-  const saved = writeChainLayout({ [claim.data.id]: { x: 12.6, y: -3.2 }, 'bad id!': { x: 1, y: 2 }, [claim.data.id + 'x']: { x: 'no', y: 2 } })
+  const saved = writeChainLayout({
+    [claim.data.id]: { x: 12.6, y: -3.2 },
+    'bad id!': { x: 1, y: 2 },
+    [claim.data.id + 'x']: { x: 'no', y: 2 },
+  })
   assert.deepEqual(saved[claim.data.id], { x: 13, y: -3 })
   assert.equal(Object.keys(saved).length, 1)
   assert.deepEqual(readChainLayout()[claim.data.id], { x: 13, y: -3 })

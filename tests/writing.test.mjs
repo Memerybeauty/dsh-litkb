@@ -3,7 +3,7 @@
  */
 import assert from 'node:assert/strict'
 import { EventEmitter } from 'node:events'
-import { mkdtempSync, readFileSync } from 'node:fs'
+import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -11,26 +11,58 @@ process.env.LITKB_LIBRARY = mkdtempSync(join(tmpdir(), 'dsh-litkb-writing-'))
 
 const { ensureLibrary, upsert, PATHS } = await import('../lib/library.js')
 const { writeCard } = await import('../lib/cards.js')
-const { assistDraft, createDraft, deleteDraft, draftCitations, exportDraft, listDrafts, readDraft, saveDraft, searchEvidence } = await import('../lib/drafts.js')
+const {
+  assistDraft,
+  createDraft,
+  deleteDraft,
+  draftCitations,
+  exportDraft,
+  listDrafts,
+  readDraft,
+  saveDraft,
+  searchEvidence,
+} = await import('../lib/drafts.js')
 const { findBacklinks } = await import('../lib/evidence-scan.js')
 
 ensureLibrary()
 const record = {
-  id: 'p-aaaaaaaa', citekey: 'p-aaaaaaaa', title: 'CA-UNet for Glaucoma', authors: 'Gao Z.',
-  year: 2024, venue: 'Scientific Reports', doi: '10.1/x', type: '学术期刊', topics: [],
-  status: '精读', file: 'p-aaaaaaaa.pdf', pages: 6, chars: 2000, quality: 0.9, added: new Date().toISOString(),
+  id: 'p-aaaaaaaa',
+  citekey: 'p-aaaaaaaa',
+  title: 'CA-UNet for Glaucoma',
+  authors: 'Gao Z.',
+  year: 2024,
+  venue: 'Scientific Reports',
+  doi: '10.1/x',
+  type: '学术期刊',
+  topics: [],
+  status: '精读',
+  file: 'p-aaaaaaaa.pdf',
+  pages: 6,
+  chars: 2000,
+  quality: 0.9,
+  added: new Date().toISOString(),
 }
 upsert(record)
-writeCard({
-  paperId: record.id, status: 'ready', model: 'fake', generatedAt: new Date().toISOString(),
-  sections: [{ key: 'oneLine', title: '一句话', text: '提出方法。', evidence: ['q-11111111'] }],
-  evidence: [{ id: 'q-11111111', page: 3, quote: 'we propose a coordinate attention method', block: 'b-1' }],
-  annotations: [], warnings: [], statusHistory: [],
-}, record)
+writeCard(
+  {
+    paperId: record.id,
+    status: 'ready',
+    model: 'fake',
+    generatedAt: new Date().toISOString(),
+    sections: [{ key: 'oneLine', title: '一句话', text: '提出方法。', evidence: ['q-11111111'] }],
+    evidence: [{ id: 'q-11111111', page: 3, quote: 'we propose a coordinate attention method', block: 'b-1' }],
+    annotations: [],
+    warnings: [],
+    statusHistory: [],
+  },
+  record,
+)
 
 let passed = 0
 const pending = []
-function test(name, fn) { pending.push({ name, fn }) }
+function test(name, fn) {
+  pending.push({ name, fn })
+}
 
 test('文稿 CRUD：新建/保存/读取/列表', () => {
   const draft = createDraft({ title: '开题_研究现状', type: '综述' })
@@ -91,16 +123,27 @@ test('drafts 路由：POST 新建 + GET 列表（method 大写/小写都接受�
   const server = await import('../lib/index.js')
   const routes = new Map()
   server.apply({ webServer: { register: (r) => routes.set(r.path, r.handler) }, logger: { info() {}, warn() {} } })
-  const call = (method, url, payload) => new Promise(async (resolve) => {
-    const req = new EventEmitter()
-    req.method = method
-    req.headers = { 'content-type': 'application/json' }
-    const res = { code: 0, body: '', writeHead(c) { this.code = c }, end(b) { this.body = b; resolve(this) } }
-    const pending = routes.get(url)(req, res)
-    if (payload !== undefined) req.emit('data', Buffer.from(JSON.stringify(payload)))
-    req.emit('end')
-    await pending
-  })
+  const call = (method, url, payload) =>
+    new Promise(async (resolve) => {
+      const req = new EventEmitter()
+      req.method = method
+      req.headers = { 'content-type': 'application/json' }
+      const res = {
+        code: 0,
+        body: '',
+        writeHead(c) {
+          this.code = c
+        },
+        end(b) {
+          this.body = b
+          resolve(this)
+        },
+      }
+      const pending = routes.get(url)(req, res)
+      if (payload !== undefined) req.emit('data', Buffer.from(JSON.stringify(payload)))
+      req.emit('end')
+      await pending
+    })
   const created = await call('post', '/api/litkb/drafts', { title: '路由新建' })
   assert.equal(created.code, 201)
   assert.ok(JSON.parse(created.body).draft.id.startsWith('d-'))

@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.2.14 — 工程化收尾：0 warning + Prettier（2026-11-09）
+
+- 清理全部 14 个 unused-vars warning（含删除 3 处死代码：`maxPairs`、`escaped`、`fetchHtml`）；
+- ESLint 现在 **0 error / 0 warning**；
+- 接入 **Prettier 3**：no semi / 单引号 / trailingComma all / 120 列；格式化 tests、scripts、配置文件共 31 个文件；
+- 新增 `npm run format` / `npm run format:check`，CI 增加格式检查；
+- `.prettierignore` 排除拼接片段（`lib/`、`src/client`、`src/server`）与文档，避免无意义 diff。
+
 ## v0.2.13 — 工程化：ESLint + CI + 覆盖率（2026-11-09）
 
 - 引入 **ESLint 9**（flat config）：`npm run lint`，0 error / 14 warning；

@@ -12,7 +12,8 @@ const { ensureLibrary } = await import('../lib/library.js')
 ensureLibrary()
 const { blocksPath } = await import('../lib/blocks.js')
 const { translateDocument, selectBlocks, validateBlock } = await import('../lib/translate.js')
-const { checkTermTargets, glossaryHash, DEFAULT_TERMS, readGlossary, writeGlossary } = await import('../lib/glossary.js')
+const { checkTermTargets, glossaryHash, DEFAULT_TERMS, readGlossary, writeGlossary } =
+  await import('../lib/glossary.js')
 const { translationPath, readTranslation } = await import('../lib/translate.js')
 
 let passed = 0
@@ -25,15 +26,25 @@ const DOC = {
   schema: 1,
   parser: 'test',
   pages: [
-    { page: 1, width: 100, height: 100, blocks: [
-      { id: 'b-a', role: 'abstract', section: 'abstract', text: 'This paper proposes a method. Accuracy is 90%.' },
-      { id: 'b-m', role: 'paragraph', section: 'method', text: 'The method uses two stages and a loss weight 0.01.' },
-    ] },
-    { page: 2, width: 100, height: 100, blocks: [
-      { id: 'b-r', role: 'paragraph', section: 'results', text: 'Results show a score of 86.5 on the test set.' },
-      { id: 'b-c', role: 'paragraph', section: 'conclusion', text: '本章总结全文，并提出未来工作。' },
-      { id: 'b-ref', role: 'reference', section: 'references', text: 'Zhang et al. 2024.' },
-    ] },
+    {
+      page: 1,
+      width: 100,
+      height: 100,
+      blocks: [
+        { id: 'b-a', role: 'abstract', section: 'abstract', text: 'This paper proposes a method. Accuracy is 90%.' },
+        { id: 'b-m', role: 'paragraph', section: 'method', text: 'The method uses two stages and a loss weight 0.01.' },
+      ],
+    },
+    {
+      page: 2,
+      width: 100,
+      height: 100,
+      blocks: [
+        { id: 'b-r', role: 'paragraph', section: 'results', text: 'Results show a score of 86.5 on the test set.' },
+        { id: 'b-c', role: 'paragraph', section: 'conclusion', text: '本章总结全文，并提出未来工作。' },
+        { id: 'b-ref', role: 'reference', section: 'references', text: 'Zhang et al. 2024.' },
+      ],
+    },
   ],
 }
 
@@ -62,10 +73,22 @@ function fakeCtx() {
 }
 
 test('范围选择：摘要+结论 / 章节 / 整篇 / 单块', () => {
-  assert.deepEqual(selectBlocks(DOC, { scope: 'summary' }).map((b) => b.id), ['b-a', 'b-c'])
-  assert.deepEqual(selectBlocks(DOC, { scope: 'section', section: 'method' }).map((b) => b.id), ['b-m'])
-  assert.deepEqual(selectBlocks(DOC, { scope: 'paper' }).map((b) => b.id), ['b-a', 'b-m', 'b-r', 'b-c'])
-  assert.deepEqual(selectBlocks(DOC, { scope: 'block', blockIds: ['b-r'] }).map((b) => b.id), ['b-r'])
+  assert.deepEqual(
+    selectBlocks(DOC, { scope: 'summary' }).map((b) => b.id),
+    ['b-a', 'b-c'],
+  )
+  assert.deepEqual(
+    selectBlocks(DOC, { scope: 'section', section: 'method' }).map((b) => b.id),
+    ['b-m'],
+  )
+  assert.deepEqual(
+    selectBlocks(DOC, { scope: 'paper' }).map((b) => b.id),
+    ['b-a', 'b-m', 'b-r', 'b-c'],
+  )
+  assert.deepEqual(
+    selectBlocks(DOC, { scope: 'block', blockIds: ['b-r'] }).map((b) => b.id),
+    ['b-r'],
+  )
 })
 
 test('译后校验：数字/引用保留、空译文、术语', () => {
@@ -105,11 +128,16 @@ test('translateDocument：整篇排除参考文献；失败范围显式报错', 
   assert.equal(result.doc.blocks['b-r'].status, 'ok')
   assert.equal(result.doc.blocks['b-ref'], undefined)
   await assert.rejects(
-    () => translateDocument({ ctx: fakeCtx(), record: { id: 'p-t' }, params: { scope: 'section', section: 'nope' }, force: true }),
+    () =>
+      translateDocument({
+        ctx: fakeCtx(),
+        record: { id: 'p-t' },
+        params: { scope: 'section', section: 'nope' },
+        force: true,
+      }),
     /没有可翻译的块/,
   )
 })
-
 
 test('术语表变更：其他块旧译文标 stale，不删除', async () => {
   const original = readGlossary().terms

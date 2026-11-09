@@ -16,27 +16,59 @@ const created = []
 for (let i = 0; i < 30; i += 1) {
   const id = `p-scale${String(i).padStart(2, '0')}`
   const record = {
-    id, citekey: id, title: `${topics[i % topics.length]}研究 ${i}`, authors: `Author ${i}`, year: 2020 + (i % 6),
-    venue: 'Journal', doi: '', type: '学术期刊', topics: [topics[i % topics.length]], status: '精读',
-    file: `${id}.pdf`, pages: 5, chars: 1000, quality: 0.9, added: new Date().toISOString(),
+    id,
+    citekey: id,
+    title: `${topics[i % topics.length]}研究 ${i}`,
+    authors: `Author ${i}`,
+    year: 2020 + (i % 6),
+    venue: 'Journal',
+    doi: '',
+    type: '学术期刊',
+    topics: [topics[i % topics.length]],
+    status: '精读',
+    file: `${id}.pdf`,
+    pages: 5,
+    chars: 1000,
+    quality: 0.9,
+    added: new Date().toISOString(),
   }
   upsert(record)
   const evidence = Array.from({ length: 10 }, (_, j) => ({
     id: `q-${i.toString(16).padStart(2, '0')}${j.toString(16).padStart(2, '0')}a1b2`,
-    page: 1 + (j % 5), block: `b-${j}`,
+    page: 1 + (j % 5),
+    block: `b-${j}`,
     quote: `${topics[i % topics.length]} method ${i} reports improvement number ${j} on dataset ${i % 4}.`,
     kind: 'author_claim',
   }))
-  writeCard({
-    paperId: id, status: 'ready', model: 'fake', generatedAt: new Date().toISOString(),
-    sections: [{ key: 'oneLine', title: '一句话', text: `${topics[i % topics.length]}。`, evidence: [] }],
-    evidence, annotations: [], warnings: [], statusHistory: [],
-  }, record)
+  writeCard(
+    {
+      paperId: id,
+      status: 'ready',
+      model: 'fake',
+      generatedAt: new Date().toISOString(),
+      sections: [{ key: 'oneLine', title: '一句话', text: `${topics[i % topics.length]}。`, evidence: [] }],
+      evidence,
+      annotations: [],
+      warnings: [],
+      statusHistory: [],
+    },
+    record,
+  )
   saveChain({
     title: `${topics[i % topics.length]}链 ${i}`,
     claim: { text: `${topics[i % topics.length]}方法 ${i} 改善结果。`, paperId: id, source: 'manual' },
-    origin: 'claim', status: 'confirmed',
-    nodes: [{ paperId: id, evidenceId: evidence[0].id, page: evidence[0].page, block: evidence[0].block, quote: evidence[0].quote, relation: 'supports' }],
+    origin: 'claim',
+    status: 'confirmed',
+    nodes: [
+      {
+        paperId: id,
+        evidenceId: evidence[0].id,
+        page: evidence[0].page,
+        block: evidence[0].block,
+        quote: evidence[0].quote,
+        relation: 'supports',
+      },
+    ],
   })
   created.push(id)
 }

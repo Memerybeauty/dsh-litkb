@@ -9,18 +9,61 @@ const { ensureLibrary, upsert } = await import('../lib/library.js')
 const { writeCard } = await import('../lib/cards.js')
 const { saveChain } = await import('../lib/chains.js')
 ensureLibrary()
-const record = { id: 'p-q1', citekey: 'p-q1', title: '极坐标视盘分割', authors: 'Wu B.', year: 2024, venue: 'Journal', doi: '', type: '学术期刊', topics: ['分割'], status: '精读', file: 'p-q1.pdf', pages: 5, chars: 900, quality: 0.9, added: new Date().toISOString() }
+const record = {
+  id: 'p-q1',
+  citekey: 'p-q1',
+  title: '极坐标视盘分割',
+  authors: 'Wu B.',
+  year: 2024,
+  venue: 'Journal',
+  doi: '',
+  type: '学术期刊',
+  topics: ['分割'],
+  status: '精读',
+  file: 'p-q1.pdf',
+  pages: 5,
+  chars: 900,
+  quality: 0.9,
+  added: new Date().toISOString(),
+}
 upsert(record)
-writeCard({
-  paperId: record.id, status: 'ready', model: 'fake', generatedAt: new Date().toISOString(),
-  sections: [{ key: 'oneLine', title: '一句话', text: '方法。', evidence: [] }],
-  evidence: [{ id: 'q-abc12345', page: 5, block: 'b-1', quote: 'Polar transform improves optic disc boundary.', kind: 'author_claim' }],
-  annotations: [], warnings: [], statusHistory: [],
-}, record)
+writeCard(
+  {
+    paperId: record.id,
+    status: 'ready',
+    model: 'fake',
+    generatedAt: new Date().toISOString(),
+    sections: [{ key: 'oneLine', title: '一句话', text: '方法。', evidence: [] }],
+    evidence: [
+      {
+        id: 'q-abc12345',
+        page: 5,
+        block: 'b-1',
+        quote: 'Polar transform improves optic disc boundary.',
+        kind: 'author_claim',
+      },
+    ],
+    annotations: [],
+    warnings: [],
+    statusHistory: [],
+  },
+  record,
+)
 saveChain({
-  title: '极坐标改善边界', claim: { text: '极坐标改善视盘边界。', paperId: record.id, source: 'manual' },
-  origin: 'claim', status: 'confirmed',
-  nodes: [{ paperId: record.id, evidenceId: 'q-abc12345', page: 5, block: 'b-1', quote: 'Polar transform improves optic disc boundary.', relation: 'supports' }],
+  title: '极坐标改善边界',
+  claim: { text: '极坐标改善视盘边界。', paperId: record.id, source: 'manual' },
+  origin: 'claim',
+  status: 'confirmed',
+  nodes: [
+    {
+      paperId: record.id,
+      evidenceId: 'q-abc12345',
+      page: 5,
+      block: 'b-1',
+      quote: 'Polar transform improves optic disc boundary.',
+      relation: 'supports',
+    },
+  ],
 })
 
 const server = await import('../lib/index.js')
@@ -28,9 +71,35 @@ const routes = []
 server.apply({ webServer: { register: (route) => routes.push(route) }, logger: { info() {} } })
 function makeReq({ method = 'GET', url = '/', body = null } = {}) {
   const handlers = { data: [], end: [] }
-  return { method, url, headers: {}, on(event, fn) { handlers[event]?.push(fn); if (event === 'end') queueMicrotask(() => { if (body !== null) { const chunk = Buffer.from(JSON.stringify(body)); for (const l of handlers.data) l(chunk) } for (const l of handlers.end) l() }) } }
+  return {
+    method,
+    url,
+    headers: {},
+    on(event, fn) {
+      handlers[event]?.push(fn)
+      if (event === 'end')
+        queueMicrotask(() => {
+          if (body !== null) {
+            const chunk = Buffer.from(JSON.stringify(body))
+            for (const l of handlers.data) l(chunk)
+          }
+          for (const l of handlers.end) l()
+        })
+    },
+  }
 }
-function makeRes() { return { code: 0, body: '', writeHead(code) { this.code = code }, end(body) { this.body = String(body || '') } } }
+function makeRes() {
+  return {
+    code: 0,
+    body: '',
+    writeHead(code) {
+      this.code = code
+    },
+    end(body) {
+      this.body = String(body || '')
+    },
+  }
+}
 async function call(path, { method = 'GET', body = null, url = null } = {}) {
   const route = routes.find((item) => item.path === path)
   assert.ok(route, path)

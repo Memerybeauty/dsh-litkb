@@ -21,31 +21,80 @@ server.apply({
 assert.equal(routes.length, 75, 'seventy-five routes registered')
 const paths = routes.map((r) => r.path).sort()
 assert.deepEqual(paths, [
-  '/api/litkb/ask', '/api/litkb/blocks', '/api/litkb/blocks.md', '/api/litkb/blocks/build',
-  '/api/litkb/card', '/api/litkb/card/annotate', '/api/litkb/card/generate',
-  '/api/litkb/card/regenerate', '/api/litkb/card/restore', '/api/litkb/card/section',
-  '/api/litkb/card/status', '/api/litkb/card/versions',
-  '/api/litkb/chains', '/api/litkb/chains/auto/jobs', '/api/litkb/chains/auto/run',
-  '/api/litkb/chains/claims', '/api/litkb/chains/delete',
-  '/api/litkb/chains/graph', '/api/litkb/chains/insert', '/api/litkb/chains/layout',
-  '/api/litkb/chains/propose', '/api/litkb/chains/read', '/api/litkb/chains/review',
-  '/api/litkb/chains/save', '/api/litkb/compare',
-  '/api/litkb/concepts', '/api/litkb/concepts/merge', '/api/litkb/concepts/update',
-  '/api/litkb/deepread', '/api/litkb/deepread/build', '/api/litkb/deepread/compare',
-  '/api/litkb/diag', '/api/litkb/drafts', '/api/litkb/drafts/assist', '/api/litkb/drafts/citations',
-  '/api/litkb/drafts/delete', '/api/litkb/drafts/export', '/api/litkb/drafts/read', '/api/litkb/drafts/save',
-  '/api/litkb/evidence/backlinks', '/api/litkb/evidence/export', '/api/litkb/evidence/search',
+  '/api/litkb/ask',
+  '/api/litkb/blocks',
+  '/api/litkb/blocks.md',
+  '/api/litkb/blocks/build',
+  '/api/litkb/card',
+  '/api/litkb/card/annotate',
+  '/api/litkb/card/generate',
+  '/api/litkb/card/regenerate',
+  '/api/litkb/card/restore',
+  '/api/litkb/card/section',
+  '/api/litkb/card/status',
+  '/api/litkb/card/versions',
+  '/api/litkb/chains',
+  '/api/litkb/chains/auto/jobs',
+  '/api/litkb/chains/auto/run',
+  '/api/litkb/chains/claims',
+  '/api/litkb/chains/delete',
+  '/api/litkb/chains/graph',
+  '/api/litkb/chains/insert',
+  '/api/litkb/chains/layout',
+  '/api/litkb/chains/propose',
+  '/api/litkb/chains/read',
+  '/api/litkb/chains/review',
+  '/api/litkb/chains/save',
+  '/api/litkb/compare',
+  '/api/litkb/concepts',
+  '/api/litkb/concepts/merge',
+  '/api/litkb/concepts/update',
+  '/api/litkb/deepread',
+  '/api/litkb/deepread/build',
+  '/api/litkb/deepread/compare',
+  '/api/litkb/diag',
+  '/api/litkb/drafts',
+  '/api/litkb/drafts/assist',
+  '/api/litkb/drafts/citations',
+  '/api/litkb/drafts/delete',
+  '/api/litkb/drafts/export',
+  '/api/litkb/drafts/read',
+  '/api/litkb/drafts/save',
+  '/api/litkb/evidence/backlinks',
+  '/api/litkb/evidence/export',
+  '/api/litkb/evidence/search',
   '/api/litkb/export',
-  '/api/litkb/glossary', '/api/litkb/graph', '/api/litkb/graph/build', '/api/litkb/health',
-  '/api/litkb/import', '/api/litkb/import/link', '/api/litkb/page', '/api/litkb/papers', '/api/litkb/pdf',
-  '/api/litkb/reclassify', '/api/litkb/search', '/api/litkb/search/answer', '/api/litkb/search/history',
-  '/api/litkb/settings', '/api/litkb/tags', '/api/litkb/tags/create',
+  '/api/litkb/glossary',
+  '/api/litkb/graph',
+  '/api/litkb/graph/build',
+  '/api/litkb/health',
+  '/api/litkb/import',
+  '/api/litkb/import/link',
+  '/api/litkb/page',
+  '/api/litkb/papers',
+  '/api/litkb/pdf',
+  '/api/litkb/reclassify',
+  '/api/litkb/search',
+  '/api/litkb/search/answer',
+  '/api/litkb/search/history',
+  '/api/litkb/settings',
+  '/api/litkb/tags',
+  '/api/litkb/tags/create',
   '/api/litkb/tags/delete',
-  '/api/litkb/themes', '/api/litkb/themes/chain', '/api/litkb/themes/delete',
-  '/api/litkb/themes/explore', '/api/litkb/themes/jobs', '/api/litkb/themes/match', '/api/litkb/themes/outline',
-  '/api/litkb/themes/papers', '/api/litkb/themes/read', '/api/litkb/themes/save',
-  '/api/litkb/themes/suggest', '/api/litkb/themes/summary',
-  '/api/litkb/translate', '/api/litkb/update',
+  '/api/litkb/themes',
+  '/api/litkb/themes/chain',
+  '/api/litkb/themes/delete',
+  '/api/litkb/themes/explore',
+  '/api/litkb/themes/jobs',
+  '/api/litkb/themes/match',
+  '/api/litkb/themes/outline',
+  '/api/litkb/themes/papers',
+  '/api/litkb/themes/read',
+  '/api/litkb/themes/save',
+  '/api/litkb/themes/suggest',
+  '/api/litkb/themes/summary',
+  '/api/litkb/translate',
+  '/api/litkb/update',
   '/api/litkb/vendor/cytoscape.js',
 ])
 const health = routes.find((r) => r.path === '/api/litkb/health')
@@ -54,8 +103,13 @@ const res = {
   code: 0,
   headers: null,
   body: '',
-  writeHead(code, headers) { this.code = code; this.headers = headers },
-  end(body) { this.body = body },
+  writeHead(code, headers) {
+    this.code = code
+    this.headers = headers
+  },
+  end(body) {
+    this.body = body
+  },
 }
 await health.handler({ method: 'GET' }, res)
 assert.equal(res.code, 200)
@@ -66,7 +120,13 @@ assert.ok(payload.version)
 
 /* ---------- client ---------- */
 let captured = null
-globalThis.window = { __ModuleLoader__: { load: (o) => { captured = o } } }
+globalThis.window = {
+  __ModuleLoader__: {
+    load: (o) => {
+      captured = o
+    },
+  },
+}
 const code = readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8')
 vm.runInThisContext(code, { filename: 'lib/client.js' })
 assert.ok(captured, 'module loader called')
@@ -93,7 +153,9 @@ globalThis.document = {
   createElement: () => ({ setAttribute() {}, remove() {}, style: {} }),
 }
 mod.apply({
-  effect: (fn) => { fn() },
+  effect: (fn) => {
+    fn()
+  },
   slots: {
     inject: (name) => injected.push(name),
     register: () => {},

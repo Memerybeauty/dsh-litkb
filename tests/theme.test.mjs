@@ -9,32 +9,76 @@ process.env.LITKB_LIBRARY = mkdtempSync(join(tmpdir(), 'dsh-litkb-theme-'))
 const { ensureLibrary, upsert } = await import('../lib/library.js')
 const { writeCard } = await import('../lib/cards.js')
 const { writeDeepRead } = await import('../lib/deepread.js')
-const { listChains, saveChain } = await import('../lib/chains.js')
+const { saveChain } = await import('../lib/chains.js')
 const {
-  listThemes, readTheme, saveTheme, deleteTheme, themeChains, themePapers, themeStats,
-  matchFacet, themeChainDrafts, buildThemeSummary, buildThemeOutline,
-  setThemePaper, updateThemeSummary, recordThemeMatch,
+  listThemes,
+  readTheme,
+  saveTheme,
+  deleteTheme,
+  themeChains,
+  themePapers,
+  themeStats,
+  matchFacet,
+  themeChainDrafts,
+  buildThemeSummary,
+  buildThemeOutline,
+  setThemePaper,
+  updateThemeSummary,
+  recordThemeMatch,
 } = await import('../lib/themes.js')
 
 ensureLibrary()
 
 const records = [
   {
-    id: 'p-th1', citekey: 'p-th1', title: 'Polar transform for optic disc segmentation',
-    authors: 'Wu B.', year: 2024, venue: 'Journal', doi: '', type: '学术期刊',
-    topics: ['分割'], status: '精读', file: 'p-th1.pdf', pages: 8, chars: 2000, quality: 0.9,
+    id: 'p-th1',
+    citekey: 'p-th1',
+    title: 'Polar transform for optic disc segmentation',
+    authors: 'Wu B.',
+    year: 2024,
+    venue: 'Journal',
+    doi: '',
+    type: '学术期刊',
+    topics: ['分割'],
+    status: '精读',
+    file: 'p-th1.pdf',
+    pages: 8,
+    chars: 2000,
+    quality: 0.9,
     added: new Date().toISOString(),
   },
   {
-    id: 'p-th2', citekey: 'p-th2', title: 'Multicenter validation of optic disc boundary',
-    authors: 'Li C.', year: 2025, venue: 'Conference', doi: '', type: '会议',
-    topics: ['临床验证'], status: '精读', file: 'p-th2.pdf', pages: 6, chars: 1800, quality: 0.9,
+    id: 'p-th2',
+    citekey: 'p-th2',
+    title: 'Multicenter validation of optic disc boundary',
+    authors: 'Li C.',
+    year: 2025,
+    venue: 'Conference',
+    doi: '',
+    type: '会议',
+    topics: ['临床验证'],
+    status: '精读',
+    file: 'p-th2.pdf',
+    pages: 6,
+    chars: 1800,
+    quality: 0.9,
     added: new Date().toISOString(),
   },
   {
-    id: 'p-th3', citekey: 'p-th3', title: 'Lightweight segmentation network',
-    authors: 'Zhang Y.', year: 2023, venue: 'Journal', doi: '', type: '学术期刊',
-    topics: ['轻量化'], status: '精读', file: 'p-th3.pdf', pages: 5, chars: 1500, quality: 0.9,
+    id: 'p-th3',
+    citekey: 'p-th3',
+    title: 'Lightweight segmentation network',
+    authors: 'Zhang Y.',
+    year: 2023,
+    venue: 'Journal',
+    doi: '',
+    type: '学术期刊',
+    topics: ['轻量化'],
+    status: '精读',
+    file: 'p-th3.pdf',
+    pages: 5,
+    chars: 1500,
+    quality: 0.9,
     added: new Date().toISOString(),
   },
 ]
@@ -49,27 +93,36 @@ const decks = {
     { id: 'q-d4d4d4d4', page: 2, block: 'b-04', quote: 'Multicenter validation improves boundary Dice on REFUGE.' },
     { id: 'q-e5e5e5e5', page: 6, block: 'b-05', quote: 'Attention modules improve robustness across centers.' },
   ],
-  'p-th3': [
-    { id: 'q-f6f6f6f6', page: 2, block: 'b-06', quote: 'The lightweight network runs at 30 FPS on CPU.' },
-  ],
+  'p-th3': [{ id: 'q-f6f6f6f6', page: 2, block: 'b-06', quote: 'The lightweight network runs at 30 FPS on CPU.' }],
 }
 
 for (const record of records) {
   upsert(record)
-  writeCard({
-    paperId: record.id, status: 'ready', model: 'fake', generatedAt: new Date().toISOString(),
-    sections: [{ key: 'oneLine', title: '一句话', text: '概述。', evidence: [] }],
-    evidence: decks[record.id].map((ev) => ({ ...ev, kind: 'author_claim', before: '', after: '' })),
-    annotations: [], warnings: [], statusHistory: [],
-  }, record)
+  writeCard(
+    {
+      paperId: record.id,
+      status: 'ready',
+      model: 'fake',
+      generatedAt: new Date().toISOString(),
+      sections: [{ key: 'oneLine', title: '一句话', text: '概述。', evidence: [] }],
+      evidence: decks[record.id].map((ev) => ({ ...ev, kind: 'author_claim', before: '', after: '' })),
+      annotations: [],
+      warnings: [],
+      statusHistory: [],
+    },
+    record,
+  )
 }
 
 writeDeepRead({
   paperId: 'p-th3',
-  sections: [{
-    key: 'conclusion', title: '结论',
-    markdown: 'Mobile deployment matters for clinical use [[p-th3#^q-f6f6f6f6|Zhang 2023, p.2]].',
-  }],
+  sections: [
+    {
+      key: 'conclusion',
+      title: '结论',
+      markdown: 'Mobile deployment matters for clinical use [[p-th3#^q-f6f6f6f6|Zhang 2023, p.2]].',
+    },
+  ],
 })
 
 /* ---------- 研究读写 ---------- */
@@ -84,7 +137,10 @@ const theme = saveTheme({
   ],
 })
 assert.match(theme.id, /^t-[a-z0-9]{8}$/)
-assert.deepEqual(theme.facets.map((facet) => facet.key), ['f1', 'f2', 'f3'])
+assert.deepEqual(
+  theme.facets.map((facet) => facet.key),
+  ['f1', 'f2', 'f3'],
+)
 assert.equal(theme.facets[0].mode, 'compare')
 assert.equal(theme.facets[0].enabled, true)
 
@@ -108,7 +164,10 @@ assert.equal(updated.facets[2].key, 'f3')
 assert.equal(updated.title, '视盘分割研究 v2')
 assert.equal(updated.facets.length, 3)
 
-assert.throws(() => saveTheme({ title: '   ' }), (error) => error.code === 'empty_title')
+assert.throws(
+  () => saveTheme({ title: '   ' }),
+  (error) => error.code === 'empty_title',
+)
 
 /* ---------- 匹配 ---------- */
 const t = readTheme(theme.id)
@@ -119,13 +178,30 @@ assert.ok(polar.hits.every((hit) => hit.quote.toLowerCase().includes('polar')))
 assert.ok(polar.hits.filter((hit) => hit.paperId === 'p-th1').length <= 2)
 assert.ok(polar.hits.every((hit) => /^q-[0-9a-f]{8}$/.test(hit.evidenceId)))
 
-const quantum = matchFacet(t, { key: 'f9', title: '量子计算', description: 'quantum computing', keywords: [], mode: 'compare', enabled: true })
+const quantum = matchFacet(t, {
+  key: 'f9',
+  title: '量子计算',
+  description: 'quantum computing',
+  keywords: [],
+  mode: 'compare',
+  enabled: true,
+})
 assert.equal(quantum.gap, true)
 assert.equal(quantum.hits.length, 0)
 assert.ok(quantum.reason.length > 0)
 
-const mobile = matchFacet(t, { key: 'f8', title: 'mobile deployment', description: 'mobile deployment', keywords: [], mode: 'compare', enabled: true })
-assert.ok(mobile.hits.some((hit) => hit.source === 'claim' && hit.evidenceId === 'q-f6f6f6f6'), '精读句子也应能命中')
+const mobile = matchFacet(t, {
+  key: 'f8',
+  title: 'mobile deployment',
+  description: 'mobile deployment',
+  keywords: [],
+  mode: 'compare',
+  enabled: true,
+})
+assert.ok(
+  mobile.hits.some((hit) => hit.source === 'claim' && hit.evidenceId === 'q-f6f6f6f6'),
+  '精读句子也应能命中',
+)
 
 /* ---------- 主题链候选 ---------- */
 const first = themeChainDrafts(t)
@@ -140,7 +216,7 @@ assert.ok(first.drafts[0].confidence > 0 && first.drafts[0].confidence <= 0.95)
 assert.ok(first.drafts[0].warnings.some((text) => text.includes('只有 1 篇论文')))
 
 const savedDraft = saveChain(first.drafts[0])
-const savedSecond = saveChain(first.drafts[1])
+saveChain(first.drafts[1])
 assert.equal(savedDraft.status, 'draft')
 assert.equal(themeChains(t.id).list.length, 2)
 

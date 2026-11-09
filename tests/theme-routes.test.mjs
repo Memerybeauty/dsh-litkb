@@ -11,14 +11,38 @@ ensureLibrary()
 
 const papers = [
   {
-    id: 'p-r1', citekey: 'p-r1', title: 'Polar transform for optic disc', authors: 'Wu B.',
-    year: 2024, venue: 'Journal', doi: '', type: '学术期刊', topics: ['分割'], status: '精读',
-    file: 'p-r1.pdf', pages: 5, chars: 900, quality: 0.9, added: new Date().toISOString(),
+    id: 'p-r1',
+    citekey: 'p-r1',
+    title: 'Polar transform for optic disc',
+    authors: 'Wu B.',
+    year: 2024,
+    venue: 'Journal',
+    doi: '',
+    type: '学术期刊',
+    topics: ['分割'],
+    status: '精读',
+    file: 'p-r1.pdf',
+    pages: 5,
+    chars: 900,
+    quality: 0.9,
+    added: new Date().toISOString(),
   },
   {
-    id: 'p-r2', citekey: 'p-r2', title: 'Multicenter validation study', authors: 'Li C.',
-    year: 2025, venue: 'Conference', doi: '', type: '会议', topics: ['临床验证'], status: '精读',
-    file: 'p-r2.pdf', pages: 4, chars: 800, quality: 0.9, added: new Date().toISOString(),
+    id: 'p-r2',
+    citekey: 'p-r2',
+    title: 'Multicenter validation study',
+    authors: 'Li C.',
+    year: 2025,
+    venue: 'Conference',
+    doi: '',
+    type: '会议',
+    topics: ['临床验证'],
+    status: '精读',
+    file: 'p-r2.pdf',
+    pages: 4,
+    chars: 800,
+    quality: 0.9,
+    added: new Date().toISOString(),
   },
 ]
 const decks = {
@@ -26,18 +50,24 @@ const decks = {
     { id: 'q-11112222', page: 3, block: 'b-1', quote: 'Polar transform improves Dice to 0.95 on REFUGE.' },
     { id: 'q-33334444', page: 4, block: 'b-2', quote: 'The polar transform keeps boundaries continuous.' },
   ],
-  'p-r2': [
-    { id: 'q-55556666', page: 2, block: 'b-3', quote: 'Multicenter validation improves boundary Dice.' },
-  ],
+  'p-r2': [{ id: 'q-55556666', page: 2, block: 'b-3', quote: 'Multicenter validation improves boundary Dice.' }],
 }
 for (const record of papers) {
   upsert(record)
-  writeCard({
-    paperId: record.id, status: 'ready', model: 'fake', generatedAt: new Date().toISOString(),
-    sections: [{ key: 'oneLine', title: '一句话', text: '概述。', evidence: [] }],
-    evidence: decks[record.id].map((ev) => ({ ...ev, kind: 'author_claim' })),
-    annotations: [], warnings: [], statusHistory: [],
-  }, record)
+  writeCard(
+    {
+      paperId: record.id,
+      status: 'ready',
+      model: 'fake',
+      generatedAt: new Date().toISOString(),
+      sections: [{ key: 'oneLine', title: '一句话', text: '概述。', evidence: [] }],
+      evidence: decks[record.id].map((ev) => ({ ...ev, kind: 'author_claim' })),
+      annotations: [],
+      warnings: [],
+      statusHistory: [],
+    },
+    record,
+  )
 }
 
 const server = await import('../lib/index.js')
@@ -47,7 +77,9 @@ server.apply({ webServer: { register: (route) => routes.push(route) }, logger: {
 function makeReq({ method = 'GET', url = '/', body = null } = {}) {
   const handlers = { data: [], end: [] }
   return {
-    method, url, headers: {},
+    method,
+    url,
+    headers: {},
     on(event, fn) {
       handlers[event]?.push(fn)
       if (event === 'end') {
@@ -63,7 +95,16 @@ function makeReq({ method = 'GET', url = '/', body = null } = {}) {
   }
 }
 function makeRes() {
-  return { code: 0, body: '', writeHead(code) { this.code = code }, end(body) { this.body = String(body || '') } }
+  return {
+    code: 0,
+    body: '',
+    writeHead(code) {
+      this.code = code
+    },
+    end(body) {
+      this.body = String(body || '')
+    },
+  }
 }
 async function call(path, { method = 'GET', body = null, url = null } = {}) {
   const route = routes.find((item) => item.path === path)
@@ -150,12 +191,14 @@ assert.ok(exploreJob.created >= 2)
 assert.match(exploreJob.items[0].chainId, /^c-/)
 
 const excepted = await call('/api/litkb/themes/papers', {
-  method: 'POST', body: { id: themeId, paperId: 'p-r1', action: 'exclude' },
+  method: 'POST',
+  body: { id: themeId, paperId: 'p-r1', action: 'exclude' },
 })
 assert.equal(excepted.code, 200)
 assert.ok(!excepted.data.papers.some((row) => row.paperId === 'p-r1'))
 const restored = await call('/api/litkb/themes/papers', {
-  method: 'POST', body: { id: themeId, paperId: 'p-r1', action: 'restore' },
+  method: 'POST',
+  body: { id: themeId, paperId: 'p-r1', action: 'restore' },
 })
 assert.ok(restored.data.papers.some((row) => row.paperId === 'p-r1'))
 
@@ -164,7 +207,8 @@ assert.equal(emptySummary.code, 200)
 assert.equal(emptySummary.data.summary.text, '')
 
 const accept = await call('/api/litkb/chains/review', {
-  method: 'POST', body: { id: afterChain.data.facetChains[0].chain.id, action: 'accept' },
+  method: 'POST',
+  body: { id: afterChain.data.facetChains[0].chain.id, action: 'accept' },
 })
 assert.equal(accept.code, 200)
 
@@ -192,7 +236,10 @@ const outlineAppend = await call('/api/litkb/themes/outline', { method: 'POST', 
 assert.equal(outlineAppend.data.draft.id, draftId)
 assert.ok(outlineAppend.data.draft.chars > outlineNew.data.draft.chars)
 
-const outlineReplace = await call('/api/litkb/themes/outline', { method: 'POST', body: { id: themeId, mode: 'replace' } })
+const outlineReplace = await call('/api/litkb/themes/outline', {
+  method: 'POST',
+  body: { id: themeId, mode: 'replace' },
+})
 assert.equal(outlineReplace.data.draft.id, draftId)
 assert.equal(outlineReplace.data.draft.chars, outlineNew.data.draft.chars)
 

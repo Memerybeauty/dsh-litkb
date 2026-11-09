@@ -1,6 +1,6 @@
 {
   "name": "dsh-litkb",
-  "version": "0.2.13",
+  "version": "0.2.14",
   "private": false,
   "type": "module",
   "description": "文献工作台：个人工作台 + 论文库 + 写作",
@@ -20,7 +20,9 @@
     "precheck": "npm run build",
     "prepack": "npm run build",
     "lint": "eslint .",
-    "coverage": "c8 --reporter=text-summary --reporter=lcov --check-coverage --lines 70 --functions 65 --exclude 'tests/**' --exclude 'scripts/**' --exclude 'lib/client.js' npm test"
+    "coverage": "c8 --reporter=text-summary --reporter=lcov --check-coverage --lines 70 --functions 65 --exclude 'tests/**' --exclude 'scripts/**' --exclude 'lib/client.js' npm test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dsh": {
     "bundle": {
@@ -53,6 +55,7 @@
   ],
   "devDependencies": {
     "c8": "^10.1.3",
-    "eslint": "^9.39.4"
+    "eslint": "^9.39.4",
+    "prettier": "^3.9.10"
   }
 }

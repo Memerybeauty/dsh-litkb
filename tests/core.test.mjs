@@ -114,7 +114,10 @@ test('splitSections 切出有序章节并保留页码', () => {
   assert.ok(method.parts.some((p) => p.page === 2))
   assert.ok(method.text.includes('WavLM'))
   const order = sections.map((s) => s.startPage)
-  assert.deepEqual(order, [...order].sort((a, b) => a - b))
+  assert.deepEqual(
+    order,
+    [...order].sort((a, b) => a - b),
+  )
 })
 
 test('无标题正文退化为全文，不丢内容', () => {
@@ -211,7 +214,11 @@ test('renderCardMarkdown 输出七段、块引用与页码', () => {
     evidence: [{ id: 'q-1234abcd', page: 3, quote: '原文引文', before: '', after: '' }],
     warnings: [],
   }
-  const md = renderCardMarkdown({ id: 'p-x', title: 'T', file: 'p-x.pdf', topics: [], pages: 3, chars: 9 }, card, '摘要')
+  const md = renderCardMarkdown(
+    { id: 'p-x', title: 'T', file: 'p-x.pdf', topics: [], pages: 3, chars: 9 },
+    card,
+    '摘要',
+  )
   assert.ok(md.includes('evidence_count: 1'))
   assert.ok(md.includes('## 1. 一句话'))
   assert.ok(md.includes('## 7. 与我的课题'))

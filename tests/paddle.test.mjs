@@ -17,29 +17,33 @@ function test(name, fn) {
 }
 
 const block = (label, content, bbox) => ({
-  block_label: label, block_content: content, block_bbox: bbox,
+  block_label: label,
+  block_content: content,
+  block_bbox: bbox,
 })
 
 const jsonl = JSON.stringify({
   result: {
-    layoutParsingResults: [{
-      prunedResult: {
-        width: 1000,
-        height: 2000,
-        parsing_res_list: [
-          block('header', '页眉信息', [0, 0, 1000, 50]),
-          block('doc_title', '面向测试的论文标题', [100, 100, 900, 160]),
-          block('abstract', '摘 要 本文提出一种方法，在数据集上取得 0.96。', [100, 200, 900, 400]),
-          block('text', '关键词：测试；方法', [100, 410, 400, 440]),
-          block('paragraph_title', '1 引言', [100, 460, 300, 490]),
-          block('text', '正 文 第一段内容，介绍研究背景。', [100, 500, 900, 700]),
-          block('text', '第二段内容，描述方法。', [100, 710, 900, 900]),
-          block('figure_title', '图 1 系统框架', [100, 920, 500, 960]),
-          block('text', '', [100, 970, 900, 1000]),
-        ],
+    layoutParsingResults: [
+      {
+        prunedResult: {
+          width: 1000,
+          height: 2000,
+          parsing_res_list: [
+            block('header', '页眉信息', [0, 0, 1000, 50]),
+            block('doc_title', '面向测试的论文标题', [100, 100, 900, 160]),
+            block('abstract', '摘 要 本文提出一种方法，在数据集上取得 0.96。', [100, 200, 900, 400]),
+            block('text', '关键词：测试；方法', [100, 410, 400, 440]),
+            block('paragraph_title', '1 引言', [100, 460, 300, 490]),
+            block('text', '正 文 第一段内容，介绍研究背景。', [100, 500, 900, 700]),
+            block('text', '第二段内容，描述方法。', [100, 710, 900, 900]),
+            block('figure_title', '图 1 系统框架', [100, 920, 500, 960]),
+            block('text', '', [100, 970, 900, 1000]),
+          ],
+        },
+        markdown: { text: '# 标题' },
       },
-      markdown: { text: '# 标题' },
-    }],
+    ],
   },
 })
 
@@ -77,7 +81,10 @@ test('章节在块之间延续：摘要 → 引言 → 正文', () => {
 test('块 ID 稳定且格式正确', () => {
   const a = normalizePaddleResult(jsonl, 'PaddleOCR-VL-1.6')
   const b = normalizePaddleResult(jsonl, 'PaddleOCR-VL-1.6')
-  assert.deepEqual(a.pages[0].blocks.map((x) => x.id), b.pages[0].blocks.map((x) => x.id))
+  assert.deepEqual(
+    a.pages[0].blocks.map((x) => x.id),
+    b.pages[0].blocks.map((x) => x.id),
+  )
   assert.ok(a.pages[0].blocks.every((x) => /^b-[0-9a-f]{8}(-\d+)?$/.test(x.id)))
 })
 

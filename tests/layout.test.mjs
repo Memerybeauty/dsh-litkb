@@ -88,13 +88,23 @@ test('blockifyPage 输出归一化 bbox、双栏顺序与章节', () => {
 test('块 ID 可重复（同输入同 ID）', () => {
   const a = blockifyPage(twoColumnPage(), 10, true, null)
   const b = blockifyPage(twoColumnPage(), 10, true, null)
-  assert.deepEqual(a.blocks.map((x) => x.id), b.blocks.map((x) => x.id))
+  assert.deepEqual(
+    a.blocks.map((x) => x.id),
+    b.blocks.map((x) => x.id),
+  )
   assert.ok(a.blocks.every((x) => /^b-[0-9a-f]{8}(-\d+)?$/.test(x.id)))
 })
 
 test('findBlockForQuote 用归一化文本找块；解析稿带块锚点', () => {
   const page = blockifyPage(twoColumnPage(), 10, true, null)
-  const doc = { pages: [page], numPages: 1, parser: 'test', quality: { layout: 1 }, builtAt: 'x', stats: { blocks: page.blocks.length } }
+  const doc = {
+    pages: [page],
+    numPages: 1,
+    parser: 'test',
+    quality: { layout: 1 },
+    builtAt: 'x',
+    stats: { blocks: page.blocks.length },
+  }
   const block = findBlockForQuote(doc, 1, '左栏正文内容，这里放足够多')
   assert.ok(block)
   assert.ok(block.text.includes('左栏正文'))

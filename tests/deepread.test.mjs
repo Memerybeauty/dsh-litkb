@@ -9,31 +9,54 @@ import { join } from 'node:path'
 process.env.LITKB_LIBRARY = mkdtempSync(join(tmpdir(), 'dsh-litkb-deep-'))
 
 const { ensureLibrary, upsert, PATHS } = await import('../lib/library.js')
-const { writeCard, readCard } = await import('../lib/cards.js')
+const { writeCard } = await import('../lib/cards.js')
 const { buildDeepRead, readDeepRead } = await import('../lib/deepread.js')
 const { repairEvidenceBlocks } = await import('../lib/blocks.js')
-const { ensureLibrary: ensure } = await import('../lib/library.js')
 
 ensureLibrary()
 const record = {
-  id: 'p-deep0001', citekey: 'p-deep0001', title: 'Polar Glaucoma Segmentation',
-  authors: 'Wu B.', year: 2026, venue: 'Journal', doi: '', type: '学术期刊', topics: [],
-  status: '精读', file: 'p-deep0001.pdf', pages: 2, chars: 1000, quality: 0.9, added: new Date().toISOString(),
+  id: 'p-deep0001',
+  citekey: 'p-deep0001',
+  title: 'Polar Glaucoma Segmentation',
+  authors: 'Wu B.',
+  year: 2026,
+  venue: 'Journal',
+  doi: '',
+  type: '学术期刊',
+  topics: [],
+  status: '精读',
+  file: 'p-deep0001.pdf',
+  pages: 2,
+  chars: 1000,
+  quality: 0.9,
+  added: new Date().toISOString(),
 }
 upsert(record)
-writeCard({
-  paperId: record.id, status: 'ready', model: 'fake', generatedAt: new Date().toISOString(),
-  sections: [
-    { key: 'oneLine', title: '一句话', text: '提出极坐标方法。', evidence: [] },
-    { key: 'method', title: '方法', text: '极坐标变换。', evidence: [] },
-  ],
-  evidence: [], annotations: [], warnings: [], statusHistory: [],
-}, record)
+writeCard(
+  {
+    paperId: record.id,
+    status: 'ready',
+    model: 'fake',
+    generatedAt: new Date().toISOString(),
+    sections: [
+      { key: 'oneLine', title: '一句话', text: '提出极坐标方法。', evidence: [] },
+      { key: 'method', title: '方法', text: '极坐标变换。', evidence: [] },
+    ],
+    evidence: [],
+    annotations: [],
+    warnings: [],
+    statusHistory: [],
+  },
+  record,
+)
 const pages = {
   numPages: 2,
   pages: [
     { page: 1, text: 'Glaucoma segmentation is important. We propose a polar transform for the optic disc boundary.' },
-    { page: 2, text: 'Experiments show that the polar transform improves boundary Dice to 0.95 on the public dataset compared with the baseline.' },
+    {
+      page: 2,
+      text: 'Experiments show that the polar transform improves boundary Dice to 0.95 on the public dataset compared with the baseline.',
+    },
   ],
 }
 writeFileSync(join(PATHS.text, `${record.id}.pages.json`), JSON.stringify(pages), 'utf8')
@@ -103,7 +126,9 @@ const ctx = {
 
 let passed = 0
 const pending = []
-function test(name, fn) { pending.push({ name, fn }) }
+function test(name, fn) {
+  pending.push({ name, fn })
+}
 
 test('精读生成：11 板块 Markdown，缺项补说明', async () => {
   const saved = await buildDeepRead({ ctx, record })
@@ -124,8 +149,17 @@ test('精读生成：11 板块 Markdown，缺项补说明', async () => {
 })
 
 test('证据块回贴：无 block 的证据按引文回贴到版面块', () => {
-  const card = { evidence: [{ id: 'q-block1', page: 2, quote: 'improves boundary Dice to 0.95 on the public dataset' }] }
-  const doc = { pages: [{ page: 2, blocks: [{ id: 'b-1', text: 'improves boundary Dice to 0.95 on the public dataset compared with baseline' }] }] }
+  const card = {
+    evidence: [{ id: 'q-block1', page: 2, quote: 'improves boundary Dice to 0.95 on the public dataset' }],
+  }
+  const doc = {
+    pages: [
+      {
+        page: 2,
+        blocks: [{ id: 'b-1', text: 'improves boundary Dice to 0.95 on the public dataset compared with baseline' }],
+      },
+    ],
+  }
   assert.equal(repairEvidenceBlocks(card, doc), true)
   assert.equal(card.evidence[0].block, 'b-1')
 })
