@@ -422,14 +422,7 @@
                 ? h('button', {
                     type: 'button', className: 'litkb-askFab is-accent',
                     onMouseDown: (event) => event.preventDefault(),
-                    onClick: () => {
-                      onBuildChain({
-                        paperId: paper.id, mode: 'claim', claim: selHint.text,
-                        page: selHint.page, blockId: selHint.blockId,
-                        source: 'parse', autoPropose: true,
-                      })
-                      setSelHint(null)
-                    },
+                    onClick: () => buildFromSelection(selHint),
                   }, '建链')
                 : null,
               onComment
@@ -1037,6 +1030,31 @@
         if (scope === 'paper' && typeof window.confirm === 'function'
           && !window.confirm(`${scopeLabel}翻译约 ${doc?.stats?.blocks ?? 0} 块，可能耗时几分钟，继续？`)) return
         translate({ scope, section: scope === 'section' ? sectionKey : undefined, force: false })
+      }
+
+      const buildFromSelection = async (selection) => {
+        try {
+          const data = await api('/api/litkb/card/evidence', {
+            method: 'POST', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              id: paper.id, quote: selection.text,
+              page: selection.page, block: selection.blockId,
+            }),
+          })
+          const evidence = data.evidence
+          onBuildChain({
+            paperId: paper.id, mode: 'evidence', evidenceIds: [evidence.id], claim: '',
+            source: 'parse', autoPropose: true,
+            nodes: [{
+              paperId: paper.id, evidenceId: evidence.id,
+              page: evidence.page, block: evidence.block || null, quote: evidence.quote,
+              title: paper.title || '', authors: paper.authors || '', year: paper.year || '', note: '',
+            }],
+          })
+          setSelHint(null)
+        } catch (e) {
+          setErr(String(e.message || e))
+        }
       }
 
       const focus = (block, from) => {

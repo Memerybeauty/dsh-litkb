@@ -18,7 +18,7 @@
         sectionKey: initial?.claim?.sectionKey || seed?.sectionKey || '',
         source: initial?.claim?.source || seed?.source || 'manual',
       })
-      const [nodes, setNodes] = useState(initial?.nodes || [])
+      const [nodes, setNodes] = useState(initial?.nodes || seed?.nodes || [])
       const [warnings, setWarnings] = useState(() => (
         (initial?.nodes || []).some((node) => node.stale)
           ? ['有节点已失效；插入时会跳过，请换一条证据。']
@@ -265,10 +265,13 @@
       }
 
       useEffect(() => {
-        if (!seed?.autoPropose || proposeAutoRef.current) return
-        if (!claim.trim()) return
+        if (!seed || proposeAutoRef.current) return
         proposeAutoRef.current = true
-        propose('claim')
+        if (seed.mode === 'evidence' && Array.isArray(seed.evidenceIds) && seed.evidenceIds.length) {
+          propose('evidence', '', '', seed.evidenceIds)
+          return
+        }
+        if (seed.autoPropose && claim.trim()) propose('claim')
       }, [])
 
       const save = async () => {

@@ -9,7 +9,7 @@ import {
   PATHS, TYPES, ensureLibrary, findByDoi, findByHash, readIndex, readTags, sha256, stats, upsert,
   writeIndex, writeTags,
 } from './library.js'
-import { addAnnotation, cardSummary, listVersions, readCard, readVersion, recomputeCardStatus, renderCardMarkdown, writeCard } from './cards.js'
+import { addAnnotation, addQuoteEvidence, cardSummary, listVersions, readCard, readVersion, recomputeCardStatus, renderCardMarkdown, writeCard } from './cards.js'
 import { blocksSummary, ensureBlocks, readBlocks, renderParsedMarkdown, repairEvidenceBlocks } from './blocks.js'
 import { documentParagraphs, paragraphPages } from './paragraphs.js'
 import { renderPagePng } from './render.js'

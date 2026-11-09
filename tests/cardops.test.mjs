@@ -137,6 +137,21 @@ test('批注追加、带日期与 ID', async () => {
   assert.equal(commentEvidence.page, 3)
   assert.equal(commentEvidence.comment, '这句需要补充')
   assert.match(commentEvidence.id, /^q-[0-9a-f]{8}$/)
+
+  const selected = await call('/api/litkb/card/evidence', {
+    method: 'POST',
+    body: JSON.stringify({ id: 'p-x', quote: '选区里的一句话', page: 4, block: 'b-2' }),
+  })
+  assert.equal(selected.code, 200)
+  const selectedEvidence = JSON.parse(selected.body).evidence
+  assert.match(selectedEvidence.id, /^q-[0-9a-f]{8}$/)
+  assert.equal(selectedEvidence.kind, 'selection')
+  assert.equal(selectedEvidence.quote, '选区里的一句话')
+  const again = await call('/api/litkb/card/evidence', {
+    method: 'POST',
+    body: JSON.stringify({ id: 'p-x', quote: '选区里的一句话', page: 4, block: 'b-2' }),
+  })
+  assert.equal(JSON.parse(again.body).evidence.id, selectedEvidence.id)
 })
 
 test('状态自由切换：任意方向可改，未知状态拒绝，原因可选', async () => {

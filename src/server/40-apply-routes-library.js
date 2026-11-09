@@ -176,6 +176,29 @@ export function apply(ctx) {
   // 追加批注
   webServer.register({
     kind: 'exact',
+    path: '/api/litkb/card/evidence',
+    handler: async (req, res) => {
+      try {
+        const body = JSON.parse((await readBody(req, 64 * 1024)).toString('utf8') || '{}')
+        const record = readIndex().find((row) => row.id === String(body.id || ''))
+        const card = record ? readCard(record.id) : null
+        if (!record || !card) { json(res, 404, { ok: false, error: '卡片不存在' }); return }
+        const quote = String(body.quote || '').trim()
+        if (!quote) { json(res, 422, { ok: false, error: '缺少原文句子' }); return }
+        const evidence = addQuoteEvidence(card, {
+          quote, page: body.page, block: body.block,
+        })
+        if (!evidence) { json(res, 422, { ok: false, error: '证据不合法' }); return }
+        writeCard(card, record)
+        json(res, 200, { ok: true, evidence })
+      } catch (error) {
+        json(res, 500, { ok: false, error: String(error?.message || error) })
+      }
+    },
+  })
+
+  webServer.register({
+    kind: 'exact',
     path: '/api/litkb/card/annotate',
     handler: async (req, res) => {
       try {
