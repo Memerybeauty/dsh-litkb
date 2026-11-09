@@ -148,6 +148,8 @@ const papersTab = render([
 ])
 assert.ok(papersTab.includes('参考论文'))
 assert.ok(papersTab.includes('在本研究论文里搜'))
+assert.ok(papersTab.includes('匹配设置'))
+assert.ok(papersTab.includes('匹配明细'))
 assert.ok(papersTab.includes('证据链'))
 assert.ok(papersTab.includes('研究结论'))
 assert.ok(papersTab.includes('重新探索'))
