@@ -1215,9 +1215,14 @@
               let x = 24
               let y = 80
               try {
-                const rect = selection.getRangeAt(0).getBoundingClientRect()
-                x = Math.min(Math.max(12, rect.left), (window.innerWidth || 900) - 96)
-                y = Math.min(Math.max(12, rect.bottom + 8), (window.innerHeight || 700) - 56)
+                const range = selection.getRangeAt(0)
+                const rects = range.getClientRects()
+                const rect = rects.length ? rects[rects.length - 1] : range.getBoundingClientRect()
+                const barWidth = 220
+                const barHeight = 38
+                x = Math.min(Math.max(12, rect.left), (window.innerWidth || 900) - barWidth - 12)
+                y = rect.top - barHeight - 8
+                if (y < 12) y = Math.min((window.innerHeight || 700) - barHeight - 12, rect.bottom + 8)
               } catch { /* 选区几何不可用时用默认位置 */ }
               setSelHint({ text, page: block.page, blockId: block.id, x, y, source: 'parse' })
             },
