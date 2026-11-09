@@ -13,7 +13,7 @@
           name: 'sidebar.panellist',
           id: 'dsh-litkb',
           order: 20,
-          label: () => '文献库',
+          label: () => '文献工作台',
         }, LitkbIcon),
         'dsh-litkb: sidebar panel icon'
       )
@@ -30,7 +30,7 @@
           name: 'settings.section',
           id: 'dsh-litkb',
           order: 30,
-          label: () => '文献库',
+          label: () => '文献工作台',
         }, LitkbSettings),
         'dsh-litkb: settings section'
       )

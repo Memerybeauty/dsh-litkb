@@ -39,14 +39,24 @@ function render(states) {
   return JSON.stringify(mod.__test.ThemePage({ papers: [{ id: 'p-1', title: 'Polar paper' }], tags: [] }))
 }
 
+const chain = {
+  id: 'c-1', status: 'draft', confidence: 0.7, title: '极坐标',
+  claim: { text: '极坐标变换改善边界。' },
+  provenance: { facetKey: 'f1', themeId: 't-1', matcher: 'theme-match.v1' },
+  warnings: ['只有 1 篇论文支撑'],
+  nodes: [{
+    paperId: 'p-1', paperTitle: 'Polar paper', title: 'Polar paper', page: 3, block: 'b-1',
+    evidenceId: 'q-11112222', quote: 'Polar transform improves Dice to 0.95.', relation: 'supports',
+  }],
+}
 const detail = {
   theme: {
     id: 't-1', title: '视盘研究', tags: ['分割'], description: '综述第二章',
     facets: [{ key: 'f1', title: '极坐标变换', description: 'polar', keywords: ['polar'], enabled: true }],
     summary: { text: '' }, papers: { include: [], exclude: [] },
   },
-  facetChains: [{ facetKey: 'f1', chain: { id: 'c-1', status: 'draft', confidence: 0.7, nodes: 2, title: '极坐标' } }],
-  chains: [{ id: 'c-1', status: 'draft', provenance: { facetKey: 'f1', themeId: 't-1' }, nodes: [{ paperId: 'p-1' }] }],
+  chains: [chain],
+  facetChains: [{ facetKey: 'f1', chain: { id: 'c-1', status: 'draft', confidence: 0.7, nodes: 1, title: '极坐标' } }],
   stats: { papers: 1, facets: 1, confirmed: 0, drafts: 1, gaps: 0 },
   papers: [{
     paperId: 'p-1', title: 'Polar paper', year: 2024, score: 3.2, facets: ['f1'],
@@ -57,47 +67,45 @@ const detail = {
 
 const listTheme = {
   id: 't-1', title: '视盘研究', tags: ['分割'], draftId: '', updatedAt: '2026-11-09T00:00:00Z',
-  stats: { facets: 1, papers: 1, confirmed: 0, drafts: 1, gaps: 0 },
+  stats: { facets: 1, papers: 1, confirmed: 1, drafts: 0, gaps: 0 },
 }
 
-const empty = render([[], '', null, '', '', '', null, null, null, '', false, null, false])
-assert.ok(empty.includes('从一个研究开始'))
-assert.ok(empty.includes('新建研究'))
+const empty = render([[], '', null, '', '', '', null, null, null, '', false, '', '', false])
+assert.ok(empty.includes('个人工作台'))
 assert.ok(empty.includes('还没有研究'))
+assert.ok(empty.includes('新建研究'))
 
-const unselected = render([[listTheme], '', null, '', '', '', null, null, null, '', false, null, false])
-assert.ok(unselected.includes('视盘研究'))
-assert.ok(unselected.includes('从左栏选一个研究'))
-assert.ok(!unselected.includes('先确认这些论文是否切题'), '未选中研究时不显示研究操作')
+const cards = render([[listTheme], '', null, '', '', '', null, null, null, '', false, '', '', false])
+assert.ok(cards.includes('视盘研究'))
+assert.ok(cards.includes('1/1 条链'))
+assert.ok(cards.includes('未开始写作'))
 
-const selected = render([[listTheme], 't-1', detail, '', '', '', null, null, null, '', false, null, false])
-assert.ok(selected.includes('论文 1'))
-assert.ok(selected.includes('先确认这些论文是否切题'))
-assert.ok(selected.includes('Polar paper'))
+const selected = render([[listTheme], 't-1', detail, '', '', '', null, null, null, '', false, 'f1', 'c-1', false])
+assert.ok(selected.includes('研究总览'))
 assert.ok(selected.includes('证据链'))
-assert.ok(selected.includes('极坐标变换'))
-assert.ok(selected.includes('待审草稿'))
-assert.ok(selected.includes('写作'))
-assert.ok(selected.includes('生成提纲'))
-assert.ok(!selected.includes('在写作页打开'), '写作统一回主写作页')
-assert.ok(selected.includes('还没有文稿'))
+assert.ok(selected.includes('链详情'))
+assert.ok(selected.includes('极坐标变换改善边界'))
+assert.ok(selected.includes('Polar transform improves Dice'))
+assert.ok(selected.includes('确认这条链'))
+assert.ok(selected.includes('去写作'))
+assert.ok(selected.includes('Polar paper'))
+
+const confirmedDetail = { ...detail, chains: [{ ...chain, status: 'confirmed' }] }
+const confirmed = render([[listTheme], 't-1', confirmedDetail, '', '', '', null, null, null, '', false, 'f1', 'c-1', false])
+assert.ok(confirmed.includes('插入写作'))
+assert.ok(confirmed.includes('已确认'))
 
 const editing = render([
   [], '', null, '', '', '', null, null,
   { title: '新研究', description: '', tags: '', facets: [{ title: '', description: '', keywords: '' }] },
-  '', false, null, false,
+  '', false, '', '', false,
 ])
 assert.ok(editing.includes('新建研究'))
 assert.ok(editing.includes('细分描述'))
 assert.ok(editing.includes('AI 帮我拆'))
 
-const withDraft = { ...detail, draft: { id: 'd-1', title: '视盘研究 · 初稿', chars: 120, citations: 3, missing: 0, updated: '' } }
-const writing = render([[listTheme], 't-1', withDraft, '', '', '', null, null, null, '', false, null, false])
-assert.ok(writing.includes('打开写作页'))
-assert.ok(writing.includes('追加提纲到文稿'))
-
-console.log('  ✓ 空态 / 左列表 / 未选中')
-console.log('  ✓ 论文优先：表格 + 匹配入口')
-console.log('  ✓ 证据链：细分 / 待审 / 覆盖矩阵')
-console.log('  ✓ 写作：只生成提纲 + 跳写作页')
+console.log('  ✓ 卡片总览：空态 / 统计 / 进度')
+console.log('  ✓ 三栏：研究总览 / 证据链 / 链详情')
+console.log('  ✓ 链操作：确认 / 插入写作')
+console.log('  ✓ 新建研究弹窗')
 console.log('\n4 passed')

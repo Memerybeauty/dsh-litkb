@@ -166,7 +166,7 @@ const settingsHtml = render('LitkbSettings', { initial: {
   settings: { library: '/tmp/lib', paddle: { configured: true, model: 'PaddleOCR-VL-1.6', enabled: true, source: 'settings' } },
   llm: { available: true, route: { provider: 'fake', model: 'fake' } },
 } })
-assert.ok(settingsHtml.includes('文献库'))
+assert.ok(settingsHtml.includes('文献工作台'))
 assert.ok(settingsHtml.includes('PaddleOCR'))
 console.log('  ✓ 右栏原文：页码 / 页图常驻')
 const manage = render('ManagePanel', { tags: [{ name: '分割', count: 2, keywords: [] }], onClose() {}, onChanged() {} }, ['tags'])
