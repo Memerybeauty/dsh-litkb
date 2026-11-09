@@ -1012,6 +1012,10 @@
               `探索中 · 已生成 ${job.created || 0} 条 · ${job.step || ''}`,
               h('button', { type: 'button', className: 'litkb-miniBtn', onClick: cancelExplore }, '取消'))
           : null,
+        (job?.errors || []).length
+          ? h('div', { className: 'litkb-error' },
+              job.errors.map((item, index) => h('div', { key: index }, `${item.facetKey || ''} ${item.message || ''}`)))
+          : null,
         views,
         h('div', { className: 'litkb-wbBody' }, body),
         matchDrawer,

@@ -2,7 +2,7 @@
  * dsh-litkb · 服务端插件（v0.3.0 / P2.1）
  * 大类（知网 12 类）+ 扁平标签 + 七段卡（章节切分 / 证据块 / 卡片页）。
  */
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {

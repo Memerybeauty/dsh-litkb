@@ -34,6 +34,7 @@
       const [saving, setSaving] = useState(false)
       const [err, setErr] = useState('')
       const [notice, setNotice] = useState('')
+      const [maintaining, setMaintaining] = useState('')
 
       const load = useCallback(async () => {
         try {
@@ -67,6 +68,31 @@
           setErr(String(e.message || e))
         } finally {
           setSaving(false)
+        }
+      }
+
+      const maintain = async (action) => {
+        if (maintaining) return
+        const confirmText = action === 'rebuild-index'
+          ? '重建索引会按论文 id 去重并重写 index.jsonl，继续？'
+          : action === 'clear-pages' ? '清理解析缓存后，下次打开解析稿会重新抽取文本，继续？'
+            : '清空搜索历史？'
+        if (typeof window !== 'undefined' && window.confirm && !window.confirm(confirmText)) return
+        setMaintaining(action)
+        setNotice('')
+        setErr('')
+        try {
+          const data = await api('/api/litkb/maintenance', {
+            method: 'POST', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ action }),
+          })
+          setNotice(action === 'rebuild-index'
+            ? `索引已重建：${data.before} → ${data.after} 条`
+            : `已清理 ${data.removed || 0} 项`)
+        } catch (e) {
+          setErr(String(e.message || e))
+        } finally {
+          setMaintaining('')
         }
       }
 
@@ -124,6 +150,19 @@
               route ? `${route.provider} / ${route.model}` : (llm.available ? '宿主未选择默认模型' : '宿主未提供模型服务'))),
           h('div', { className: 'litkb-settingsHint' },
             '分类、七段卡、翻译、追问都走宿主默认模型；在 DSH「设置 → 模型」里更换。')),
+        h('section', { className: 'litkb-settingsSection' },
+          h('div', { className: 'litkb-settingsTitle' }, '维护'),
+          h('div', { className: 'litkb-settingsHint' },
+            '索引重建会按论文 id 去重；清理解析缓存只删 text/*.pages.json，不动卡片、证据与译文。'),
+          h('div', { className: 'litkb-settingsRow' },
+            h('span', { className: 'litkb-settingsLabel' }, '操作'),
+            h('div', { className: 'litkb-inline' },
+              h('button', { type: 'button', className: 'litkb-miniBtn', disabled: Boolean(maintaining), onClick: () => maintain('rebuild-index') },
+                maintaining === 'rebuild-index' ? '重建中…' : '重建索引'),
+              h('button', { type: 'button', className: 'litkb-miniBtn', disabled: Boolean(maintaining), onClick: () => maintain('clear-pages') },
+                maintaining === 'clear-pages' ? '清理中…' : '清理解析缓存'),
+              h('button', { type: 'button', className: 'litkb-miniBtn', disabled: Boolean(maintaining), onClick: () => maintain('clear-history') },
+                maintaining === 'clear-history' ? '清理中…' : '清空搜索历史')))),
         err ? h('div', { className: 'litkb-error' }, err) : null,
         h('div', { className: 'litkb-settingsActions' },
           h('button', { type: 'button', className: 'litkb-btn', disabled: saving, onClick: save },

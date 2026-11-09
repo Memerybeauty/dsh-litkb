@@ -1197,5 +1197,6 @@
       '.litkb-moreList button.is-danger{color:var(--litkb-danger)}',
       '.litkb-chainBatchRel{display:flex;align-items:center;gap:8px;padding:6px 0}',
       '.litkb-exportMenu.is-down .litkb-exportMenuList{top:calc(100% + 6px);bottom:auto}',
+      '.litkb-exProgress{display:flex;align-items:center;gap:8px;flex-wrap:wrap}',
     ].join('\n')
 

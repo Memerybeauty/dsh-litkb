@@ -28,6 +28,25 @@
     return 500
   }
 
+  const themeJobDir = join(PATHS.cache, 'theme-jobs')
+  function persistThemeJob(job, extra = {}) {
+    try {
+      if (!existsSync(themeJobDir)) mkdirSync(themeJobDir, { recursive: true })
+      const payload = {
+        id: job.id, themeId: job.themeId, status: job.status,
+        facetKeys: job.facetKeys || [], createdAt: job.createdAt || new Date().toISOString(),
+        ...extra,
+      }
+      writeFileSync(join(themeJobDir, `${job.id}.json`), JSON.stringify(payload), 'utf8')
+    } catch { /* 持久化失败不影响任务 */ }
+  }
+  function clearPersistedJob(id) {
+    try {
+      const file = join(themeJobDir, `${id}.json`)
+      if (existsSync(file)) unlinkSync(file)
+    } catch { /* ignore */ }
+  }
+
   function startThemeChainJob({ themeId, facetKeys = [] } = {}) {
     const theme = readTheme(themeId)
     if (!theme) throw Object.assign(new Error('研究不存在'), { code: 'not_found' })
@@ -41,10 +60,12 @@
       themeId,
       status: 'queued', step: '排队中',
       total: targets.length, done: 0, created: 0, failed: 0,
-      gaps: [], items: [], errors: [],
+      gaps: [], items: [], errors: [], facetKeys: wanted ? [...wanted] : [],
+      createdAt: new Date().toISOString(),
       startedAt: new Date().toISOString(), finishedAt: null,
     }
     themeJobs.set(job.id, job)
+    persistThemeJob(job)
     const cutoff = Date.now() - 24 * 60 * 60 * 1000
     for (const [id, item] of themeJobs) {
       if (item.status !== 'running' && item.status !== 'queued' && Date.parse(item.finishedAt || item.startedAt) < cutoff) themeJobs.delete(id)
@@ -90,8 +111,10 @@
       markThemeRun(theme.id, { runId: result.runId, model: null })
       job.status = 'done'
       job.step = '完成'
+      clearPersistedJob(job.id)
     } catch (error) {
       job.status = 'failed'
+      clearPersistedJob(job.id)
       job.step = '失败'
       job.errors.push({ message: String(error?.message || error), code: error?.code || 'error' })
     } finally {
@@ -264,6 +287,7 @@
           job.status = 'canceled'
           job.step = '已取消'
           job.finishedAt = new Date().toISOString()
+          clearPersistedJob(job.id)
         }
         json(res, 200, { ok: true, job: publicThemeJob(job) })
       } catch (error) {
@@ -438,3 +462,20 @@
       }
     },
   })
+
+  // 重启续跑：上次进程中断时留下的 running/queued 主题任务，重新入队。
+  try {
+    if (existsSync(themeJobDir)) {
+      for (const name of readdirSync(themeJobDir)) {
+        if (!name.endsWith('.json')) continue
+        const file = join(themeJobDir, name)
+        try {
+          const data = JSON.parse(readFileSync(file, 'utf8'))
+          if (data?.themeId && (data.status === 'running' || data.status === 'queued')) {
+            startThemeChainJob({ themeId: data.themeId, facetKeys: data.facetKeys || [] })
+          }
+        } catch { /* 坏文件跳过 */ }
+        try { unlinkSync(file) } catch { /* ignore */ }
+      }
+    }
+  } catch { /* 没有缓存目录 */ }

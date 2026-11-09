@@ -448,6 +448,49 @@ export function apply(ctx) {
     },
   })
 
+  // 维护：索引重建 / 缓存清理
+  webServer.register({
+    kind: 'exact',
+    path: '/api/litkb/maintenance',
+    handler: async (req, res) => {
+      try {
+        const body = JSON.parse((await readBody(req, 16 * 1024)).toString('utf8') || '{}')
+        const action = String(body.action || '')
+        if (action === 'rebuild-index') {
+          const before = readIndex()
+          const map = new Map()
+          for (const row of before) if (row?.id) map.set(row.id, row)
+          const rows = [...map.values()]
+          writeIndex(rows)
+          json(res, 200, { ok: true, action, before: before.length, after: rows.length })
+          return
+        }
+        if (action === 'clear-pages') {
+          let count = 0
+          if (existsSync(PATHS.text)) {
+            for (const name of readdirSync(PATHS.text)) {
+              if (!name.endsWith('.pages.json')) continue
+              unlinkSync(join(PATHS.text, name))
+              count += 1
+            }
+          }
+          json(res, 200, { ok: true, action, removed: count })
+          return
+        }
+        if (action === 'clear-history') {
+          const file = join(PATHS.cache, 'search-history.json')
+          const removed = existsSync(file)
+          if (removed) unlinkSync(file)
+          json(res, 200, { ok: true, action, removed: removed ? 1 : 0 })
+          return
+        }
+        json(res, 400, { ok: false, error: '未知维护动作' })
+      } catch (error) {
+        json(res, 500, { ok: false, error: String(error?.message || error) })
+      }
+    },
+  })
+
   // 术语表
   webServer.register({
     kind: 'exact',
