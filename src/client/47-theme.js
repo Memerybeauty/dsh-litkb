@@ -28,6 +28,7 @@
       const [matchDetail, setMatchDetail] = useState(null)
       const [picked, setPicked] = useState([])
       const [mergeOpen, setMergeOpen] = useState(null)
+      const [showLegacy, setShowLegacy] = useState(false)
 
       const refreshList = useCallback(async () => {
         try {
@@ -56,6 +57,7 @@
           setMatchDetail(null)
           setPicked([])
           setMergeOpen(null)
+          setShowLegacy(false)
           if (!keepView) setDeepreadPaper(null)
         } catch (e) {
           setErr(String(e.message || e))
@@ -627,20 +629,29 @@
             h('span', { className: 'litkb-viewLabel' }, label)),
           h('span', { className: 'litkb-viewHint' }, hint))))
 
-      const filteredPapers = papersInTheme
+      const allPaperRows = papersInTheme
         .map((row) => ({ row, paper: papers.find((paper) => paper.id === row.paperId) }))
         .filter((item) => item.paper)
+      const matchedPaperRows = allPaperRows.filter((item) => item.row.source !== 'chain')
+      const legacyPaperRows = allPaperRows.filter((item) => item.row.source === 'chain')
+      const filteredPapers = (showLegacy ? allPaperRows : matchedPaperRows)
         .filter((item) => !needle || String(item.paper.title || '').toLowerCase().includes(needle))
       const activePaper = filteredPapers.find((item) => item.paper.id === paperId)?.paper
-        || filteredPapers[0]?.paper
+        || matchedPaperRows[0]?.paper
         || null
       const scoreOf = (pid) => papersInTheme.find((row) => row.paperId === pid)?.score || 0
 
       const papersView = h('div', { className: 'litkb-rp' },
         h('div', { className: 'litkb-rpList' },
           h('div', { className: 'litkb-rpHead' },
-            h('span', { className: 'litkb-rpHeadTitle' }, `本研究论文 ${filteredPapers.length}`),
-            h('span', { className: 'litkb-exHint' }, '只含匹配到的论文'),
+            h('span', { className: 'litkb-rpHeadTitle' }, `匹配论文 ${matchedPaperRows.length}`),
+            h('span', { className: 'litkb-exHint' }, '只含本次匹配'),
+            legacyPaperRows.length
+              ? h('button', {
+                  type: 'button', className: 'litkb-miniBtn',
+                  onClick: () => setShowLegacy((value) => !value),
+                }, showLegacy ? `隐藏旧链 ${legacyPaperRows.length}` : `显示旧链 ${legacyPaperRows.length}`)
+              : null,
             spacer(),
             h('button', {
               type: 'button', className: 'litkb-miniBtn',
@@ -696,7 +707,11 @@
                 cardRevision: paperActions.cardRevision || 0,
               })
             : h('div', { className: 'litkb-exEmpty' },
-                papersInTheme.length ? '没有匹配关键词的论文。清空搜索试试。' : '还没有匹配到论文。点右上角「开始探索」。')))
+                needle
+                  ? '没有匹配关键词的论文。清空搜索试试。'
+                  : (legacyPaperRows.length
+                    ? `本次匹配没有命中论文；另有 ${legacyPaperRows.length} 篇来自历史链，可点上方「显示旧链」查看。`
+                    : '还没有匹配到论文。点右上角「开始探索」或调整「匹配设置」。'))))
 
       const chainDetail = (chain) => h('div', { className: 'litkb-cd' },
         h('div', { className: 'litkb-cdTop' },

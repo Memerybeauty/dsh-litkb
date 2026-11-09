@@ -45,11 +45,11 @@ globalThis.document = {
 globalThis.window.document = globalThis.document
 mod.apply({ effect: (fn) => fn(), slots: { inject: () => {}, register: () => {} } })
 
-const STATE_DEFAULTS = ['', 'all', false, null, null, [], null]
+const STATE_DEFAULTS = ['', 'all', false, null, null, [], null, false]
 
 function render(states) {
-  const list = states.slice(0, 22)
-  for (let i = list.length; i < 22; i += 1) list[i] = STATE_DEFAULTS[i - 15]
+  const list = states.slice(0, 23)
+  for (let i = list.length; i < 23; i += 1) list[i] = STATE_DEFAULTS[i - 15]
   globalThis.__i = 0
   globalThis.__s = list
   return JSON.stringify(
@@ -153,10 +153,33 @@ assert.ok(papersTab.includes('匹配明细'))
 assert.ok(papersTab.includes('证据链'))
 assert.ok(papersTab.includes('研究结论'))
 assert.ok(papersTab.includes('重新探索'))
-assert.ok(papersTab.includes('本研究论文 1'))
+assert.ok(papersTab.includes('匹配论文 1'))
 assert.ok(papersTab.includes('Polar paper'))
 assert.ok(papersTab.includes('"initialView":"deep"'), '论文详情默认打开精读页签')
 assert.ok(papersTab.includes('"paper":{"id":"p-1"'))
+
+const legacyDetail = { ...detail, papers: [{ ...detail.papers[0], source: 'chain' }] }
+const legacyTab = render([
+  [listTheme],
+  't-1',
+  legacyDetail,
+  '',
+  '',
+  '',
+  null,
+  null,
+  '',
+  false,
+  'c-1',
+  false,
+  null,
+  'papers',
+  'p-1',
+  '',
+  'all',
+])
+assert.ok(legacyTab.includes('匹配论文 0'))
+assert.ok(legacyTab.includes('显示旧链 1'))
 
 const chainsTab = render([
   [listTheme],
