@@ -334,6 +334,17 @@
         }
       }
 
+      const cancelExplore = async () => {
+        if (!job?.id) return
+        try {
+          const data = await post('/api/litkb/themes/jobs/cancel', { id: job.id })
+          setJob(data.job)
+          setNotice('已请求取消；已生成的草稿会保留')
+        } catch (e) {
+          setErr(String(e.message || e))
+        }
+      }
+
       const reviewChain = async (chain, action) => {
         try {
           await post('/api/litkb/chains/review', { id: chain.id, action })
@@ -997,7 +1008,9 @@
         err ? h('div', { className: 'litkb-error' }, err) : null,
         notice ? h('div', { className: 'litkb-themeNotice' }, notice) : null,
         running
-          ? h('div', { className: 'litkb-exProgress' }, `探索中 · 已生成 ${job.created || 0} 条 · ${job.step || ''}`)
+          ? h('div', { className: 'litkb-exProgress' },
+              `探索中 · 已生成 ${job.created || 0} 条 · ${job.step || ''}`,
+              h('button', { type: 'button', className: 'litkb-miniBtn', onClick: cancelExplore }, '取消'))
           : null,
         views,
         h('div', { className: 'litkb-wbBody' }, body),
