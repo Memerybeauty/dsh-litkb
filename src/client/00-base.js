@@ -27,7 +27,7 @@ window.__ModuleLoader__.load({
       return value
     }
 
-    const TABS = ['论文库', '研究工作台', '横向精读', '图谱', '写作', '检索']
+    const TABS = ['论文库', '研究工作台']
     const CHAIN_RELATIONS = [['supports', '支持'], ['contradicts', '反驳'], ['qualifies', '限定'], ['derives', '推导'], ['compares', '对比']]
     const CHAIN_ORIGIN = { claim: '论点先行', evidence: '证据先行', question: '问题先行', block: '原文段落', topic: '主题建链' }
     const CHAIN_RELATION_LABELS = Object.fromEntries(CHAIN_RELATIONS)

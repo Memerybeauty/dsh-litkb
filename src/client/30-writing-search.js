@@ -177,7 +177,7 @@
                 : null))
     }
 
-    function WritingPage({ insertRequest, onConsumed, onOpenPaper, focus = null }) {
+    function WritingPage({ insertRequest, onConsumed, onOpenPaper, focus = null, onBack = null }) {
       const [drafts, setDrafts] = useState([])
       const [activeId, setActiveId] = useState('')
       const [draft, setDraft] = useState(null)
@@ -573,6 +573,10 @@
         style: { '--litkb-write-draft': `${draftWidth}px`, '--litkb-write-rail': `${railWidth}px` },
       },
         h('aside', { className: 'litkb-draftList' },
+          onBack
+            ? h('div', { className: 'litkb-writingBack' },
+                h('button', { type: 'button', className: 'litkb-miniBtn', onClick: onBack }, '← 研究工作台'))
+            : null,
           h('div', { className: 'litkb-draftHead' },
             h('span', { className: 'litkb-blockTitle' }, '文稿'),
             h('button', { type: 'button', className: 'litkb-btn litkb-btnGhost', onClick: create }, '＋ 新建')),

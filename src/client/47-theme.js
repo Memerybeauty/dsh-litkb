@@ -1,7 +1,7 @@
     /* ---------------- 研究工作台（v0.2.1：左列表 + 右工作区） ---------------- */
     function spacer() { return h('span', { className: 'litkb-spacer' }) }
 
-    function ThemePage({ papers = [], tags = [], onOpenPaper, onOpenChain, onOpenDraft }) {
+    function ThemePage({ papers = [], tags = [], onOpenPaper, onOpenChain, onOpenDraft, onOpenWriting }) {
       const [themes, setThemes] = useState([])
       const [selectedId, setSelectedId] = useState('')
       const [detail, setDetail] = useState(null)
@@ -354,6 +354,13 @@
                 item.stats.gaps ? ` · ${item.stats.gaps} 缺口` : ''),
               h('span', { className: 'litkb-themeSideState' }, item.draftId ? '有文稿' : '未开始')))
             : h('div', { className: 'litkb-themeSideEmpty' }, '还没有研究')),
+        h('div', { className: 'litkb-themeSideMore' },
+          h('button', {
+            type: 'button', className: 'litkb-themeSideItem',
+            onClick: () => onOpenWriting && onOpenWriting(),
+          },
+            h('span', { className: 'litkb-themeSideName' }, '全部文稿'),
+            h('span', { className: 'litkb-themeSideMeta' }, '写作页 · 按研究筛选'))),
         h('div', { className: 'litkb-themeSideFoot' },
           `${themes.length} 个研究 · ${sumFacets} 条细分 · ${sumConfirmed} 条已确认`))
 

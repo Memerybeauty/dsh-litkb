@@ -862,5 +862,11 @@
       '.litkb-writingFilterRow{padding:0 12px 8px}',
       '.litkb-writingFilter{width:100%;height:28px;font-size:11px}',
       '.litkb-draftMeta.is-research{color:var(--litkb-accent-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+      '.litkb-subtabs{display:flex;align-items:center;gap:4px;margin-left:8px}',
+      '.litkb-subtab{padding:3px 9px;border:1px solid transparent;border-radius:999px;background:transparent;color:var(--litkb-text-3);font:inherit;font-size:11.5px;cursor:pointer}',
+      '.litkb-subtab:hover{background:var(--litkb-fill-1);color:var(--litkb-text-2)}',
+      '.litkb-subtab.is-on{background:var(--litkb-fill-2);color:var(--litkb-text);border-color:var(--litkb-border)}',
+      '.litkb-writingBack{padding:8px 10px 0}',
+      '.litkb-themeSideMore{margin-top:auto;padding:6px;border-top:1px solid var(--litkb-border)}',
     ].join('\n')
 
