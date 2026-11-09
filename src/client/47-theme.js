@@ -468,7 +468,15 @@
         h('div', { className: 'litkb-rpList' },
           h('div', { className: 'litkb-rpHead' },
             h('span', { className: 'litkb-rpHeadTitle' }, `本研究论文 ${filteredPapers.length}`),
-            h('span', { className: 'litkb-exHint' }, '只含匹配到的论文')),
+            h('span', { className: 'litkb-exHint' }, '只含匹配到的论文'),
+            spacer(),
+            h('select', {
+              className: 'litkb-input litkb-rpAdd', value: '', title: '手动加入一篇论文',
+              onChange: (e) => { if (e.target.value) setPaper(e.target.value, 'include') },
+            },
+              h('option', { value: '' }, '＋ 手动加入论文…'),
+              papers.filter((paper) => !papersInTheme.some((row) => row.paperId === paper.id))
+                .map((paper) => h('option', { key: paper.id, value: paper.id }, paper.title || paper.id)))),
           h('input', {
             className: 'litkb-input litkb-rpSearch', type: 'search', value: paperQuery,
             placeholder: '在本研究论文里搜…', 'aria-label': '搜索本研究论文',
@@ -490,14 +498,7 @@
               h('button', {
                 type: 'button', className: 'litkb-rpDel', title: '从本研究中移出',
                 onClick: () => setPaper(item.paper.id, 'exclude'),
-              }, '×')))),
-          h('select', {
-            className: 'litkb-input litkb-rpAdd', value: '',
-            onChange: (e) => { if (e.target.value) setPaper(e.target.value, 'include') },
-          },
-            h('option', { value: '' }, '手动加入论文…'),
-            papers.filter((paper) => !papersInTheme.some((row) => row.paperId === paper.id))
-              .map((paper) => h('option', { key: paper.id, value: paper.id }, paper.title || paper.id)))),
+              }, '×'))))),
         h('div', { className: 'litkb-rpDetail' },
           activePaper
             ? h(Detail, {
