@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.2.13 — 工程化：ESLint + CI + 覆盖率（2026-11-09）
+
+- 引入 **ESLint 9**（flat config）：`npm run lint`，0 error / 14 warning；
+  覆盖 `lib/*.js`、`scripts/`、`tests/`；`src/client` 是共享作用域片段、`lib/client.js` 是拼接产物，暂不单独解析；
+- 引入 **c8**：`npm run coverage`，语句 **77.5%** / 分支 57.8% / 函数 74.0%，阈值 lines 70 / functions 65；
+- 新增 **GitHub Actions CI**：check → lint → test → coverage，上传覆盖率产物；
+- 新增 `.editorconfig`；`coverage/` 入 `.gitignore`；
+- 修掉 `lib/blocks.js` 的一处不可达代码；
+- 仍未做：Prettier、类型检查、真正 ESM 模块化。
+
 ## v0.2.12 — 手动加入论文移到顶部（2026-11-09）
 
 - 「＋ 手动加入论文…」从参考论文列表底部移到卡片头部右侧；

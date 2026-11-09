@@ -5,9 +5,13 @@
 ```bash
 npm install
 npm run build
-npm test
 npm run check
+npm run lint
+npm test
+npm run coverage
 ```
+
+CI（`.github/workflows/ci.yml`）会依次跑 check → lint → test → coverage；提交前本地至少跑 `npm run lint && npm test`。
 
 - `lib/` 是生成产物，不要直接编辑；
 - 客户端源码：`src/client/*.js`，由 `scripts/build-client.mjs` 按文件名拼接；
@@ -19,7 +23,7 @@ npm run check
 
 - 一个提交只做一件事；
 - 信息用 `feat: ...` / `fix: ...` / `docs: ...` / `refactor: ...`；
-- 提交前必须 `npm test` 通过。
+- 提交前必须 `npm run lint` 与 `npm test` 通过；覆盖率阈值 lines 70 / functions 65。
 
 ## 数据
 
