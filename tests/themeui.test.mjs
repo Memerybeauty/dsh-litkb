@@ -45,11 +45,11 @@ globalThis.document = {
 globalThis.window.document = globalThis.document
 mod.apply({ effect: (fn) => fn(), slots: { inject: () => {}, register: () => {} } })
 
-const STATE_DEFAULTS = ['', 'all', false, null, null, [], null, false]
+const STATE_DEFAULTS = ['', 'all', false, null, null, [], null, false, false]
 
 function render(states) {
-  const list = states.slice(0, 23)
-  for (let i = list.length; i < 23; i += 1) list[i] = STATE_DEFAULTS[i - 15]
+  const list = states.slice(0, 24)
+  for (let i = list.length; i < 24; i += 1) list[i] = STATE_DEFAULTS[i - 15]
   globalThis.__i = 0
   globalThis.__s = list
   return JSON.stringify(
@@ -180,6 +180,33 @@ const legacyTab = render([
 ])
 assert.ok(legacyTab.includes('匹配论文 0'))
 assert.ok(legacyTab.includes('显示旧链 1'))
+
+const excludedDetail = {
+  ...detail,
+  papers: [],
+  theme: { ...detail.theme, papers: { include: [], exclude: ['p-1'] } },
+}
+const excludedTab = render([
+  [listTheme],
+  't-1',
+  excludedDetail,
+  '',
+  '',
+  '',
+  null,
+  null,
+  '',
+  false,
+  'c-1',
+  false,
+  null,
+  'papers',
+  'p-1',
+  '',
+  'all',
+])
+assert.ok(excludedTab.includes('已移出 1'))
+assert.ok(excludedTab.includes('恢复'))
 
 const chainsTab = render([
   [listTheme],

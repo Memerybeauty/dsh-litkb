@@ -1169,5 +1169,8 @@
       '.litkb-mdTerms.is-expanded{color:var(--litkb-accent-text)}',
       '.litkb-mdOps{display:flex;gap:6px;margin-top:2px}',
       '@media (max-width:720px){.litkb-matchGrid{grid-template-columns:1fr}}',
+      '.litkb-rpExcluded{display:flex;flex-direction:column;gap:4px;padding-top:6px;border-top:1px dashed var(--litkb-border-strong)}',
+      '.litkb-rpExcludedTitle{font-size:11px;color:var(--litkb-text-3);padding:0 4px}',
+      '.litkb-rpItem.is-excluded{opacity:.75}',
     ].join('\n')
 

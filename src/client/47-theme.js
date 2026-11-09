@@ -29,6 +29,7 @@
       const [picked, setPicked] = useState([])
       const [mergeOpen, setMergeOpen] = useState(null)
       const [showLegacy, setShowLegacy] = useState(false)
+      const [showExcluded, setShowExcluded] = useState(false)
 
       const refreshList = useCallback(async () => {
         try {
@@ -58,6 +59,7 @@
           setPicked([])
           setMergeOpen(null)
           setShowLegacy(false)
+          setShowExcluded(false)
           if (!keepView) setDeepreadPaper(null)
         } catch (e) {
           setErr(String(e.message || e))
@@ -640,6 +642,9 @@
         || matchedPaperRows[0]?.paper
         || null
       const scoreOf = (pid) => papersInTheme.find((row) => row.paperId === pid)?.score || 0
+      const excludedPaperRows = (theme.papers?.exclude || [])
+        .map((pid) => ({ id: pid, paper: papers.find((paper) => paper.id === pid) }))
+        .filter((item) => item.paper)
 
       const papersView = h('div', { className: 'litkb-rp' },
         h('div', { className: 'litkb-rpList' },
@@ -651,6 +656,12 @@
                   type: 'button', className: 'litkb-miniBtn',
                   onClick: () => setShowLegacy((value) => !value),
                 }, showLegacy ? `隐藏旧链 ${legacyPaperRows.length}` : `显示旧链 ${legacyPaperRows.length}`)
+              : null,
+            excludedPaperRows.length
+              ? h('button', {
+                  type: 'button', className: 'litkb-miniBtn',
+                  onClick: () => setShowExcluded((value) => !value),
+                }, showExcluded ? `隐藏已移出 ${excludedPaperRows.length}` : `已移出 ${excludedPaperRows.length}`)
               : null,
             spacer(),
             h('button', {
@@ -685,7 +696,11 @@
                   ` · 匹配 ${scoreOf(item.paper.id) || '—'}`)),
               h('button', {
                 type: 'button', className: 'litkb-rpDel', title: '从本研究中移出',
-                onClick: () => setPaper(item.paper.id, 'exclude'),
+                onClick: () => {
+                  if (typeof window === 'undefined' || !window.confirm || window.confirm('从本研究中移出这篇论文？')) {
+                    setPaper(item.paper.id, 'exclude')
+                  }
+                },
               }, '×'))))),
         h('div', { className: 'litkb-rpDetail' },
           activePaper
@@ -709,9 +724,11 @@
             : h('div', { className: 'litkb-exEmpty' },
                 needle
                   ? '没有匹配关键词的论文。清空搜索试试。'
-                  : (legacyPaperRows.length
-                    ? `本次匹配没有命中论文；另有 ${legacyPaperRows.length} 篇来自历史链，可点上方「显示旧链」查看。`
-                    : '还没有匹配到论文。点右上角「开始探索」或调整「匹配设置」。'))))
+                  : (excludedPaperRows.length && !matchedPaperRows.length
+                    ? `本次没有可显示的论文；${excludedPaperRows.length} 篇已被移出，可点上方「已移出」恢复。`
+                    : (legacyPaperRows.length
+                      ? `本次匹配没有命中论文；另有 ${legacyPaperRows.length} 篇来自历史链，可点上方「显示旧链」查看。`
+                      : '还没有匹配到论文。点右上角「开始探索」或调整「匹配设置」。')))))
 
       const chainDetail = (chain) => h('div', { className: 'litkb-cd' },
         h('div', { className: 'litkb-cdTop' },
