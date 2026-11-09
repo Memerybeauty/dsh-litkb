@@ -368,6 +368,14 @@ const regenerated = buildThemeSummary(readTheme(t.id))
 updateThemeSummary(t.id, { text: regenerated.text, model: null })
 assert.equal(summaryState(readTheme(t.id)).stale, false)
 
+/* ---------- 重新匹配：命中论文重新入库 ---------- */
+setThemePaper(t.id, { paperId: 'p-th2', action: 'exclude' })
+assert.ok(!themePapers(readTheme(t.id)).some((row) => row.paperId === 'p-th2'))
+recordThemeMatch(t.id, [{ paperId: 'p-th2', score: 3, facets: ['f1'], hits: 1 }])
+const reIncluded = readTheme(t.id)
+assert.ok(!reIncluded.papers.exclude.includes('p-th2'))
+assert.ok(themePapers(reIncluded).some((row) => row.paperId === 'p-th2'))
+
 /* ---------- 删除 ---------- */
 assert.equal(deleteTheme(t.id), true)
 assert.equal(readTheme(t.id), null)
