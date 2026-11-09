@@ -93,8 +93,8 @@ assert.ok(normal.includes('编辑'))
 assert.ok(normal.includes('重生成'))
 assert.ok(normal.includes('上下文'))
 assert.ok(!normal.includes('反链'), '反链 UI 应在 P4 再开放')
-assert.ok(normal.includes('导出 JSON'))
-assert.ok(normal.includes('导出 CSV'))
+assert.ok(normal.includes('导出 ▾'))
+assert.ok(normal.includes('卡片 Markdown'))
 
 const editing = render([
   card,

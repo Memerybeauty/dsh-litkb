@@ -988,7 +988,12 @@
             running ? '探索中…' : (chains.length ? '↻ 重新探索' : '▶ 开始探索')),
           h('button', { type: 'button', className: 'litkb-miniBtn', disabled: busy === 'outline', onClick: makeOutline },
             busy === 'outline' ? '生成中…' : '✎ 生成提纲'),
-          h('button', { type: 'button', className: 'litkb-miniBtn', onClick: () => onOpenDraft && onOpenDraft({ themeId: theme.id, draftId: detail.draft?.id || '' }) }, '去写作')),
+          h('button', { type: 'button', className: 'litkb-miniBtn', onClick: () => onOpenDraft && onOpenDraft({ themeId: theme.id, draftId: detail.draft?.id || '' }) }, '去写作'),
+          h('details', { className: 'litkb-moreMenu' },
+            h('summary', { className: 'litkb-miniBtn' }, '更多 ▾'),
+            h('div', { className: 'litkb-moreList' },
+              h('button', { type: 'button', onClick: startEdit }, '编辑研究'),
+              h('button', { type: 'button', className: 'is-danger', onClick: () => setConfirmDelete(true) }, '删除研究')))),
         err ? h('div', { className: 'litkb-error' }, err) : null,
         notice ? h('div', { className: 'litkb-themeNotice' }, notice) : null,
         running

@@ -66,6 +66,11 @@ async function importPdfBuffer(buffer, filename = 'untitled.pdf', source = 'uplo
     venue: String(metaOverride.venue || '').trim() || base.venue,
     doi: String(metaOverride.doi || '').trim() || base.doi,
   }
+  const doi = String(meta.doi || '').trim()
+  if (doi) {
+    const sameDoi = findByDoi(doi)
+    if (sameDoi) return { duplicate: true, paper: sameDoi, duplicateCode: 'doi' }
+  }
   const id = `p-${hash.slice(0, 8)}`
   const pdfFile = `${id}.pdf`
   writeFileSync(join(PATHS.papers, pdfFile), buffer)
@@ -102,7 +107,7 @@ async function importPdf(req, res) {
     const filename = decodeURIComponent(String(req.headers['x-filename'] || 'untitled.pdf'))
     const result = await importPdfBuffer(buffer, filename, 'upload')
     if (result.duplicate) {
-      json(res, 200, { ok: true, duplicate: true, code: 'duplicate_sha', paper: result.paper })
+      json(res, 200, { ok: true, duplicate: true, code: result.duplicateCode || 'duplicate_sha', paper: result.paper })
       return
     }
     json(res, 200, {

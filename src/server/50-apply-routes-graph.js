@@ -212,6 +212,11 @@
           data = exportCardMarkdown(id)
           filename = `${id}.md`
           type = 'text/markdown; charset=utf-8'
+        } else if (format === 'bilingual') {
+          if (!id) { json(res, 400, { ok: false, error: '缺少 id' }); return }
+          data = exportBilingual(id)
+          filename = `${id}.bilingual.md`
+          type = 'text/markdown; charset=utf-8'
         } else if (format === 'mermaid') {
           data = exportMermaid()
           filename = 'litkb.mmd'

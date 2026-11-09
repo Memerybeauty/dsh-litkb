@@ -371,31 +371,29 @@
             type: 'button', className: 'litkb-btn litkb-btnGhost', disabled: versionBusy,
             onClick: openVersions,
           }, versionBusy ? '读取中…' : '历史版本'),
-          h('a', {
-            className: 'litkb-btn litkb-btnGhost',
-            href: `/api/litkb/evidence/export?id=${encodeURIComponent(paper.id)}&format=json`,
-            download: paper.id + '.evidence.json',
-          }, '导出 JSON'),
-          h('a', {
-            className: 'litkb-btn litkb-btnGhost',
-            href: `/api/litkb/evidence/export?id=${encodeURIComponent(paper.id)}&format=csv`,
-            download: paper.id + '.evidence.csv',
-          }, '导出 CSV'),
-          h('a', {
-            className: 'litkb-btn litkb-btnGhost',
-            href: `/api/litkb/export?format=bibtex&id=${encodeURIComponent(paper.id)}`,
-            download: paper.id + '.bib',
-          }, 'BibTeX'),
-          h('a', {
-            className: 'litkb-btn litkb-btnGhost',
-            href: `/api/litkb/export?format=gbt&id=${encodeURIComponent(paper.id)}`,
-            download: paper.id + '.gbt.txt',
-          }, 'GB/T'),
-          h('a', {
-            className: 'litkb-btn litkb-btnGhost',
-            href: `/api/litkb/export?format=card&id=${encodeURIComponent(paper.id)}`,
-            download: paper.id + '.md',
-          }, '卡片 MD')),
+          h('details', { className: 'litkb-exportMenu' },
+            h('summary', { className: 'litkb-btn litkb-btnGhost' }, '导出 ▾'),
+            h('div', { className: 'litkb-exportMenuList' },
+              h('a', {
+                href: `/api/litkb/evidence/export?id=${encodeURIComponent(paper.id)}&format=json`,
+                download: paper.id + '.evidence.json',
+              }, '证据 JSON'),
+              h('a', {
+                href: `/api/litkb/evidence/export?id=${encodeURIComponent(paper.id)}&format=csv`,
+                download: paper.id + '.evidence.csv',
+              }, '证据 CSV'),
+              h('a', {
+                href: `/api/litkb/export?format=bibtex&id=${encodeURIComponent(paper.id)}`,
+                download: paper.id + '.bib',
+              }, 'BibTeX'),
+              h('a', {
+                href: `/api/litkb/export?format=gbt&id=${encodeURIComponent(paper.id)}`,
+                download: paper.id + '.gbt.txt',
+              }, 'GB/T 7714'),
+              h('a', {
+                href: `/api/litkb/export?format=card&id=${encodeURIComponent(paper.id)}`,
+                download: paper.id + '.md',
+              }, '卡片 Markdown')))),
         versionsOpen
           ? h('div', { className: 'litkb-versions' },
               h('div', { className: 'litkb-inline' },

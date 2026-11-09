@@ -1063,6 +1063,16 @@
         return lines.join('\n\n')
       }
 
+      const copyCompare = async () => {
+        if (!data) return
+        try {
+          if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(buildMarkdown())
+          setNotice('已复制对比 Markdown')
+        } catch {
+          setNotice('复制失败，可改用「存为文稿」')
+        }
+      }
+
       const saveCompare = async () => {
         if (!onSaveCompare || !data || saving) return
         setSaving(true)
@@ -1109,6 +1119,7 @@
             type: 'button', className: 'litkb-searchMode' + (onlyDiff ? ' is-on' : ''),
             onClick: () => setOnlyDiff((value) => !value),
           }, onlyDiff ? '看全部' : '只看差异'),
+          data ? h('button', { type: 'button', className: 'litkb-miniBtn', onClick: copyCompare }, '复制对比') : null,
           onSaveCompare && data
             ? h('button', { type: 'button', className: 'litkb-miniBtn', disabled: saving, onClick: saveCompare }, saving ? '保存中…' : '存为文稿')
             : null,
@@ -1169,10 +1180,21 @@
                     })))))
     }
 
-    function GraphPanel({ onOpenPaper, onOpenPdf, onOpenChain, onGoLibrary, chainRevision = 0 }) {
-      // 概念图谱暂时隐藏；保留 ConceptGraphPanel 组件与接口，后续恢复。
+    function GraphPanel({ papers = [], onOpenPaper, onOpenPdf, onOpenChain, onGoLibrary, chainRevision = 0 }) {
+      const [mode, setMode] = useState('chains')
       return h('div', { className: 'litkb-graphPage' },
-        h(ChainGraphView, { onOpenChain, onOpenPdf, onOpenPaper, onGoLibrary, chainRevision }))
+        h('div', { className: 'litkb-graphModes' },
+          h('button', {
+            type: 'button', className: 'litkb-searchMode' + (mode === 'chains' ? ' is-on' : ''),
+            onClick: () => setMode('chains'),
+          }, '证据链图'),
+          h('button', {
+            type: 'button', className: 'litkb-searchMode' + (mode === 'concept' ? ' is-on' : ''),
+            onClick: () => setMode('concept'),
+          }, '概念图谱')),
+        mode === 'concept'
+          ? h(ConceptGraphPanel, { papers, onOpenPaper, onOpenPdf })
+          : h(ChainGraphView, { onOpenChain, onOpenPdf, onOpenPaper, onGoLibrary, chainRevision }))
     }
 
     function ConceptGraphPanel({ papers, onOpenPaper, onOpenPdf }) {

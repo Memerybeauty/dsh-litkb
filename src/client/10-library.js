@@ -712,6 +712,7 @@
               })
             : libraryView === '图谱'
             ? h(GraphPanel, {
+                papers,
                 chainRevision,
                 onOpenPaper: (id) => { setManaging(false); setFilter('全部'); setSelected(papers.find((p) => p.id === id) || null); goLibrary() },
                 onOpenPdf: (paperId, page, blockId) => {
@@ -915,7 +916,7 @@
                 onReview ? h('button', {
                   type: 'button', className: 'litkb-rowAct',
                   onClick: (event) => { event.stopPropagation(); onReview() },
-                }, '审核') : null)
+                }, '审核队列') : null)
             : null,
           h('span', { className: 'litkb-statusPill', style: { color: STATUS_COLOR[status] || undefined } }, status)))
       })

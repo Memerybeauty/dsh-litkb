@@ -6,7 +6,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
-  PATHS, TYPES, ensureLibrary, findByHash, readIndex, readTags, sha256, stats, upsert,
+  PATHS, TYPES, ensureLibrary, findByDoi, findByHash, readIndex, readTags, sha256, stats, upsert,
   writeIndex, writeTags,
 } from './library.js'
 import { addAnnotation, cardSummary, listVersions, readCard, readVersion, recomputeCardStatus, renderCardMarkdown, writeCard } from './cards.js'
@@ -21,8 +21,10 @@ import { applySection, callModel, generateCard, generateCardSection, llmStatus, 
 import { mergeConcepts, readConcepts, readEdges, rebuildEdges, updateConcept, writeConcepts } from './concepts.js'
 import { buildAll, compareGroups, conceptOverview, readGraph } from './graph.js'
 import { askPaper } from './ask.js'
-import { exportBibtex, exportCanvas, exportCardMarkdown, exportGbt, exportMermaid } from './export.js'
+import { exportBibtex, exportBilingual, exportCanvas, exportCardMarkdown, exportGbt, exportMermaid } from './export.js'
 import { assistDraft, createDraft, deleteDraft, draftCitations, exportDraft, listDrafts, readDraft, saveDraft, searchEvidence } from './drafts.js'
+import { draftToDocx } from './docx-export.js'
+import { buildVaultZip } from './vault-export.js'
 import { loadPaperPages } from './pdftext.js'
 import { buildDeepRead, readDeepRead } from './deepread.js'
 import { appendChainToDraft, autoChainDrafts, chainGraph, chainParagraph, claimCandidates, deleteChain, listChains, proposeChain, readChain, saveChain, suggestClaim, writeChainLayout } from './chains.js'

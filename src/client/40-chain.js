@@ -419,6 +419,19 @@
                   h('span', { className: 'litkb-spacer' }),
                   h('span', { className: 'litkb-muted' }, `${nodes.length} 条证据`)),
                 warnings.length ? h('div', { className: 'litkb-chainWarn' }, warnings.join('；')) : null,
+                nodes.length > 1
+                  ? h('div', { className: 'litkb-chainBatchRel' },
+                      h('span', { className: 'litkb-muted' }, '批量关系'),
+                      h('select', {
+                        className: 'litkb-input litkb-chainRel', value: '', title: '把下面所有证据设为同一关系',
+                        onChange: (e) => {
+                          if (!e.target.value) return
+                          setNodes((current) => current.map((node) => ({ ...node, relation: e.target.value })))
+                        },
+                      },
+                        h('option', { value: '' }, '选择…'),
+                        CHAIN_RELATIONS.map(([value, label]) => h('option', { key: value, value }, label))))
+                  : null,
                 h('div', { className: 'litkb-chainNodes' },
                   nodes.length
                     ? nodes.map(nodeRow)

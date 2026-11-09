@@ -62,6 +62,24 @@
         }
       }
 
+      const exportEvidence = () => {
+        const rows = (data?.citations?.length ? data.citations : data?.evidence) || []
+        if (!rows.length) { setNotice('当前没有可导出的证据'); return }
+        const cell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`
+        const header = ['paper_id', 'title', 'page', 'evidence_id', 'quote']
+        const csv = [header.join(','), ...rows.map((row) => [
+          row.paperId, row.title, row.page, row.evidenceId, row.quote,
+        ].map(cell).join(','))].join('\n')
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = 'litkb-search-evidence.csv'
+        link.click()
+        URL.revokeObjectURL(url)
+        setNotice(`已导出 ${rows.length} 条证据`)
+      }
+
       const openCitation = (item) => {
         if (onOpenPdf) onOpenPdf(item.paperId, item.page, item.block)
         else if (onOpenPaper) onOpenPaper(item.paperId, item.page, item.block)
@@ -127,6 +145,9 @@
                 h('span', { className: 'litkb-muted' }, `${data.took ?? 0}ms · ${data.chains?.length || 0} 条链 · ${data.evidence?.length || 0} 条证据`),
                 h('span', { className: 'litkb-spacer' }),
                 data.answer ? h('button', { type: 'button', className: 'litkb-miniBtn', onClick: copyAnswer }, '复制答案') : null,
+                (data.citations?.length || data.evidence?.length)
+                  ? h('button', { type: 'button', className: 'litkb-miniBtn', onClick: exportEvidence }, '导出证据 CSV')
+                  : null,
                 data.answer && onSaveAnswer ? h('button', { type: 'button', className: 'litkb-miniBtn', disabled: saving, onClick: saveAnswer }, saving ? '保存中…' : '存为文稿') : null),
               data.warnings?.length ? h('div', { className: 'litkb-searchWarn' }, data.warnings.join('；')) : null,
               data.answer
@@ -628,11 +649,21 @@
                       onClick: () => setMode(key),
                     }, label))),
                   h('button', { type: 'button', className: 'litkb-miniBtn', disabled: saving, onClick: saveNow }, '保存'),
-                  h('a', {
-                    className: 'litkb-miniBtn',
-                    href: '/api/litkb/drafts/export?id=' + encodeURIComponent(draft.id),
-                    download: draft.id + '.md',
-                  }, '导出 MD')),
+                  h('details', { className: 'litkb-exportMenu is-down' },
+                    h('summary', { className: 'litkb-miniBtn' }, '导出 ▾'),
+                    h('div', { className: 'litkb-exportMenuList' },
+                      h('a', {
+                        href: '/api/litkb/drafts/export?id=' + encodeURIComponent(draft.id),
+                        download: draft.id + '.md',
+                      }, '当前文稿 Markdown'),
+                      h('a', {
+                        href: '/api/litkb/drafts/export?id=' + encodeURIComponent(draft.id) + '&format=docx',
+                        download: draft.id + '.docx',
+                      }, '当前文稿 DOCX'),
+                      h('a', {
+                        href: '/api/litkb/drafts/export?format=vault',
+                        download: 'litkb-vault.zip',
+                      }, '整库 Obsidian vault')))),
                 notice ? h('div', { className: 'litkb-glossNotice' }, notice) : null,
                 err ? h('div', { className: 'litkb-error' }, err) : null,
                 h('div', { className: 'litkb-writeTools' },

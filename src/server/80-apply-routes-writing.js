@@ -68,7 +68,32 @@
     path: '/api/litkb/drafts/export',
     handler: async (req, res) => {
       try {
+        const format = queryParam(req, 'format') || 'md'
+        if (format === 'vault') {
+          const buffer = buildVaultZip()
+          res.writeHead(200, {
+            'content-type': 'application/zip',
+            'content-disposition': 'attachment; filename="litkb-vault.zip"',
+            'cache-control': 'no-store',
+          })
+          res.end(buffer)
+          return
+        }
         const id = queryParam(req, 'id')
+        if (!id) { json(res, 400, { ok: false, error: '缺少 id' }); return }
+        if (format === 'docx') {
+          const draft = readDraft(id)
+          if (!draft) { json(res, 404, { ok: false, error: '文稿不存在' }); return }
+          const references = draftCitations(id)?.references || []
+          const buffer = await draftToDocx(draft, references)
+          res.writeHead(200, {
+            'content-type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'content-disposition': `attachment; filename="${id}.docx"`,
+            'cache-control': 'no-store',
+          })
+          res.end(buffer)
+          return
+        }
         const data = exportDraft(id)
         if (data === null) { json(res, 404, { ok: false, error: '文稿不存在' }); return }
         res.writeHead(200, {

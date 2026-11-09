@@ -1,6 +1,6 @@
 {
   "name": "dsh-litkb",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "private": false,
   "type": "module",
   "description": "文献工作台：个人工作台 + 论文库 + 写作",
@@ -39,6 +39,8 @@
   },
   "dependencies": {
     "@napi-rs/canvas": "^0.1.100",
+    "docx": "^9.15.3",
+    "fflate": "^0.8.3",
     "pdfjs-dist": "^4.10.38"
   },
   "files": [

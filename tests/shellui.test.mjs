@@ -946,7 +946,7 @@ const graphPage = render('GraphPanel', {
   onGoLibrary() {},
 })
 assert.ok(graphPage.includes('ChainGraphView'))
-assert.ok(!graphPage.includes('概念图谱'))
+assert.ok(graphPage.includes('概念图谱'))
 const graphView = render('ChainGraphView', { chainRevision: 0 }, [])
 assert.ok(graphView.includes('加载知识库'))
 assert.ok(graphView.includes('自动建链 / 审核'))

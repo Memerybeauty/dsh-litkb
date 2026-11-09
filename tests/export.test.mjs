@@ -2,16 +2,21 @@
  * P4.6 导出与反链：BibTeX / GB-T / 卡片 MD / Mermaid / Canvas / 反链路由。
  */
 import assert from 'node:assert/strict'
-import { mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 process.env.LITKB_LIBRARY = mkdtempSync(join(tmpdir(), 'dsh-litkb-export-'))
 
-const { ensureLibrary, upsert, PATHS } = await import('../lib/library.js')
+const { ensureLibrary, findByDoi, upsert, PATHS } = await import('../lib/library.js')
 const { writeCard } = await import('../lib/cards.js')
 const { findBacklinks } = await import('../lib/evidence-scan.js')
-const { exportBibtex, exportCanvas, exportCardMarkdown, exportGbt, exportMermaid } = await import('../lib/export.js')
+const { exportBibtex, exportBilingual, exportCanvas, exportCardMarkdown, exportGbt, exportMermaid } =
+  await import('../lib/export.js')
+const { createDraft } = await import('../lib/drafts.js')
+const { draftToDocx } = await import('../lib/docx-export.js')
+const { buildVaultZip } = await import('../lib/vault-export.js')
+const { unzipSync } = await import('fflate')
 
 ensureLibrary()
 const record = {
@@ -156,6 +161,51 @@ test('导出路由：bibtex / gbt / card / mermaid / canvas', async () => {
   })
   assert.equal(back.code, 200)
   assert.ok(JSON.parse(back.body).links.some((link) => link.file === 'exports/draft.md'))
+})
+
+test('DOI 判重：大小写与 doi.org 前缀归一', () => {
+  assert.equal(findByDoi('10.1038/s41598-024-1234-5')?.id, record.id)
+  assert.equal(findByDoi('https://doi.org/10.1038/S41598-024-1234-5')?.id, record.id)
+  assert.equal(findByDoi('10.9999/nope'), null)
+})
+
+test('DOCX / vault / 双语：能生成可打开的文件', async () => {
+  const draft = createDraft({ title: '测试文稿', body: '# 标题\n\n正文 [[p-aaaaaaaa#^q-11111111|证据]]' })
+  const docx = await draftToDocx(draft, [])
+  assert.equal(docx.subarray(0, 2).toString(), 'PK')
+  const zip = buildVaultZip()
+  assert.equal(zip.subarray(0, 2).toString(), 'PK')
+  const files = unzipSync(new Uint8Array(zip))
+  assert.ok(Object.keys(files).some((name) => name.startsWith('文稿/')))
+  assert.ok(Object.keys(files).includes('参考文献/all.bib'))
+
+  mkdirSync(PATHS.blocks, { recursive: true })
+  mkdirSync(PATHS.translations, { recursive: true })
+  writeFileSync(
+    join(PATHS.blocks, `${record.id}.json`),
+    JSON.stringify({
+      numPages: 1,
+      pages: [
+        {
+          page: 1,
+          blocks: [
+            { id: 'b-1', role: 'paragraph', text: '原文第一段。' },
+            { id: 'b-2', role: 'paragraph', text: '原文第二段。' },
+          ],
+        },
+      ],
+    }),
+  )
+  writeFileSync(
+    join(PATHS.translations, `${record.id}.zh.json`),
+    JSON.stringify({
+      paperId: record.id,
+      blocks: { 'b-1': { text: 'Translated first paragraph.', status: 'ok' } },
+    }),
+  )
+  const bilingual = exportBilingual(record.id)
+  assert.ok(bilingual.includes('原文第一段'))
+  assert.ok(bilingual.includes('Translated first paragraph'))
 })
 
 for (const item of pending) {
