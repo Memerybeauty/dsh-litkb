@@ -376,8 +376,9 @@
         return h('div', { className: 'litkb-wbPage' },
           h('div', { className: 'litkb-wbHead' },
             h('div', null,
-              h('div', { className: 'litkb-wbTitle' }, '个人工作台'),
-              h('div', { className: 'litkb-wbSub' }, '每个研究是一张卡片；点进去看参考论文、证据链与研究结论。')),
+              h('div', { className: 'litkb-wbTitle' }, '我的研究'),
+              h('div', { className: 'litkb-wbSub' },
+                `${themes.length} 个研究 · ${themes.reduce((n, item) => n + item.stats.papers, 0)} 篇论文 · ${themes.reduce((n, item) => n + item.stats.confirmed, 0)} 条已确认链${themes.reduce((n, item) => n + item.stats.gaps, 0) ? ` · ${themes.reduce((n, item) => n + item.stats.gaps, 0)} 个缺口` : ''}`)),
             h('button', { type: 'button', className: 'litkb-btn', onClick: startNew }, '＋ 新建研究')),
           err ? h('div', { className: 'litkb-error' }, err) : null,
           notice ? h('div', { className: 'litkb-themeNotice' }, notice) : null,
@@ -423,8 +424,6 @@
           h('button', { type: 'button', className: 'litkb-miniBtn', onClick: startEdit }, '编辑'),
           h('button', { type: 'button', className: 'litkb-miniBtn', onClick: () => setConfirmDelete(true) }, '删除')),
         theme.description ? h('div', { className: 'litkb-wbDesc' }, theme.description) : null,
-        h('div', { className: 'litkb-wbBar', title: `已确认 ${stats.confirmed || 0}/${facets.length}` },
-          h('span', { className: 'litkb-wbBarFill', style: { width: `${progress}%` } })),
         h('div', { className: 'litkb-wbOverviewFacets' },
           facets.map((facet) => {
             const state = statusOfFacet(facet.key)
@@ -438,7 +437,17 @@
                 if (first) setSelectedChain(first.id)
               },
             }, facet.title)
-          })))
+          })),
+        h('div', { className: 'litkb-wbDonut', title: `完成度 ${progress}%` },
+          h('svg', { width: 66, height: 66, viewBox: '0 0 66 66', 'aria-hidden': 'true' },
+            h('circle', { cx: 33, cy: 33, r: 27, fill: 'none', stroke: 'var(--litkb-fill-2)', strokeWidth: 7 }),
+            h('circle', {
+              cx: 33, cy: 33, r: 27, fill: 'none', stroke: 'var(--litkb-accent)', strokeWidth: 7,
+              strokeLinecap: 'round', transform: 'rotate(-90 33 33)',
+              strokeDasharray: `${Math.round((progress / 100) * 169.6 * 10) / 10} 169.6`,
+            })),
+          h('span', { className: 'litkb-wbDonutText' }, `${progress}%`),
+          h('span', { className: 'litkb-wbDonutLabel' }, '完成度')))
 
       const seg = h('div', { className: 'litkb-wbSeg', role: 'tablist' },
         [['papers', `▤ 参考论文 ${papersInTheme.length}`], ['chains', `☷ 证据链 ${chains.length}`], ['summary', '✎ 研究结论']]

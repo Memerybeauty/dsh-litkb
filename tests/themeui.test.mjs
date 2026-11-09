@@ -77,7 +77,7 @@ const listTheme = {
 }
 
 const empty = render([[], '', null, '', '', '', null, null, '', false, '', false, null, 'papers', ''])
-assert.ok(empty.includes('个人工作台'))
+assert.ok(empty.includes('我的研究'))
 assert.ok(empty.includes('还没有研究'))
 
 const cards = render([[listTheme], '', null, '', '', '', null, null, '', false, '', false, null, 'papers', ''])

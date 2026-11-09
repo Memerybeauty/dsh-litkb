@@ -134,7 +134,7 @@
     function Workspace({ embedded = false }) {
       const open = useOpen()
       const active = embedded || open
-      const [tab, setTab] = useState('论文库')
+      const [tab, setTab] = useState('个人工作台')
       const [filter, setFilter] = useState('全部')
       const [query, setQuery] = useState('')
       const [papers, setPapers] = useState([])
@@ -536,6 +536,29 @@
           onClick,
         }, h('b', {}, String(value)), ' ', label)
       }
+      const navIcon = (kind) => {
+        const base = {
+          width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none',
+          stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round',
+          'aria-hidden': 'true',
+        }
+        if (kind === 'home') {
+          return h('svg', base,
+            h('path', { d: 'M3 10.5 12 3l9 7.5' }),
+            h('path', { d: 'M5 9.5V21h14V9.5' }),
+            h('path', { d: 'M9.5 21v-6h5v6' }))
+        }
+        if (kind === 'library') {
+          return h('svg', base,
+            h('rect', { x: 3, y: 4, width: 18, height: 16, rx: 2.5 }),
+            h('path', { d: 'M3 9h18' }),
+            h('path', { d: 'M8 13h8' }),
+            h('path', { d: 'M8 16.5h5' }))
+        }
+        return h('svg', base,
+          h('path', { d: 'M12 20h9' }),
+          h('path', { d: 'M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z' }))
+      }
       const allTagsCount = Object.keys(stats.byTag || {}).length || tags.length
       const allUntagged = papers.filter((p) => !(p.topics || []).length).length
 
@@ -552,12 +575,32 @@
         onDragLeave: (e) => { if (e.target === e.currentTarget) setDragging(false) },
         onDrop,
       },
+      h('div', { className: 'litkb-shell' },
+        h('aside', { className: 'litkb-nav' },
+          h('div', { className: 'litkb-brand' },
+            h('span', { className: 'litkb-brandMark', 'aria-hidden': 'true' }, '文'),
+            h('span', { className: 'litkb-brandText' },
+              h('span', { className: 'litkb-brandName' }, '文献工作台'),
+              h('span', { className: 'litkb-brandSub' }, 'Literature Workbench'))),
+          h('nav', { className: 'litkb-navList', role: 'navigation', 'aria-label': '主导航' },
+            TABS.map((label) => h('button', {
+              key: label, type: 'button',
+              className: 'litkb-navItem' + (tab === label ? ' is-on' : ''),
+              onClick: () => {
+                setTab(label); setManaging(false); setWritingFocus(null)
+                if (label === '论文库') setLibraryView('论文')
+              },
+            },
+              h('span', { className: 'litkb-navIcon' }, navIcon(label === '个人工作台' ? 'home' : (label === '论文库' ? 'library' : 'write'))),
+              h('span', { className: 'litkb-navLabel' }, label)))),
+          h('div', { className: 'litkb-navFoot' },
+            h('span', { className: 'litkb-navStat' }, `${papers.length} 篇论文`),
+            h('span', { className: 'litkb-navStat' }, `${tags.length} 个标签`))),
+        h('div', { className: 'litkb-shellMain' },
       h('header', { className: 'litkb-head' },
         h('div', { className: 'litkb-headTop' },
-          h('div', { className: 'litkb-brand' },
-            h('span', { className: 'litkb-logo', 'aria-hidden': 'true' }, '▤'),
-            h('span', { className: 'litkb-title' }, '文献工作台'),
-            h('span', { className: 'litkb-badge' }, embedded ? 'P4' : 'P3')),
+          h('div', { className: 'litkb-pageTitle' },
+            h('span', { className: 'litkb-title' }, tab)),
           splitTab
             ? h('div', { className: 'litkb-headSearch' },
                 h('input', {
@@ -579,15 +622,6 @@
             onClick: () => setOpen(false),
           }, '×')),
         h('div', { className: 'litkb-headBottom' },
-          h('nav', { className: 'litkb-tabs', role: 'tablist' },
-            TABS.map((t) => h('button', {
-              key: t, type: 'button', role: 'tab', 'aria-selected': tab === t,
-              className: 'litkb-tab' + (tab === t ? ' is-on' : ''),
-              onClick: () => {
-                setTab(t); setManaging(false); setWritingFocus(null)
-                if (t === '论文库') setLibraryView('论文')
-              },
-            }, t))),
           tab === '论文库'
             ? h('div', { className: 'litkb-subtabs', role: 'tablist' },
                 ['论文', '横向精读', '图谱', '检索'].map((view) => h('button', {
@@ -744,6 +778,7 @@
         h('span', { className: 'litkb-health' },
           error ? `出错：${error}` : `库 ${library || '未初始化'} · ${stats.total ?? 0} 篇 · 未归类 ${stats.untagged ?? 0}`),
         h('button', { type: 'button', className: 'litkb-link', onClick: load }, '刷新')),
+      )),
       h('input', {
         ref: fileRef, type: 'file', accept: 'application/pdf,.pdf', multiple: true,
         style: { display: 'none' },
