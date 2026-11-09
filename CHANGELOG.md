@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.4.4 — 修复解析稿定位的作用域错误（2026-11-09）
+
+- 真正根因：`Detail` 与 `Workspace` 是并列组件，`Detail` 里却直接引用 `Workspace` 的 `openPdf`；点击时先 `setActive` 所以左边高亮，随后抛 `ReferenceError`，右侧永远收不到定位；
+- `Detail` 改用自身的 `onOpenPdf` prop，并把 `blockIds` 一路传给 `PdfRail`；
+- `PdfRail` 增加兜底：根据 `focusBlock` 从 `doc.paragraphs` 反推整段；
+- 解析稿点击额外派发 `litkb:locate` 事件，PdfRail 直接监听，跨组件双保险。
+
 ## v0.4.3 — 解析稿点击联动右侧 PDF 高亮（2026-11-09）
 
 - 定位到根因：解析视图与右侧 PDF 是两个组件，点击解析稿只改了左侧 `active`，从未通知 `PdfRail`；

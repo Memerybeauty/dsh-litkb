@@ -516,6 +516,7 @@
       const [zoom, setZoom] = useState(() => storedNumber('litkb.pdfZoom', 1.35))
       const [evidenceView, setEvidenceView] = useState('evidence')
       const [chains, setChains] = useState([])
+      const [highlightIds, setHighlightIds] = useState([])
       const bodyRef = useRef(null)
       const pageRefs = useRef(new Map())
 
@@ -548,6 +549,20 @@
       useEffect(() => { loadChains() }, [loadChains, chainRevision, paper.id])
       useEffect(() => { setErr('') }, [paper.id])
       useEffect(() => { setFocusBlock(blockId) }, [blockId])
+
+      useEffect(() => {
+        if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') return undefined
+        const handler = (event) => {
+          const detail = event?.detail || {}
+          if (detail.paperId && detail.paperId !== paper.id) return
+          setTab('pdf')
+          if (detail.blockId) setFocusBlock(detail.blockId)
+          setHighlightIds(Array.isArray(detail.blockIds) ? detail.blockIds : [])
+          if (detail.page) setTargetPage({ page: Number(detail.page) || 1, nonce: Date.now() })
+        }
+        window.addEventListener('litkb:locate', handler)
+        return () => window.removeEventListener('litkb:locate', handler)
+      }, [paper.id])
       useEffect(() => { if (nonce) setTab('pdf') }, [nonce])
       useEffect(() => { if (askSelection) setTab('ask') }, [askSelection])
 
@@ -632,6 +647,11 @@
               h('button', { type: 'button', className: 'litkb-btn litkb-btnGhost litkb-pageBtn', onClick: go }, '跳转'))
           : h('span', { className: 'litkb-railTitle', title: paper.title }, paper.title || ''))
 
+      const paragraphGroup = (doc?.paragraphs || [])
+        .find((paragraph) => (paragraph.blockIds || []).includes(focusBlock))?.blockIds || []
+      const externalIds = (Array.isArray(highlightIds) && highlightIds.length ? highlightIds : blockIds) || []
+      const groupIds = externalIds.length ? externalIds : paragraphGroup
+      const inGroup = (id) => id === focusBlock || groupIds.includes(id)
       const pdfBody = h('div', { className: 'litkb-pdfRailBody', ref: bodyRef, onScroll },
         err ? h('div', { className: 'litkb-error' }, err) : null,
         pages.map((pageDoc) => h('div', {
@@ -657,18 +677,18 @@
             }),
             (pageDoc.blocks || []).map((block) => h('div', {
               key: block.id,
-              className: 'litkb-box' + (block.id === focusBlock || blockIds.includes(block.id) ? ' litkb-focus' : ''),
+              className: 'litkb-box' + (inGroup(block.id) ? ' litkb-focus' : ''),
               style: {
                 left: `${block.bbox[0] * 100}%`,
                 top: `${block.bbox[1] * 100}%`,
                 width: `${(block.bbox[2] - block.bbox[0]) * 100}%`,
                 height: `${(block.bbox[3] - block.bbox[1]) * 100}%`,
-                background: block.id === focusBlock || blockIds.includes(block.id) ? 'rgba(79,142,247,.16)' : 'transparent',
-                border: block.id === focusBlock || blockIds.includes(block.id)
+                background: inGroup(block.id) ? 'rgba(79,142,247,.16)' : 'transparent',
+                border: inGroup(block.id)
                   ? '2px solid var(--litkb-accent)' : '1px solid transparent',
-                boxShadow: block.id === focusBlock || blockIds.includes(block.id)
+                boxShadow: inGroup(block.id)
                   ? '0 0 0 2px rgba(79,142,247,.2)' : 'none',
-                pointerEvents: block.id === focusBlock || blockIds.includes(block.id) ? 'auto' : 'none',
+                pointerEvents: inGroup(block.id) ? 'auto' : 'none',
               },
               title: String(block.text || '').slice(0, 90),
             })))
@@ -1000,6 +1020,11 @@
       const focus = (block, from) => {
         setActive(block.id)
         if (onLocate) onLocate(block.page, block.id, block.blockIds || [block.id])
+        if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof window.CustomEvent === 'function') {
+          window.dispatchEvent(new window.CustomEvent('litkb:locate', {
+            detail: { paperId: paper.id, page: block.page, blockId: block.id, blockIds: block.blockIds || [block.id] },
+          }))
+        }
         const targetId = from === 'parse' ? 'pg-' + block.page : 'blk-' + block.id
         const target = document.getElementById(targetId)
         if (target && typeof target.scrollIntoView === 'function') {

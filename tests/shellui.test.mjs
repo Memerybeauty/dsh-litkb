@@ -52,6 +52,10 @@ assert.ok(source.includes('--litkb-text-3:color-mix'), 'text-3 必须定义')
 assert.ok(source.includes('.litkb-theme-light{'), '必须有显式浅色主题类')
 assert.ok(source.includes('.litkb-theme-dark{'), '必须有显式深色主题类')
 assert.ok(source.includes('.litkb-chainRel.litkb-input'), '关系下拉宽度不能被 .litkb-input 覆盖')
+assert.ok(
+  source.includes('onLocate: (page, blockId, blockIds) => onOpenPdf(page, blockId, blockIds)'),
+  'Detail 不能用 Workspace 作用域的 openPdf',
+)
 
 function render(component, props, states = []) {
   globalThis.__i = 0

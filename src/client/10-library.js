@@ -481,7 +481,7 @@
                   onClose: () => {},
                   onSaved: (paper) => { setSelected(paper); refreshCard() },
                   onRefresh: refreshCard,
-                  onOpenPdf: (page, blockId) => openPdf(reader, page, blockId),
+                  onOpenPdf: (page, blockId, blockIds) => openPdf(reader, page, blockId, blockIds),
                   onAsk: (selection) => setAskSelection(selection),
                   onCite: (request) => { setManaging(false); setInsertRequest(request); openWriting() },
                   onBuildChain: (request) => {
@@ -1073,7 +1073,7 @@
           ? h('div', { className: 'litkb-drawerBody' }, h(CardPanel, { key: paper.id, paper, onChanged: onRefresh, onOpenPdf, onAsk, onCite, cardRevision }))
           : view === 'deep'
             ? h('div', { className: 'litkb-drawerBody' }, h(DeepReadPanel, { key: paper.id, paper, onOpenPdf, onBuildChain }))
-            : h('div', { className: 'litkb-drawerBody is-flush' }, h(ParsePanel, { key: paper.id, paper, onOpenPdf, onLocate: (page, blockId, blockIds) => openPdf(paper, page, blockId, blockIds), onAsk, onBuildChain, onDeep: () => setView('deep'), flat: inline }))
+            : h('div', { className: 'litkb-drawerBody is-flush' }, h(ParsePanel, { key: paper.id, paper, onOpenPdf, onLocate: (page, blockId, blockIds) => onOpenPdf(page, blockId, blockIds), onAsk, onBuildChain, onDeep: () => setView('deep'), flat: inline }))
       const foot = view === 'info'
         ? h('div', { className: 'litkb-drawerFoot' },
             h('button', { type: 'button', className: 'litkb-btn', disabled: saving, onClick: () => save() },
