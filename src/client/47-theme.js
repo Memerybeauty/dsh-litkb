@@ -852,7 +852,7 @@
               list.length
                 ? list.map((chain) => h('div', { key: chain.id, className: 'litkb-exChainRow' },
                     h('input', {
-                      type: 'checkbox', className: 'litkb-chainPick',
+                      type: 'checkbox', className: 'litkb-chainCheck',
                       checked: picked.includes(chain.id),
                       'aria-label': `选择链 ${chain.claim?.text || chain.title || chain.id}`,
                       onChange: () => togglePicked(chain.id),

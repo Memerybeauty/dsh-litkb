@@ -53,6 +53,8 @@ assert.ok(source.includes('.litkb-theme-light{'), '必须有显式浅色主题�
 assert.ok(source.includes('.litkb-theme-dark{'), '必须有显式深色主题类')
 assert.ok(source.includes('.litkb-wbPage{position:relative}'), '抽屉必须相对工作台页定位')
 assert.ok(source.includes('.litkb-chainRel.litkb-input'), '关系下拉宽度不能被 .litkb-input 覆盖')
+assert.ok(source.includes('.litkb-chainCheck{width:14px'), '复选框类名不能撞添加证据面板')
+assert.ok(!source.includes('.litkb-chainPick{width:14px'), '添加证据面板不能被复选框样式压窄')
 assert.ok(
   source.includes('onLocate: (page, blockId, blockIds) => onOpenPdf(page, blockId, blockIds)'),
   'Detail 不能用 Workspace 作用域的 openPdf',

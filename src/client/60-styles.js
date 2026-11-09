@@ -1146,7 +1146,7 @@
       '.litkb-batchCount{font-size:11.5px;color:var(--litkb-text-2);margin-right:2px}',
       '.litkb-exChainRow{display:flex;align-items:center;gap:6px}',
       '.litkb-exChainRow .litkb-exChain{flex:1;min-width:0}',
-      '.litkb-chainPick{width:14px;height:14px;flex:0 0 14px;accent-color:var(--litkb-accent);cursor:pointer}',
+      '.litkb-chainCheck{width:14px;height:14px;flex:0 0 14px;accent-color:var(--litkb-accent);cursor:pointer}',
       '.litkb-stale{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border:1px solid color-mix(in srgb,var(--litkb-warn) 40%,transparent);border-radius:10px;background:color-mix(in srgb,var(--litkb-warn) 7%,transparent);font-size:11.5px;color:var(--litkb-warn)}',
       '.litkb-stale.is-legacy{border-style:dashed;color:var(--litkb-text-3);background:var(--litkb-fill-1)}',
       '.litkb-matchGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}',
