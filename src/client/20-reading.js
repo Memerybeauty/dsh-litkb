@@ -308,6 +308,7 @@
             if (!ev) return null
             return h('blockquote', { key: id, className: 'litkb-quote' },
               h('div', { className: 'litkb-quoteText' }, ev.quote),
+              ev.comment ? h('div', { className: 'litkb-noteText' }, `批注：${ev.comment}`) : null,
               h('div', { className: 'litkb-quoteMeta' },
                 h('button', {
                   type: 'button', className: 'litkb-evPage',
@@ -347,7 +348,8 @@
           (card.annotations || []).length
             ? (card.annotations || []).map((note) => h('div', { key: note.id, className: 'litkb-note' },
                 h('span', { className: 'litkb-noteAt' }, formatLocal(note.at).slice(0, 10)),
-                h('span', { className: 'litkb-noteText' }, note.text)))
+                h('span', { className: 'litkb-noteText' }, note.text),
+                note.quote ? h('div', { className: 'litkb-noteQuote' }, `原句：${note.quote}`) : null))
             : h('div', { className: 'litkb-muted' }, '还没有批注'),
           h('div', { className: 'litkb-noteAdd' },
             h('textarea', {
@@ -410,11 +412,33 @@
           : null,
         !modelReady ? h('div', { className: 'litkb-muted' }, hint) : null,
         selHint
-          ? h('button', {
-              type: 'button', className: 'litkb-askFab', style: { left: selHint.x, top: selHint.y },
-              onMouseDown: (event) => event.preventDefault(),
-              onClick: () => { if (onAsk) onAsk(selHint); setSelHint(null) },
-            }, '追问')
+          ? h('div', { className: 'litkb-selFab', style: { left: selHint.x, top: selHint.y } },
+              h('button', {
+                type: 'button', className: 'litkb-askFab',
+                onMouseDown: (event) => event.preventDefault(),
+                onClick: () => { if (onAsk) onAsk(selHint); setSelHint(null) },
+              }, '追问'),
+              onBuildChain
+                ? h('button', {
+                    type: 'button', className: 'litkb-askFab is-accent',
+                    onMouseDown: (event) => event.preventDefault(),
+                    onClick: () => {
+                      onBuildChain({
+                        paperId: paper.id, mode: 'claim', claim: selHint.text,
+                        page: selHint.page, blockId: selHint.blockId,
+                        source: 'parse', autoPropose: true,
+                      })
+                      setSelHint(null)
+                    },
+                  }, '建链')
+                : null,
+              onComment
+                ? h('button', {
+                    type: 'button', className: 'litkb-askFab',
+                    onMouseDown: (event) => event.preventDefault(),
+                    onClick: () => { onComment(selHint); setSelHint(null) },
+                  }, '评论')
+                : null)
           : null,
         null)
     }
@@ -908,7 +932,7 @@
             saving ? '保存中…' : '保存术语表')))
     }
 
-    function ParsePanel({ paper, onOpenPdf, onLocate, onAsk, onDeep, onBuildChain, flat = false }) {
+    function ParsePanel({ paper, onOpenPdf, onLocate, onAsk, onComment, onDeep, onBuildChain, flat = false }) {
       const [doc, setDoc] = useState(null)
       const [job, setJob] = useState(null)
       const [settings, setSettings] = useState(null)
@@ -1254,11 +1278,33 @@
 
       return h('div', { className: 'litkb-reader' + (flat && !showPage ? ' is-flat' : '') }, parsePane, showPage ? pagePane : null,
         selHint
-          ? h('button', {
-              type: 'button', className: 'litkb-askFab', style: { left: selHint.x, top: selHint.y },
-              onMouseDown: (event) => event.preventDefault(),
-              onClick: () => { if (onAsk) onAsk(selHint); setSelHint(null) },
-            }, '追问')
+          ? h('div', { className: 'litkb-selFab', style: { left: selHint.x, top: selHint.y } },
+              h('button', {
+                type: 'button', className: 'litkb-askFab',
+                onMouseDown: (event) => event.preventDefault(),
+                onClick: () => { if (onAsk) onAsk(selHint); setSelHint(null) },
+              }, '追问'),
+              onBuildChain
+                ? h('button', {
+                    type: 'button', className: 'litkb-askFab is-accent',
+                    onMouseDown: (event) => event.preventDefault(),
+                    onClick: () => {
+                      onBuildChain({
+                        paperId: paper.id, mode: 'claim', claim: selHint.text,
+                        page: selHint.page, blockId: selHint.blockId,
+                        source: 'parse', autoPropose: true,
+                      })
+                      setSelHint(null)
+                    },
+                  }, '建链')
+                : null,
+              onComment
+                ? h('button', {
+                    type: 'button', className: 'litkb-askFab',
+                    onMouseDown: (event) => event.preventDefault(),
+                    onClick: () => { onComment(selHint); setSelHint(null) },
+                  }, '评论')
+                : null)
           : null,
         null)
     }

@@ -118,6 +118,25 @@ test('批注追加、带日期与 ID', async () => {
   assert.match(note.id, /^a-[0-9a-f]{8}$/)
   assert.ok(note.at)
   assert.equal(note.text, '这条结论需要核对')
+
+  const anchored = await call('/api/litkb/card/annotate', {
+    method: 'POST',
+    body: JSON.stringify({
+      id: 'p-x',
+      text: '这句需要补充',
+      quote: '原文里的这一句',
+      page: 3,
+      block: 'b-1',
+    }),
+  })
+  assert.equal(anchored.code, 200)
+  const anchoredCard = JSON.parse(anchored.body).card
+  const commentEvidence = anchoredCard.evidence.find((item) => item.kind === 'comment')
+  assert.ok(commentEvidence)
+  assert.equal(commentEvidence.quote, '原文里的这一句')
+  assert.equal(commentEvidence.page, 3)
+  assert.equal(commentEvidence.comment, '这句需要补充')
+  assert.match(commentEvidence.id, /^q-[0-9a-f]{8}$/)
 })
 
 test('状态自由切换：任意方向可改，未知状态拒绝，原因可选', async () => {

@@ -40,6 +40,7 @@
       const [poolLoading, setPoolLoading] = useState(false)
       const [expandedQuotes, setExpandedQuotes] = useState({})
       const autoRef = useRef(false)
+      const proposeAutoRef = useRef(false)
       const contextPaperId = source.paperId || nodes[0]?.paperId || seed?.paperId || paper?.id || ''
       const contextTitle = paper?.title || nodes[0]?.title || ''
 
@@ -56,7 +57,7 @@
         setNodes((current) => mergeChainNodes(current, [{
           relation: 'supports', paperId: item.paperId, evidenceId: item.evidenceId,
           page: item.page, block: item.block || null, quote: item.quote || '',
-          title: item.title || '', authors: item.authors || '', year: item.year || '', note: '',
+          title: item.title || '', authors: item.authors || '', year: item.year || '', note: item.note || '',
         }]))
       }
 
@@ -153,6 +154,7 @@
               title: data.card?.title || paper?.title || contextPaperId,
               authors: paper?.authors || '', year: paper?.year || '',
               section: ev.section || '',
+              note: ev.comment ? `批注：${ev.comment}` : '',
             }))
             setPaperEvidence(list)
           })
@@ -261,6 +263,13 @@
         if (onSaved) onSaved(data.chain)
         return data.chain
       }
+
+      useEffect(() => {
+        if (!seed?.autoPropose || proposeAutoRef.current) return
+        if (!claim.trim()) return
+        proposeAutoRef.current = true
+        propose('claim')
+      }, [])
 
       const save = async () => {
         setBusy('save')

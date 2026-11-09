@@ -571,7 +571,7 @@
                     chain.warnings?.length ? h('div', { className: 'litkb-autoWarn' }, chain.warnings.join('；')) : null,
                     h('div', { className: 'litkb-autoActions' },
                       h('button', { type: 'button', className: 'litkb-btn litkb-btnGhost', disabled: busyId === chain.id, onClick: () => decide(chain.id, 'reject') }, '拒绝'),
-                      h('button', { type: 'button', className: 'litkb-miniBtn', onClick: () => onOpenChain && onOpenChain(chain.id) }, '查看'),
+                      h('button', { type: 'button', className: 'litkb-miniBtn', onClick: () => onOpenChain && onOpenChain(chain.id) }, '编辑'),
                       h('button', { type: 'button', className: 'litkb-btn', disabled: busyId === chain.id, onClick: () => decide(chain.id, 'accept') }, busyId === chain.id ? '处理中…' : '确认')))))
                 : h('div', { className: 'litkb-muted' }, '没有待审核草稿。先运行自动建链，或所有草稿已处理。'))))
     }

@@ -1198,5 +1198,9 @@
       '.litkb-chainBatchRel{display:flex;align-items:center;gap:8px;padding:6px 0}',
       '.litkb-exportMenu.is-down .litkb-exportMenuList{top:calc(100% + 6px);bottom:auto}',
       '.litkb-exProgress{display:flex;align-items:center;gap:8px;flex-wrap:wrap}',
+      '.litkb-selFab{position:fixed;z-index:10002;display:flex;gap:6px}',
+      '.litkb-selFab .litkb-askFab{position:static}',
+      '.litkb-askFab.is-accent{border-color:var(--litkb-accent);background:var(--litkb-accent);color:#fff}',
+      '.litkb-noteQuote{margin-top:2px;font-size:11px;color:var(--litkb-text-3)}',
     ].join('\n')
 

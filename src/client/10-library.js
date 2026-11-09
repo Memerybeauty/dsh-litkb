@@ -1091,6 +1091,25 @@
           metaLine('解析质量', String(paper.quality ?? '—')),
           metaLine('原始文件', paper.originalName || '—')))
 
+      const commentSelection = async (selection) => {
+        const text = typeof window !== 'undefined' && window.prompt
+          ? window.prompt('评论这句话（会作为批注并生成一条可入链的证据）：')
+          : ''
+        if (!text || !text.trim()) return
+        try {
+          await api('/api/litkb/card/annotate', {
+            method: 'POST', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              id: paper.id, text: text.trim(),
+              quote: selection.text, page: selection.page, block: selection.blockId,
+            }),
+          })
+          onRefresh && onRefresh()
+        } catch (e) {
+          setErr(String(e.message || e))
+        }
+      }
+
       const head = h('div', { className: 'litkb-drawerHead litkb-detailHead' },
         h('div', { className: 'litkb-detailTop' },
           h('div', { className: 'litkb-detailHeadMain' },
@@ -1109,7 +1128,7 @@
           ? h('div', { className: 'litkb-drawerBody' }, h(CardPanel, { key: paper.id, paper, onChanged: onRefresh, onOpenPdf, onAsk, onCite, cardRevision }))
           : view === 'deep'
             ? h('div', { className: 'litkb-drawerBody' }, h(DeepReadPanel, { key: paper.id, paper, onOpenPdf, onBuildChain }))
-            : h('div', { className: 'litkb-drawerBody is-flush' }, h(ParsePanel, { key: paper.id, paper, onOpenPdf, onLocate: (page, blockId, blockIds) => onOpenPdf(page, blockId, blockIds), onAsk, onBuildChain, onDeep: () => setView('deep'), flat: inline }))
+            : h('div', { className: 'litkb-drawerBody is-flush' }, h(ParsePanel, { key: paper.id, paper, onOpenPdf, onLocate: (page, blockId, blockIds) => onOpenPdf(page, blockId, blockIds), onAsk, onComment: commentSelection, onBuildChain, onDeep: () => setView('deep'), flat: inline }))
       const foot = view === 'info'
         ? h('div', { className: 'litkb-drawerFoot' },
             h('button', { type: 'button', className: 'litkb-btn', disabled: saving, onClick: () => save() },
