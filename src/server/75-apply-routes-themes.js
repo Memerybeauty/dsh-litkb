@@ -143,6 +143,7 @@
           facetChains,
           stats: themeStats(theme, chains.list),
           papers: themePapers(theme, chains.list),
+          summaryState: summaryState(theme, chains.list),
           draft: draftInfo,
         })
       } catch (error) {

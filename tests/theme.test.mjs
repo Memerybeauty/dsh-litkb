@@ -25,6 +25,7 @@ const {
   setThemePaper,
   updateThemeSummary,
   recordThemeMatch,
+  summaryState,
 } = await import('../lib/themes.js')
 
 ensureLibrary()
@@ -216,7 +217,7 @@ assert.ok(first.drafts[0].confidence > 0 && first.drafts[0].confidence <= 0.95)
 assert.ok(first.drafts[0].warnings.some((text) => text.includes('只有 1 篇论文')))
 
 const savedDraft = saveChain(first.drafts[0])
-saveChain(first.drafts[1])
+const savedSecond = saveChain(first.drafts[1])
 assert.equal(savedDraft.status, 'draft')
 assert.equal(themeChains(t.id).list.length, 2)
 
@@ -267,6 +268,105 @@ assert.ok(summary.citations >= 1)
 
 updateThemeSummary(t.id, { text: '手写结论', model: null })
 assert.equal(readTheme(t.id).summary.text, '手写结论')
+
+/* ---------- 匹配配置 / 拆解 / 扩展 ---------- */
+const { readConcepts, writeConcepts } = await import('../lib/concepts.js')
+const store = readConcepts()
+store.concepts.push({
+  id: 'c-expand01',
+  kind: 'method',
+  name: 'polar transform',
+  aliases: ['极坐标变换'],
+  status: 'active',
+})
+writeConcepts(store)
+
+const baseTheme = readTheme(t.id)
+assert.equal(baseTheme.match.minScore, 1.5)
+assert.equal(baseTheme.match.keywordMode, 'require')
+
+const cfgTheme = { ...baseTheme, match: { ...baseTheme.match, perPaper: 1 } }
+const capped = matchFacet(cfgTheme, cfgTheme.facets[0])
+assert.ok(capped.hits.filter((hit) => hit.paperId === 'p-th1').length <= 1)
+
+const strict = { ...baseTheme, match: { ...baseTheme.match, minScore: 20 } }
+const strictResult = matchFacet(strict, strict.facets[0])
+assert.equal(strictResult.gap, true)
+assert.equal(strictResult.reasonCode, 'below_threshold')
+
+const softKeywords = { ...baseTheme, match: { ...baseTheme.match, keywordMode: 'off' } }
+const hard = matchFacet(baseTheme, {
+  key: 'f-k',
+  title: '极坐标变换',
+  description: '',
+  keywords: ['zzz'],
+  mode: 'compare',
+  enabled: true,
+})
+const soft = matchFacet(softKeywords, {
+  key: 'f-k',
+  title: '极坐标变换',
+  description: '',
+  keywords: ['zzz'],
+  mode: 'compare',
+  enabled: true,
+})
+assert.equal(hard.gap, true)
+assert.equal(hard.reasonCode, 'keywords_miss')
+assert.ok(soft.hits.length >= 1)
+
+const tagOnly = { ...baseTheme, match: { ...baseTheme.match, tagMode: 'require' } }
+const tagResult = matchFacet(tagOnly, {
+  key: 'f-t',
+  title: '极坐标 polar',
+  description: '',
+  keywords: ['polar'],
+  mode: 'compare',
+  enabled: true,
+})
+assert.ok(tagResult.hits.length >= 1)
+assert.ok(tagResult.hits.every((hit) => hit.paperId === 'p-th1'))
+
+const yearTheme = { ...baseTheme, match: { ...baseTheme.match, yearFrom: 2025, yearTo: 2026 } }
+const yearResult = matchFacet(yearTheme, {
+  key: 'f-y',
+  title: '极坐标 polar',
+  description: '',
+  keywords: ['polar'],
+  mode: 'compare',
+  enabled: true,
+})
+assert.equal(yearResult.gap, true)
+assert.equal(yearResult.reasonCode, 'year_filter_empty')
+
+const expandFacet = { key: 'f-e', title: '极坐标变换', description: '', keywords: [], mode: 'compare', enabled: true }
+const noExpandTheme = { ...baseTheme, match: { ...baseTheme.match, expand: false } }
+const withExpandTheme = { ...baseTheme, match: { ...baseTheme.match, expand: true } }
+const noExpand = matchFacet(noExpandTheme, expandFacet)
+const withExpand = matchFacet(withExpandTheme, expandFacet)
+assert.equal(noExpand.hits.length, 0)
+assert.ok(withExpand.hits.length >= 1)
+assert.ok(withExpand.expansions.some((term) => /polar/i.test(term)))
+assert.ok(withExpand.hits[0].parts.bm25 > 0)
+
+/* ---------- 结论同步 ---------- */
+updateThemeSummary(t.id, { text: '基于当前链', model: null })
+const summarySaved = readTheme(t.id)
+assert.equal(summarySaved.summary.basis.chainIds.length >= 1, true)
+assert.equal(summaryState(summarySaved).stale, false)
+
+saveChain({
+  ...savedSecond,
+  status: 'confirmed',
+  review: { action: 'accepted', at: new Date().toISOString() },
+})
+const stale = summaryState(readTheme(t.id))
+assert.equal(stale.stale, true)
+assert.ok(stale.reason.includes('新增'))
+
+const regenerated = buildThemeSummary(readTheme(t.id))
+updateThemeSummary(t.id, { text: regenerated.text, model: null })
+assert.equal(summaryState(readTheme(t.id)).stale, false)
 
 /* ---------- 删除 ---------- */
 assert.equal(deleteTheme(t.id), true)

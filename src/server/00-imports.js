@@ -34,7 +34,7 @@ import { resolveLink } from './link-import.js'
 import {
   aggregateThemePapers, bindThemeDraft, buildThemeOutline, buildThemeSummary, deleteTheme, listThemes, markThemeRun,
   matchTheme, readTheme, recordThemeMatch, saveTheme, setThemePaper, themeChainDrafts, themeChains,
-  themePapers, themeStats, updateThemeSummary,
+  themePapers, themeStats, summaryState, updateThemeSummary,
 } from './themes.js'
 import { extractPdf } from './pdf.js'
 import { classify, matchTags } from './classify.js'

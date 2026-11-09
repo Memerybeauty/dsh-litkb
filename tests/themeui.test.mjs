@@ -45,9 +45,13 @@ globalThis.document = {
 globalThis.window.document = globalThis.document
 mod.apply({ effect: (fn) => fn(), slots: { inject: () => {}, register: () => {} } })
 
+const STATE_DEFAULTS = ['', 'all', false, null, null, [], null]
+
 function render(states) {
+  const list = states.slice(0, 22)
+  for (let i = list.length; i < 22; i += 1) list[i] = STATE_DEFAULTS[i - 15]
   globalThis.__i = 0
-  globalThis.__s = states
+  globalThis.__s = list
   return JSON.stringify(
     mod.__test.ThemePage({
       papers: [{ id: 'p-1', title: 'Polar paper', year: 2024 }],

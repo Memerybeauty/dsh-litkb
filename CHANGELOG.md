@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.3.0 — 匹配可调 + 结论同步 + 批量审核（2026-11-09）
+
+### 匹配
+
+- 每个研究增加 `match` 配置（阈值、相对阈值、每篇/结果/论文上限、关键词模式、标签模式、年份范围、别名扩展），默认值等于旧行为；
+- 命中带打分拆解 `parts: { bm25, tag, concept }`、命中词与 `expandedBy`；
+- 缺口返回结构化 `reasonCode`（no_corpus / no_terms / keywords_miss / tag_filter_empty / year_filter_empty / below_threshold）；
+- 同义/别名扩展：从概念词表取别名，最多 12 词，只加召回不加权；
+- 参考论文头部新增「匹配设置」「匹配明细」；保存设置后自动重新探索。
+
+### 结论
+
+- `summary.basis` 记录已确认链 id 与指纹；链变化后 `/themes/read` 返回 `summaryState.stale`；
+- 研究结论顶部提示「结论可能过期」并可重新生成；手写保存会把当前链记为依据。
+
+### 审核
+
+- 新增 `POST /api/litkb/chains/review/batch`（逐条结果，单条失败不中断）；
+- 证据链列表支持多选、全选草稿、批量确认/拒绝、两链合并（弹窗选保留目标）。
+
+### 工程
+
+- 路由 75 → **76**；测试 128 项；lint / format / coverage 全绿。
+
 ## v0.2.14 — 工程化收尾：0 warning + Prettier（2026-11-09）
 
 - 清理全部 14 个 unused-vars warning（含删除 3 处死代码：`maxPairs`、`escaped`、`fetchHtml`）；

@@ -181,6 +181,50 @@
 
   webServer.register({
     kind: 'exact',
+    path: '/api/litkb/chains/review/batch',
+    handler: async (req, res) => {
+      try {
+        const body = JSON.parse((await readBody(req, 256 * 1024)).toString('utf8') || '{}')
+        const ids = [...new Set((Array.isArray(body.ids) ? body.ids : []).map(String))]
+          .filter((id) => /^c-[a-zA-Z0-9_-]+$/.test(id))
+          .slice(0, 50)
+        const action = body.action === 'reject' ? 'reject' : 'accept'
+        if (!ids.length) { json(res, 400, { ok: false, error: '缺少链 id' }); return }
+        const results = []
+        for (const id of ids) {
+          try {
+            const chain = readChain(id)
+            if (!chain) { results.push({ id, ok: false, error: '链不存在' }); continue }
+            if (chain.status !== 'draft') { results.push({ id, ok: false, error: '不是草稿' }); continue }
+            if (action === 'reject') {
+              deleteChain(id)
+              results.push({ id, ok: true })
+            } else {
+              saveChain({
+                ...chain,
+                status: 'confirmed',
+                review: { action: 'accepted', at: new Date().toISOString() },
+              })
+              results.push({ id, ok: true })
+            }
+          } catch (error) {
+            results.push({ id, ok: false, error: String(error?.message || error) })
+          }
+        }
+        const succeeded = results.filter((item) => item.ok).length
+        json(res, 200, {
+          ok: true, action, succeeded,
+          failed: results.length - succeeded,
+          results,
+        })
+      } catch (error) {
+        json(res, 500, { ok: false, error: String(error?.message || error) })
+      }
+    },
+  })
+
+  webServer.register({
+    kind: 'exact',
     path: '/api/litkb/chains/review',
     handler: async (req, res) => {
       try {

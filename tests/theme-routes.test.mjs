@@ -253,6 +253,37 @@ assert.equal(suggest.data.facets.length, 5)
 const suggestEmpty = await call('/api/litkb/themes/suggest', { method: 'POST', body: {} })
 assert.equal(suggestEmpty.code, 422)
 
+const secondExplore = await call('/api/litkb/themes/explore', { method: 'POST', body: { id: themeId } })
+assert.equal(secondExplore.code, 200)
+await waitJob(secondExplore.data.job.id)
+const beforeBatch = await call('/api/litkb/themes/read', { url: `/api/litkb/themes/read?id=${themeId}` })
+const draftIds = beforeBatch.data.chains.filter((chain) => chain.status === 'draft').map((chain) => chain.id)
+assert.ok(draftIds.length >= 2)
+const batch = await call('/api/litkb/chains/review/batch', {
+  method: 'POST',
+  body: { ids: draftIds, action: 'accept' },
+})
+assert.equal(batch.code, 200)
+assert.equal(batch.data.succeeded, draftIds.length)
+
+const afterBatch = await call('/api/litkb/themes/read', { url: `/api/litkb/themes/read?id=${themeId}` })
+assert.ok(afterBatch.data.summaryState)
+assert.equal(afterBatch.data.summaryState.stale, true, '新增确认链后结论应过期')
+
+const thirdExplore = await call('/api/litkb/themes/explore', { method: 'POST', body: { id: themeId } })
+await waitJob(thirdExplore.data.job.id)
+const beforeReject = await call('/api/litkb/themes/read', { url: `/api/litkb/themes/read?id=${themeId}` })
+const rejectIds = beforeReject.data.chains.filter((chain) => chain.status === 'draft').map((chain) => chain.id)
+assert.ok(rejectIds.length >= 1)
+const rejectBatch = await call('/api/litkb/chains/review/batch', {
+  method: 'POST',
+  body: { ids: rejectIds, action: 'reject' },
+})
+assert.equal(rejectBatch.code, 200)
+assert.equal(rejectBatch.data.failed, 0)
+const emptyBatch = await call('/api/litkb/chains/review/batch', { method: 'POST', body: { ids: [], action: 'accept' } })
+assert.equal(emptyBatch.code, 400)
+
 const deleted = await call('/api/litkb/themes/delete', { method: 'POST', body: { id: themeId } })
 assert.equal(deleted.code, 200)
 assert.ok(deleted.data.chainsKept >= 1)
