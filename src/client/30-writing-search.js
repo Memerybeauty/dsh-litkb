@@ -177,7 +177,7 @@
                 : null))
     }
 
-    function WritingPage({ insertRequest, onConsumed, onOpenPaper }) {
+    function WritingPage({ insertRequest, onConsumed, onOpenPaper, focus = null }) {
       const [drafts, setDrafts] = useState([])
       const [activeId, setActiveId] = useState('')
       const [draft, setDraft] = useState(null)
@@ -199,6 +199,8 @@
       const [draftWidth, setDraftWidth] = useState(() => storedWidth('litkb.writeDraftWidth', 250))
       const [railWidth, setRailWidth] = useState(() => storedWidth('litkb.writeRailWidth', 330))
       const [splitRatio, setSplitRatio] = useState(() => Math.min(75, Math.max(25, storedWidth('litkb.writeSplit', 50))))
+      const [researchFilter, setResearchFilter] = useState('')
+      const [themes, setThemes] = useState([])
       const dirtyRef = useRef(false)
       const writeRef = useRef(null)
       const paneRef = useRef(null)
@@ -227,6 +229,16 @@
       }, [])
 
       useEffect(() => { loadList().catch((e) => setErr(String(e.message || e))) }, [loadList])
+      useEffect(() => {
+        api('/api/litkb/themes')
+          .then((data) => setThemes(data.themes || []))
+          .catch(() => { /* 研究列表不可用时写作照常 */ })
+      }, [])
+      useEffect(() => {
+        if (!focus) return
+        if (focus.themeId) setResearchFilter(focus.themeId)
+        if (focus.draftId) setActiveId(focus.draftId)
+      }, [focus])
       useEffect(() => { if (activeId) loadDraft(activeId).catch((e) => setErr(String(e.message || e))) }, [activeId, loadDraft])
 
       const saveNow = useCallback(async () => {
@@ -535,6 +547,13 @@
       const references = citationInfo?.references || []
       const missing = citationInfo?.missing || []
       const chars = body.length
+      const themeByDraft = new Map(themes.filter((item) => item.draftId).map((item) => [item.draftId, item]))
+      const filteredDrafts = researchFilter ? drafts.filter((item) => themeByDraft.get(item.id)?.id === researchFilter) : drafts
+
+      useEffect(() => {
+        if (!researchFilter || !drafts.length) return
+        if (!filteredDrafts.some((item) => item.id === activeId)) setActiveId(filteredDrafts[0]?.id || '')
+      }, [researchFilter, drafts, activeId])
 
       const searchRow = (item) => h('div', { key: item.evidenceId, className: 'litkb-writeEv' },
         h('div', { className: 'litkb-writeEvTop' },
@@ -557,8 +576,17 @@
           h('div', { className: 'litkb-draftHead' },
             h('span', { className: 'litkb-blockTitle' }, '文稿'),
             h('button', { type: 'button', className: 'litkb-btn litkb-btnGhost', onClick: create }, '＋ 新建')),
-          drafts.length
-            ? drafts.map((item) => h('div', {
+          h('div', { className: 'litkb-writingFilterRow' },
+            h('select', {
+              className: 'litkb-input litkb-writingFilter',
+              value: researchFilter,
+              onChange: (e) => setResearchFilter(e.target.value),
+              title: '按研究筛选文稿',
+            },
+              h('option', { value: '' }, '全部文稿'),
+              themes.filter((item) => item.draftId).map((item) => h('option', { key: item.id, value: item.id }, item.title)))),
+          filteredDrafts.length
+            ? filteredDrafts.map((item) => h('div', {
                 key: item.id, role: 'button', tabIndex: 0,
                 className: 'litkb-draftRow' + (item.id === activeId ? ' is-active' : ''),
                 onClick: () => selectDraft(item.id),
@@ -566,13 +594,16 @@
               },
               h('span', { className: 'litkb-draftRowMain' },
                 h('span', { className: 'litkb-draftTitle' }, item.title),
-                h('span', { className: 'litkb-draftMeta' }, `${item.chars || 0} 字 · ${item.citations || 0} 引用`)),
+                h('span', { className: 'litkb-draftMeta' }, `${item.chars || 0} 字 · ${item.citations || 0} 引用`),
+                themeByDraft.get(item.id)
+                  ? h('span', { className: 'litkb-draftMeta is-research', title: themeByDraft.get(item.id).title }, `研究：${themeByDraft.get(item.id).title}`)
+                  : null),
               h('button', {
                 type: 'button', className: 'litkb-draftDel', title: '删除文稿',
                 'aria-label': `删除文稿 ${item.title}`,
                 onClick: (e) => { e.stopPropagation(); removeDraft(item) },
               }, '×')))
-            : h('div', { className: 'litkb-muted', style: { padding: '10px 6px' } }, '还没有文稿')),
+            : h('div', { className: 'litkb-muted', style: { padding: '10px 6px' } }, researchFilter ? '这个研究还没有绑定文稿' : '还没有文稿')),
         h('div', {
           className: 'litkb-resizer litkb-writeResizer', role: 'separator', 'aria-orientation': 'vertical',
           title: '拖动调整文稿列表宽度', onMouseDown: (event) => startWriteResize('draft', event),

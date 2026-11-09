@@ -1,4 +1,4 @@
-/** 研究工作台渲染冒烟（假 React）：总览 / 研究内容 / 论文 / 写作。 */
+/** 研究工作台渲染冒烟（假 React）：左列表 + 右工作区（论文 / 证据链 / 写作）。 */
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import vm from 'node:vm'
@@ -39,22 +39,6 @@ function render(states) {
   return JSON.stringify(mod.__test.ThemePage({ papers: [{ id: 'p-1', title: 'Polar paper' }], tags: [] }))
 }
 
-const base = [[], '', null, 'content', '', '', '', null, null, null, '', false, null, false]
-
-const empty = render(base)
-assert.ok(empty.includes('研究工作台'))
-assert.ok(empty.includes('还没有研究'))
-assert.ok(empty.includes('新建研究'))
-
-const overview = render([
-  [{ id: 't-1', title: '视盘研究', tags: ['分割'], draftId: 'd-1', updatedAt: '2026-11-09T00:00:00Z', stats: { facets: 3, papers: 2, confirmed: 1, drafts: 1, gaps: 1 } }],
-  '', null, 'content', '', '', '', null, null, null, '', false, null, false,
-])
-assert.ok(overview.includes('视盘研究'))
-assert.ok(overview.includes('已确认'))
-assert.ok(overview.includes('待审'))
-assert.ok(overview.includes('缺口'))
-
 const detail = {
   theme: {
     id: 't-1', title: '视盘研究', tags: ['分割'], description: '综述第二章',
@@ -71,32 +55,35 @@ const detail = {
   draft: null,
 }
 
-const content = render([[], 't-1', detail, 'content', '', '', '', null, null, null, '', false, null, false])
-assert.ok(content.includes('研究内容'))
-assert.ok(content.includes('极坐标变换'))
-assert.ok(content.includes('草稿'))
-assert.ok(content.includes('看链'))
-assert.ok(content.includes('综合结论'))
-assert.ok(content.includes('匹配预览'))
-assert.ok(content.includes('覆盖矩阵'))
-
-const papersView = render([[], 't-1', detail, 'papers', '', '', '', null, null, null, '', false, null, false])
-assert.ok(papersView.includes('手动加入论文'))
-assert.ok(papersView.includes('Polar paper'))
-assert.ok(papersView.includes('移出'))
-
-const withDraft = {
-  ...detail,
-  draft: { id: 'd-1', title: '视盘研究 · 初稿', chars: 120, citations: 3, missing: 0, updated: '' },
+const listTheme = {
+  id: 't-1', title: '视盘研究', tags: ['分割'], draftId: '', updatedAt: '2026-11-09T00:00:00Z',
+  stats: { facets: 1, papers: 1, confirmed: 0, drafts: 1, gaps: 0 },
 }
-const writing = render([[], 't-1', withDraft, 'writing', '', '', '', null, null, null, '', false, null, false])
-assert.ok(writing.includes('研究文稿'))
-assert.ok(writing.includes('生成提纲'))
-assert.ok(writing.includes('追加到文稿'))
-assert.ok(writing.includes('在写作页打开'))
+
+const empty = render([[], '', null, '', '', '', null, null, null, '', false, null, false])
+assert.ok(empty.includes('从一个研究开始'))
+assert.ok(empty.includes('新建研究'))
+assert.ok(empty.includes('还没有研究'))
+
+const unselected = render([[listTheme], '', null, '', '', '', null, null, null, '', false, null, false])
+assert.ok(unselected.includes('视盘研究'))
+assert.ok(unselected.includes('从左栏选一个研究'))
+assert.ok(!unselected.includes('先确认这些论文是否切题'), '未选中研究时不显示研究操作')
+
+const selected = render([[listTheme], 't-1', detail, '', '', '', null, null, null, '', false, null, false])
+assert.ok(selected.includes('论文 1'))
+assert.ok(selected.includes('先确认这些论文是否切题'))
+assert.ok(selected.includes('Polar paper'))
+assert.ok(selected.includes('证据链'))
+assert.ok(selected.includes('极坐标变换'))
+assert.ok(selected.includes('待审草稿'))
+assert.ok(selected.includes('写作'))
+assert.ok(selected.includes('生成提纲'))
+assert.ok(!selected.includes('在写作页打开'), '写作统一回主写作页')
+assert.ok(selected.includes('还没有文稿'))
 
 const editing = render([
-  [], '', null, 'content', '', '', '', null, null,
+  [], '', null, '', '', '', null, null,
   { title: '新研究', description: '', tags: '', facets: [{ title: '', description: '', keywords: '' }] },
   '', false, null, false,
 ])
@@ -104,8 +91,13 @@ assert.ok(editing.includes('新建研究'))
 assert.ok(editing.includes('细分描述'))
 assert.ok(editing.includes('AI 帮我拆'))
 
-console.log('  ✓ 总览：空态 / 表头 / 统计')
-console.log('  ✓ 研究内容：细分卡片 / 状态 / 结论')
-console.log('  ✓ 论文：列表 / 手动加入')
-console.log('  ✓ 写作：文稿状态 / 提纲入口')
+const withDraft = { ...detail, draft: { id: 'd-1', title: '视盘研究 · 初稿', chars: 120, citations: 3, missing: 0, updated: '' } }
+const writing = render([[listTheme], 't-1', withDraft, '', '', '', null, null, null, '', false, null, false])
+assert.ok(writing.includes('打开写作页'))
+assert.ok(writing.includes('追加提纲到文稿'))
+
+console.log('  ✓ 空态 / 左列表 / 未选中')
+console.log('  ✓ 论文优先：表格 + 匹配入口')
+console.log('  ✓ 证据链：细分 / 待审 / 覆盖矩阵')
+console.log('  ✓ 写作：只生成提纲 + 跳写作页')
 console.log('\n4 passed')

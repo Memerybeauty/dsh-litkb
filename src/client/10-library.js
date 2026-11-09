@@ -150,6 +150,7 @@
       const [askSelection, setAskSelection] = useState(null)
       const [cardRevision, setCardRevision] = useState(0)
       const [insertRequest, setInsertRequest] = useState(null)
+      const [writingFocus, setWritingFocus] = useState(null)
       const [autoChain, setAutoChain] = useState(null)
       const [linkOpen, setLinkOpen] = useState(false)
       const [linkValue, setLinkValue] = useState('')
@@ -560,7 +561,7 @@
             TABS.map((t) => h('button', {
               key: t, type: 'button', role: 'tab', 'aria-selected': tab === t,
               className: 'litkb-tab' + (tab === t ? ' is-on' : ''),
-              onClick: () => { setTab(t); setManaging(false) },
+              onClick: () => { setTab(t); setManaging(false); setWritingFocus(null) },
             }, t))),
           splitTab && !showList
             ? h('button', {
@@ -620,11 +621,12 @@
                 if (page) openPdf(target, page, blockId)
               },
               onOpenChain: (id) => setChainDialog({ chainId: id, paperId: '', nonce: Date.now() }),
-              onOpenDraft: () => setTab('写作'),
+              onOpenDraft: (payload) => { setWritingFocus(payload || null); setTab('写作') },
             })
           : tab === '写作'
           ? h(WritingPage, {
               insertRequest,
+              focus: writingFocus,
               onConsumed: () => setInsertRequest(null),
               onOpenPaper: (paperId, page, blockId) => {
                 const target = papers.find((paper) => paper.id === paperId)
