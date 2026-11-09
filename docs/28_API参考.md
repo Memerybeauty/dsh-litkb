@@ -1,6 +1,6 @@
-# API 参考（v0.1.2）
+# API 参考（v0.2.0）
 
-所有接口前缀：`/api/litkb`；v0.1.x 共注册 **63** 条。请求/响应均为 JSON；PDF 上传为原始 body + `x-filename`；错误统一为：
+所有接口前缀：`/api/litkb`；v0.2.0 共注册 **74** 条。请求/响应均为 JSON；PDF 上传为原始 body + `x-filename`；错误统一为：
 
 ```json
 { "ok": false, "code": "error_code", "error": "人类可读信息" }
@@ -78,7 +78,7 @@
 | POST | `/chains/insert` | 插入文稿（`append:true` 新建/追加） |
 | POST | `/chains/auto/run` | 后台自动建链：`{scope,paperIds,sections,mode:'paper'|'cross',topic,autoConfirm}` |
 | GET | `/chains/auto/jobs?id=` | 任务进度 |
-| GET | `/chains/review` | 待审核 draft 链 |
+| GET | `/chains/review` | 待审核 draft 链（`?origin=topic` 只看主题链） |
 | POST | `/chains/review` | `{id,action:'accept'|'reject'|'merge',targetId?}` |
 | GET | `/chains/graph` | 证据链知识库图 |
 | POST | `/chains/layout` | 保存图坐标 |
@@ -103,6 +103,41 @@
 | GET | `/drafts/export` | MD 导出 |
 | GET | `/drafts/citations` | 引用/缺失 |
 | POST | `/drafts/assist` | 按证据 AI 扩写 |
+
+## 研究工作台（v0.2.0）
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/themes` | 研究列表 + 统计（论文/链/缺口/待审/写作） |
+| GET | `/themes/read?id=` | 研究详情：theme、chains、facetChains、stats、papers、draft |
+| POST | `/themes/save` | 新建/更新（facets 全量覆盖，key 保留） |
+| POST | `/themes/delete` | 删除研究（链与文稿保留） |
+| POST | `/themes/match` | 匹配预览；`persist:true` 写 lastMatch |
+| POST | `/themes/chain` | 生成主题链草稿（任务），返回 job |
+| GET | `/themes/jobs?id=` | 任务进度；不带 id 返回最近 20 条 |
+| POST | `/themes/papers` | 手动加入/移出/恢复论文（`action`） |
+| POST | `/themes/outline` | 生成提纲；`mode`=new/append/replace 写入文稿 |
+| POST | `/themes/summary` | 不带 text 生成结论；带 text 保存 |
+| POST | `/themes/suggest` | 拆分细分描述（有模型走模型，无模型模板） |
+
+**研究对象**
+
+```json
+{
+  "id": "t-1a2b3c4d",
+  "title": "多模态大模型在医学影像诊断中的应用",
+  "description": "综述第二章",
+  "tags": ["医学影像"],
+  "facets": [
+    { "key": "f1", "title": "多模态融合方式", "description": "…", "keywords": ["fusion"], "mode": "compare", "enabled": true }
+  ],
+  "papers": { "include": [], "exclude": [], "lastMatch": { "at": "…", "papers": [] } },
+  "draftId": "d-9a8b7c6d",
+  "summary": { "text": "", "updatedAt": null, "model": null }
+}
+```
+
+主题链：`origin: "topic"`，`provenance: { themeId, facetKey, runId, matcher, query, tokens }`；审核用 `GET /chains/review?origin=topic`。
 
 ## 示例
 

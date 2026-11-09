@@ -32,7 +32,7 @@ export function apply(ctx) {
     path: '/api/litkb/health',
     handler: async (req, res) => {
       json(res, 200, {
-        ok: true, plugin: name, version: pkg.version, stage: 'P3',
+        ok: true, plugin: name, version: pkg.version, stage: 'P5',
         library: PATHS.root, stats: stats(readIndex()), time: new Date().toISOString(),
       })
     },

@@ -18,7 +18,7 @@ server.apply({
   webServer: { register: (r) => routes.push(r) },
   logger: { info() {}, warn() {} },
 })
-assert.equal(routes.length, 63, 'sixty-three routes registered')
+assert.equal(routes.length, 74, 'seventy-four routes registered')
 const paths = routes.map((r) => r.path).sort()
 assert.deepEqual(paths, [
   '/api/litkb/ask', '/api/litkb/blocks', '/api/litkb/blocks.md', '/api/litkb/blocks/build',
@@ -40,7 +40,12 @@ assert.deepEqual(paths, [
   '/api/litkb/import', '/api/litkb/import/link', '/api/litkb/page', '/api/litkb/papers', '/api/litkb/pdf',
   '/api/litkb/reclassify', '/api/litkb/search', '/api/litkb/search/answer', '/api/litkb/search/history',
   '/api/litkb/settings', '/api/litkb/tags', '/api/litkb/tags/create',
-  '/api/litkb/tags/delete', '/api/litkb/translate', '/api/litkb/update',
+  '/api/litkb/tags/delete',
+  '/api/litkb/themes', '/api/litkb/themes/chain', '/api/litkb/themes/delete',
+  '/api/litkb/themes/jobs', '/api/litkb/themes/match', '/api/litkb/themes/outline',
+  '/api/litkb/themes/papers', '/api/litkb/themes/read', '/api/litkb/themes/save',
+  '/api/litkb/themes/suggest', '/api/litkb/themes/summary',
+  '/api/litkb/translate', '/api/litkb/update',
   '/api/litkb/vendor/cytoscape.js',
 ])
 const health = routes.find((r) => r.path === '/api/litkb/health')

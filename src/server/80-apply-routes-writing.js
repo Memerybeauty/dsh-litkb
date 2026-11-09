@@ -223,7 +223,8 @@
       json(res, 200, {
         ok: true,
         version: pkg.version,
-        stage: 'P3',
+        stage: 'P5',
+        themes: listThemes().length,
         llm: llmStatus(pluginCtx),
         jobs: [...jobs.values()].map(publicJob),
         graphJob: publicGraphJob(graphJobs.get(GRAPH_JOB_ID)),

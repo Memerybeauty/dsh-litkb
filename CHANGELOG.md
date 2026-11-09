@@ -1,5 +1,28 @@
 # Changelog
 
+## v0.2.0 — 研究工作台（2026-11-09）
+
+### 新增
+
+- **研究工作台**（顶层页签）：总览 + 每主题的研究（研究内容 / 论文 / 写作）；
+- `lib/themes.js`：研究存储、细分描述、BM25 匹配（概念/标签加分、关键词硬过滤、每篇上限）、主题链候选、综合结论、提纲；
+- 11 条 `/api/litkb/themes*` 路由（列表/读取/保存/删除/匹配/建链任务/进度/论文增删/提纲/结论/AI 拆分）；
+- 3 个 Agent 工具：`lit_theme_list` / `lit_theme_match` / `lit_theme_chain`（写需 confirm）；
+- 主题链 `origin=topic`，`/chains/review?origin=topic` 可筛选；
+- 覆盖矩阵、缺口提示、AI 拆分细分描述（无模型回退模板）。
+
+### 工程
+
+- 路由 63 → **74**，测试 116 → **128**（`tests/theme.test.mjs` / `theme-routes.test.mjs` / `themeui.test.mjs`）；
+- `PATHS.themes`、`ensureLibrary` 建 `themes/`；
+- `search.js` 导出 `bm25`，`chains.js` 导出 `cueRelation` 与 `nodeForEvidence`。
+
+### 边界
+
+- 主题链全部是草稿 + 审核，确认后才进检索与图谱；
+- 写作只到「提纲 + 引用」，不自动写整篇初稿；
+- 暂无研究模板、研究间对比、整库研究导出。
+
 ## v0.1.2 — PRD/SRS/SDD 收口（2026-11-06）
 
 - PRD v1.33：补 6.15/6.16（自动链/检索/工具/导航）、发布计划补 P4.10–v0.1.2；

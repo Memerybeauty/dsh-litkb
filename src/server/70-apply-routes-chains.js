@@ -185,18 +185,21 @@
     handler: async (req, res) => {
       try {
         if (String(req.method || 'GET').toUpperCase() !== 'POST') {
+          const origin = queryParam(req, 'origin')
           const records = new Map(readIndex().map((record) => [record.id, record]))
         const chains = listChains()
           .filter((chain) => chain.status === 'draft')
+          .filter((summary) => !origin || summary.origin === origin)
           .map((summary) => {
             const chain = readChain(summary.id)
             return chain ? {
               ...chain,
               paperTitle: records.get(chain.claim?.paperId)?.title || '',
+              themeTitle: chain.provenance?.themeId ? (readTheme(chain.provenance.themeId)?.title || '') : '',
             } : null
           })
           .filter(Boolean)
-          json(res, 200, { ok: true, chains, count: chains.length })
+          json(res, 200, { ok: true, chains, count: chains.length, origin: origin || 'all' })
           return
         }
         const body = JSON.parse((await readBody(req, 256 * 1024)).toString('utf8') || '{}')

@@ -582,7 +582,7 @@
                 kpiChip('is-amber', stats.untagged ?? allUntagged, '未归类', () => setFilter('未归类')),
                 kpiChip('is-violet', allTagsCount, '标签', () => setManaging(true)),
                 h('span', { className: 'litkb-kpi is-neutral', title: library }, library ? '库已连接' : '库未初始化'))
-            : h('span', { className: 'litkb-headHint' }, tab === '写作' ? '文稿 · 引用 · 证据链' : (tab === '检索' ? '链优先检索 · 引用可追溯' : (tab === '横向精读' ? '跨论文并排 · 差异对比' : '证据链知识库'))),
+            : h('span', { className: 'litkb-headHint' }, tab === '写作' ? '文稿 · 引用 · 证据链' : (tab === '检索' ? '链优先检索 · 引用可追溯' : (tab === '横向精读' ? '跨论文并排 · 差异对比' : (tab === '研究工作台' ? '总览 · 研究内容 · 论文 · 写作' : '证据链知识库')))),
           splitTab && !showList
             ? h('button', { type: 'button', className: 'litkb-miniBtn', onClick: () => setManaging(true) }, '标签与术语')
             : null,
@@ -607,7 +607,22 @@
       h('main', { className: 'litkb-body' + (splitTab ? ' is-split' : '') + (tab === '写作' ? ' is-writing' : '') },
         busy ? h('div', { className: 'litkb-progress' }, `正在解析 ${busy.done}/${busy.total} …`) : null,
         error ? h('div', { className: 'litkb-error' }, error) : null,
-        tab === '写作'
+        tab === '研究工作台'
+          ? h(ThemePage, {
+              papers,
+              tags,
+              onOpenPaper: (paperId, page, blockId) => {
+                const target = papers.find((paper) => paper.id === paperId)
+                if (!target) return
+                setFilter('全部')
+                setSelected(target)
+                setTab('论文库')
+                if (page) openPdf(target, page, blockId)
+              },
+              onOpenChain: (id) => setChainDialog({ chainId: id, paperId: '', nonce: Date.now() }),
+              onOpenDraft: () => setTab('写作'),
+            })
+          : tab === '写作'
           ? h(WritingPage, {
               insertRequest,
               onConsumed: () => setInsertRequest(null),

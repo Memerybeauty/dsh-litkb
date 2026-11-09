@@ -8,6 +8,7 @@ process.env.LITKB_LIBRARY = mkdtempSync(join(tmpdir(), 'dsh-litkb-tools-'))
 const { ensureLibrary, upsert } = await import('../lib/library.js')
 const { writeCard } = await import('../lib/cards.js')
 const { saveChain, readChain } = await import('../lib/chains.js')
+const { saveTheme } = await import('../lib/themes.js')
 ensureLibrary()
 const record = {
   id: 'p-t1', citekey: 'p-t1', title: '极坐标视盘分割', authors: 'Wu B.', year: 2024,
@@ -36,9 +37,9 @@ server.apply({
   get(name) { return name === 'tools' ? registry : undefined },
 })
 
-assert.equal(tools.length, 9)
+assert.equal(tools.length, 12)
 const names = tools.map((tool) => tool.name)
-for (const name of ['lit_search', 'lit_answer', 'lit_chain_get', 'lit_chain_propose', 'lit_chain_save', 'lit_card', 'lit_cite', 'lit_graph', 'lit_blocks']) {
+for (const name of ['lit_search', 'lit_answer', 'lit_chain_get', 'lit_chain_propose', 'lit_chain_save', 'lit_card', 'lit_cite', 'lit_graph', 'lit_blocks', 'lit_theme_list', 'lit_theme_match', 'lit_theme_chain']) {
   assert.ok(names.includes(name), name)
   const tool = tools.find((item) => item.name === name)
   assert.ok(tool.description)
@@ -99,7 +100,30 @@ assert.equal(saved.ok, true)
 assert.equal(saved.chain.status, 'confirmed')
 assert.ok(readChain(saved.chain.id))
 
-console.log('  ✓ 9 个 lit_* 工具注册与 schema')
+const theme = saveTheme({
+  title: '极坐标研究',
+  facets: [{ title: '极坐标边界', description: 'polar transform', keywords: ['polar'] }],
+})
+const themeList = await tools.find((t) => t.name === 'lit_theme_list').execute({}, {})
+assert.equal(themeList.ok, true)
+assert.ok(themeList.themes.some((item) => item.id === theme.id))
+
+const themeMatch = await tools.find((t) => t.name === 'lit_theme_match').execute({ themeId: theme.id }, {})
+assert.equal(themeMatch.ok, true)
+assert.ok(themeMatch.results[0].hits.some((hit) => hit.evidenceId === 'q-a1a1a1a1'))
+
+const themeChainTool = tools.find((t) => t.name === 'lit_theme_chain')
+const themePreview = await themeChainTool.execute({ themeId: theme.id }, {})
+assert.equal(themePreview.ok, true)
+assert.equal(themePreview.requiresConfirm, true)
+assert.equal(themePreview.preview.drafts.length, 1)
+const themeCreated = await themeChainTool.execute({ themeId: theme.id, confirm: true }, {})
+assert.equal(themeCreated.ok, true)
+assert.ok(themeCreated.created.length >= 1)
+assert.ok(readChain(themeCreated.created[0].chainId))
+assert.equal(readChain(themeCreated.created[0].chainId).origin, 'topic')
+
+console.log('  ✓ 12 个 lit_* 工具注册与 schema')
 console.log('  ✓ 检索/回答/取链/引用/卡片')
 console.log('  ✓ 保存必须 confirm=true')
 console.log('\n3 passed')

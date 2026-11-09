@@ -16,7 +16,7 @@ import { publicSettings, writeSettings } from './settings.js'
 import { glossaryHash, readGlossary, writeGlossary } from './glossary.js'
 import { readTranslation, translateDocument, translationSummary } from './translate.js'
 import { evidenceCsv, evidenceRows, findBacklinks } from './evidence-scan.js'
-import { applySection, generateCard, generateCardSection, llmStatus, SECTION_DEFS } from './cardgen.js'
+import { applySection, callModel, generateCard, generateCardSection, llmStatus, parseModelJson, SECTION_DEFS } from './cardgen.js'
 import { mergeConcepts, readConcepts, readEdges, rebuildEdges, updateConcept, writeConcepts } from './concepts.js'
 import { buildAll, compareGroups, conceptOverview, readGraph } from './graph.js'
 import { askPaper } from './ask.js'
@@ -31,6 +31,11 @@ import { AGENT_TOOL_NAMES, registerAgentTools } from './agent-tools.js'
 import { autoCrossPaperDrafts } from './chain-cross.js'
 import { listSearchHistory, recordSearch } from './search-history.js'
 import { resolveLink } from './link-import.js'
+import {
+  aggregateThemePapers, bindThemeDraft, buildThemeOutline, buildThemeSummary, deleteTheme, listThemes, markThemeRun,
+  matchTheme, readTheme, recordThemeMatch, saveTheme, setThemePaper, themeChainDrafts, themeChains,
+  themePapers, themeStats, updateThemeSummary,
+} from './themes.js'
 import { extractPdf } from './pdf.js'
 import { classify, matchTags } from './classify.js'
 
