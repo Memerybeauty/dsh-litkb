@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { documentParagraphs, paragraphForQuote, paragraphIndex } from '../lib/paragraphs.js'
+import { documentParagraphs, paragraphForQuote, paragraphIndex, paragraphPages } from '../lib/paragraphs.js'
 import { renderParsedMarkdown } from '../lib/blocks.js'
 
 const doc = {
@@ -45,6 +45,12 @@ assert.deepEqual(paragraphs[4].blockIds, ['b-6', 'b-7'])
 const index = paragraphIndex(doc)
 assert.equal(index.byBlock.get('b-3').text, '这是第一段被拆成两块的正文。')
 assert.equal(paragraphForQuote(doc, '在下一页继续并结束', 2).firstBlockId, 'b-6')
+
+const pageTexts = paragraphPages(doc)
+assert.equal(pageTexts.length, 2)
+assert.ok(pageTexts[0].text.includes('这是第一段被拆成两块的正文。'))
+assert.ok(!pageTexts[0].text.includes('\n17'))
+assert.ok(pageTexts[1].text.includes('新的一段。'))
 
 const md = renderParsedMarkdown(doc, { id: 'p-1', title: '测试' })
 assert.ok(md.includes('这是第一段被拆成两块的正文。'))

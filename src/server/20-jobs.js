@@ -214,7 +214,8 @@ async function runCardJob(id, job) {
     const record = readIndex().find((r) => r.id === id)
     if (!record) throw Object.assign(new Error('论文不存在'), { code: 'not_found' })
     const doc = await loadPaperPages(record)
-    const pages = doc.pages
+    const blockDoc = readBlocks(record.id)
+    const pages = blockDoc ? paragraphPages(blockDoc) : doc.pages
     job.step = `切分章节（${pages.length} 页）并调用模型`
     let card
     if (job.key) {
