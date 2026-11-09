@@ -230,6 +230,29 @@ assert.ok(chainsTab.includes('极坐标变换改善边界'))
 assert.ok(chainsTab.includes('Polar transform improves Dice'))
 
 const confirmedDetail = { ...detail, chains: [{ ...chain, status: 'confirmed' }] }
+const deepState = [
+  [listTheme],
+  't-1',
+  detail,
+  '',
+  '',
+  '',
+  null,
+  null,
+  '',
+  false,
+  'c-1',
+  false,
+  { id: 'p-1', title: 'Polar' },
+  'papers',
+  'p-1',
+  '',
+  'all',
+]
+const deepTab = render(deepState)
+assert.ok(deepTab.includes('精读：Polar'))
+assert.ok(deepTab.includes('关闭'))
+
 const dupDetail = {
   ...detail,
   chains: [
