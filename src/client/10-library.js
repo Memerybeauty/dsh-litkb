@@ -1245,22 +1245,22 @@
           onKeyDown: (e) => { if (e.key === 'Enter') onOpen(p) },
         },
         h('div', { className: 'litkb-rowMain' },
-          h('div', { className: 'litkb-rowTitleRow' },
+          h('div', { className: 'litkb-rowHead' },
             h('span', { className: 'litkb-rowDot', style: { background: STATUS_COLOR[status] || 'var(--litkb-text-3)' }, 'aria-hidden': 'true' }),
-            h('span', { className: 'litkb-rowTitle' }, p.title || '(未命名)'),
+            h('span', { className: 'litkb-rowTitle', title: p.title || '' }, p.title || '(未命名)'),
             p.card
               ? h('span', {
-                  className: 'litkb-rowCardMark',
+                  className: 'litkb-cardBadge',
                   title: `七段卡：${p.card.status === 'ready' ? '完整' : '部分'} · 证据 ${p.card.evidence || 0} 条`,
-                })
-              : null),
+                }, '卡')
+              : null,
+            h('span', { className: 'litkb-statusPill', style: { color: STATUS_COLOR[status] || undefined } }, status)),
           h('div', { className: 'litkb-rowMeta' },
-            [p.venue, p.year, p.authors].filter(Boolean).join(' · ') || '元数据缺失'),
-          h('div', { className: 'litkb-rowTags' },
+            [p.year, p.authors ? shortAuthors(p.authors) : '', p.venue].filter(Boolean).join(' · ') || '元数据缺失'),
+          h('div', { className: 'litkb-rowTags', title: topics.join('、') },
             h('span', { className: 'litkb-chip is-type' }, p.type || '学术期刊'),
             topics.slice(0, 2).map((t) => h('span', { key: t, className: 'litkb-chip is-tag tone-' + tagTone(t) }, t)),
-            topics.length > 2 ? h('span', { className: 'litkb-rowMore' }, `+${topics.length - 2}`) : null)),
-        h('div', { className: 'litkb-rowRight' },
+            topics.length > 2 ? h('span', { className: 'litkb-rowMore' }, `+${topics.length - 2}`) : null),
           onAutoChain || onReview || onIngest
             ? h('div', { className: 'litkb-rowActions' },
                 onIngest ? h('button', {
@@ -1270,14 +1270,15 @@
                 }, '补全') : null,
                 onAutoChain ? h('button', {
                   type: 'button', className: 'litkb-rowAct',
+                  title: '按精读/卡片自动生成证据链草稿',
                   onClick: (event) => { event.stopPropagation(); onAutoChain(p) },
                 }, '自动建链') : null,
                 onReview ? h('button', {
                   type: 'button', className: 'litkb-rowAct',
+                  title: '查看待审核的证据链草稿',
                   onClick: (event) => { event.stopPropagation(); onReview() },
                 }, '审核队列') : null)
-            : null,
-          h('span', { className: 'litkb-statusPill', style: { color: STATUS_COLOR[status] || undefined } }, status)))
+            : null))
       })
 
       return h('div', { className: 'litkb-listWrap' },

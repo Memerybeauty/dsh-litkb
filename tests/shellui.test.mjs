@@ -949,6 +949,9 @@ assert.ok(listRows.includes('情绪识别'))
 assert.ok(listRows.includes('精读'))
 assert.ok(listRows.includes('自动建链'))
 assert.ok(listRows.includes('审核'))
+assert.ok(listRows.includes('litkb-cardBadge'))
+assert.ok(listRows.includes('litkb-rowActions'))
+assert.ok(!listRows.includes('litkb-rowRight'))
 
 const graphPage = render('GraphPanel', {
   papers: [],
