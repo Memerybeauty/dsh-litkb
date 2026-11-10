@@ -148,6 +148,7 @@ async function updatePaper(req, res) {
         return
       }
       next.statusReason = String(patch.reason || '').trim()
+      next.statusSource = 'manual'
     }
     if (typeof patch.type === 'string') {
       if (!TYPES.includes(patch.type)) {

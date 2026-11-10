@@ -154,6 +154,7 @@ async function runDeepJob(id, job) {
     if (!record) throw Object.assign(new Error('论文不存在'), { code: 'not_found' })
     job.step = '精读：提取问题 / 方法 / 结果 / claims'
     const deepread = await buildDeepRead({ ctx: pluginCtx, record })
+    try { applyAutoStatus(id, '精读') } catch { /* 状态回写失败不影响精读 */ }
     job.sections = deepread?.sections?.length || 0
     job.status = 'done'
     job.step = '完成'
@@ -231,6 +232,7 @@ async function runCardJob(id, job) {
     }
     job.step = '写入卡片与证据'
     writeCard(card, record)
+    try { applyAutoStatus(id, '略读') } catch { /* 状态回写失败不影响卡片 */ }
     job.card = cardSummary(card)
     job.status = 'done'
     job.step = '完成'
@@ -386,21 +388,10 @@ function finishIngestJob(job) {
     const reason = steps.find((step) => step.status === 'failed' || step.status === 'skipped')
     job.error = { code: done > 0 ? 'partial' : 'failed', message: reason?.message || '部分步骤未完成' }
   }
-  if (job.steps.deepread.status !== 'done') return
   try {
-    const record = readIndex().find((item) => item.id === job.paperId)
-    if (!record || (record.status || '待读') !== '待读') return
-    const next = { ...record, status: '精读' }
-    try {
-      const text = readFileSync(join(PATHS.text, `${record.id}.txt`), 'utf8')
-      writeFileSync(
-        join(PATHS.cards, `${record.id}.md`),
-        renderCardMarkdown(next, readCard(record.id), text.slice(0, 600)),
-        'utf8',
-      )
-    } catch { /* 卡片 Markdown 更新失败不影响索引 */ }
-    upsert(next)
-  } catch { /* 状态回写失败不阻断任务结果 */ }
+    if (job.steps.deepread.status === 'done') applyAutoStatus(job.paperId, '精读')
+    else if (job.steps.card.status === 'done') applyAutoStatus(job.paperId, '略读')
+  } catch { /* 状态回写失败不影响任务结果 */ }
 }
 
 async function runIngestJob(id, job) {

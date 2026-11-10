@@ -46,6 +46,7 @@ import {
   recoverInterruptedRestore, restoreBackup,
 } from './backup.js'
 import { deletePaper, paperDeleteImpact } from './paper-delete.js'
+import { applyAutoStatus, migrateAutoStatuses } from './paper-status.js'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const pkg = JSON.parse(readFileSync(join(HERE, '..', 'package.json'), 'utf8'))

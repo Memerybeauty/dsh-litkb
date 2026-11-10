@@ -34,6 +34,12 @@ export function apply(ctx) {
   } catch (error) {
     ctx.logger?.warn?.(`[dsh-litkb] restore recovery skipped: ${String(error?.message || error)}`)
   }
+  try {
+    const migrated = migrateAutoStatuses()
+    if (migrated) ctx.logger?.info?.(`[dsh-litkb] auto reading status migrated: ${migrated} paper(s)`)
+  } catch (error) {
+    ctx.logger?.warn?.(`[dsh-litkb] auto status migration skipped: ${String(error?.message || error)}`)
+  }
 
   webServer.register({
     kind: 'exact',

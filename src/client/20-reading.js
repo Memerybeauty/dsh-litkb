@@ -254,10 +254,12 @@
             card.status === 'ready' ? '七段完整' : '部分待补'),
           h('select', {
             className: 'litkb-input litkb-statusSelect', value: status, disabled: statusBusy,
-            title: '阅读状态（可自由切换）',
+            title: '阅读状态（可自由切换；手动切换后不再自动改）',
             onChange: (e) => changeStatus(e.target.value),
           }, STATUS.map((s) => h('option', { key: s, value: s }, s))),
           h('span', { className: 'litkb-muted' }, meta)),
+        h('div', { className: 'litkb-muted' },
+          '生成七段卡自动记「略读」；生成精读自动记「精读」。手动切换后以你的选择为准。'),
         pdfMissing ? h('div', { className: 'litkb-error' }, '原文 PDF 已缺失（断链）：卡片内容仍可读，p.N 跳转不可用。') : null,
         running ? progressLine(job) : null,
         err ? h('div', { className: 'litkb-error' }, err) : null,

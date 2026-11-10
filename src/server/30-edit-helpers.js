@@ -16,7 +16,7 @@ async function updateStatus(req, res) {
       json(res, 422, { ok: false, error: '未知状态', from, to })
       return
     }
-    const nextRecord = { ...record, status: to, statusReason: reason }
+    const nextRecord = { ...record, status: to, statusReason: reason, statusSource: 'manual' }
     const card = readCard(record.id)
     if (card) {
       card.statusHistory = Array.isArray(card.statusHistory) ? card.statusHistory : []
