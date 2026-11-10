@@ -1,5 +1,11 @@
 import assert from 'node:assert/strict'
-import { documentParagraphs, paragraphForQuote, paragraphIndex, paragraphPages } from '../lib/paragraphs.js'
+import {
+  documentParagraphs,
+  paragraphForQuote,
+  paragraphIndex,
+  paragraphPages,
+  readingOrder,
+} from '../lib/paragraphs.js'
 import { renderParsedMarkdown } from '../lib/blocks.js'
 
 const doc = {
@@ -51,6 +57,21 @@ assert.equal(pageTexts.length, 2)
 assert.ok(pageTexts[0].text.includes('这是第一段被拆成两块的正文。'))
 assert.ok(!pageTexts[0].text.includes('\n17'))
 assert.ok(pageTexts[1].text.includes('新的一段。'))
+
+const twoColumn = {
+  page: 1,
+  blocks: [
+    { id: 't', role: 'title', text: '标题', bbox: [0.1, 0.02, 0.9, 0.08] },
+    { id: 'l1', role: 'paragraph', text: '左一。', bbox: [0.05, 0.12, 0.48, 0.2] },
+    { id: 'r1', role: 'paragraph', text: '右一。', bbox: [0.52, 0.12, 0.95, 0.2] },
+    { id: 'l2', role: 'paragraph', text: '左二。', bbox: [0.05, 0.22, 0.48, 0.3] },
+    { id: 'r2', role: 'paragraph', text: '右二。', bbox: [0.52, 0.22, 0.95, 0.3] },
+  ],
+}
+assert.deepEqual(
+  readingOrder(twoColumn).map((block) => block.id),
+  ['t', 'l1', 'l2', 'r1', 'r2'],
+)
 
 const md = renderParsedMarkdown(doc, { id: 'p-1', title: '测试' })
 assert.ok(md.includes('这是第一段被拆成两块的正文。'))

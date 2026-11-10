@@ -710,7 +710,7 @@
         h('div', { className: 'litkb-module' + (tab === '个人工作台' ? '' : ' is-hidden') },
           h(ThemePage, {
             papers,
-            tags,
+            tags: tagNames,
             paperActions,
             onOpenPaper: (paperId, page, blockId) => {
               const target = papers.find((paper) => paper.id === paperId)
@@ -1153,6 +1153,9 @@
       const [claimDraft, setClaimDraft] = useState('')
       const [activeSection, setActiveSection] = useState('')
       const [navHidden, setNavHidden] = useState(false)
+      const [editingSection, setEditingSection] = useState('')
+      const [sectionDraft, setSectionDraft] = useState('')
+      const [savingSection, setSavingSection] = useState(false)
 
       const load = useCallback(async () => {
         const data = await api('/api/litkb/deepread?id=' + encodeURIComponent(paper.id))
@@ -1230,6 +1233,30 @@
         })
         setClaimDraft('')
       }
+      const startSectionEdit = (section) => {
+        setEditingSection(section.key)
+        setSectionDraft(section.markdown || '')
+        setErr('')
+      }
+
+      const saveSection = async () => {
+        if (!editingSection || savingSection) return
+        setSavingSection(true)
+        setErr('')
+        try {
+          const data = await api('/api/litkb/deepread/section', {
+            method: 'POST', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ id: paper.id, key: editingSection, markdown: sectionDraft }),
+          })
+          setDeepread(data.deepread)
+          setEditingSection('')
+        } catch (e) {
+          setErr(String(e.message || e))
+        } finally {
+          setSavingSection(false)
+        }
+      }
+
       const markdown = deepread?.markdown || ''
       const hasSections = Array.isArray(deepread?.sections) && deepread.sections.length > 0
       const numbers = deepread?.numbers || []
@@ -1347,8 +1374,24 @@
                 deepread.sections.map((section) => h('section', {
                   key: section.key, id: 'deep-sec-' + section.key, className: 'litkb-deepSection',
                 },
-                h('h3', { className: 'litkb-deepSectionTitle' }, `${section.index}. ${section.title}`),
-                h('div', { className: 'litkb-deepSectionBody' }, renderMarkdown(section.markdown || '原文未说明。', mdOptions)))),
+                h('div', { className: 'litkb-deepSectionHead' },
+                  h('h3', { className: 'litkb-deepSectionTitle' }, `${section.index}. ${section.title}`),
+                  h('button', {
+                    type: 'button', className: 'litkb-link',
+                    onClick: () => (editingSection === section.key ? setEditingSection('') : startSectionEdit(section)),
+                  }, editingSection === section.key ? '取消' : '编辑')),
+                editingSection === section.key
+                  ? h('div', { className: 'litkb-deepEdit' },
+                      h('textarea', {
+                        className: 'litkb-input litkb-textarea', rows: 10,
+                        value: sectionDraft,
+                        onChange: (e) => setSectionDraft(e.target.value),
+                      }),
+                      h('div', { className: 'litkb-inline' },
+                        h('button', { type: 'button', className: 'litkb-btn', disabled: savingSection, onClick: saveSection },
+                          savingSection ? '保存中…' : '保存本段'),
+                        h('button', { type: 'button', className: 'litkb-btnGhost', onClick: () => setEditingSection('') }, '取消')))
+                  : h('div', { className: 'litkb-deepSectionBody' }, renderMarkdown(section.markdown || '原文未说明。', mdOptions)))),
                 numbersBlock,
                 claimsBlock))
           : h('div', null,

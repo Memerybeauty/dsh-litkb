@@ -326,6 +326,8 @@ const editing = render([
 assert.ok(editing.includes('新建研究'))
 assert.ok(editing.includes('细分描述'))
 assert.ok(editing.includes('AI 帮我拆'))
+assert.ok(editing.includes('综述'))
+assert.ok(editing.includes('方法对比'))
 
 console.log('  ✓ 卡片总览 / 空态')
 console.log('  ✓ 顶部总览 + 三视图切换')

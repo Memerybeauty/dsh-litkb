@@ -26,7 +26,7 @@ import { assistDraft, createDraft, deleteDraft, draftCitations, exportDraft, lis
 import { draftToDocx } from './docx-export.js'
 import { buildVaultZip } from './vault-export.js'
 import { loadPaperPages } from './pdftext.js'
-import { buildDeepRead, readDeepRead } from './deepread.js'
+import { buildDeepRead, readDeepRead, writeDeepRead } from './deepread.js'
 import { appendChainToDraft, autoChainDrafts, chainGraph, chainParagraph, claimCandidates, deleteChain, listChains, proposeChain, readChain, saveChain, suggestClaim, writeChainLayout } from './chains.js'
 import { searchLibrary } from './search.js'
 import { answerQuestion } from './answer.js'

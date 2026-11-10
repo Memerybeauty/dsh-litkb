@@ -5,6 +5,28 @@
       keywordMode: 'require', tagMode: 'boost', yearFrom: 0, yearTo: 0, expand: true,
     }
 
+    const RESEARCH_TEMPLATES = {
+      review: {
+        label: '综述',
+        description: '梳理该方向的研究脉络、方法分类与趋势，形成可写的综述骨架。',
+        facets: ['研究背景与问题', '主要技术路线', '代表性工作对比', '数据与评测指标', '开放挑战', '趋势与展望'],
+      },
+      proposal: {
+        label: '开题',
+        description: '围绕研究问题、现状缺口、技术路线与预期贡献组织开题材料。',
+        facets: ['研究问题', '国内外现状', '现有缺口', '技术路线', '实验计划', '预期贡献'],
+      },
+      compare: {
+        label: '方法对比',
+        description: '按任务、方法、指标、结论对比不同工作，形成可比证据链。',
+        facets: ['任务定义', '方法 A 的核心', '方法 B 的核心', '实验与指标差异', '适用边界与结论'],
+      },
+    }
+
+    function templateFacets(names, keyword = '') {
+      return names.map((title) => ({ title, description: '', keywords: keyword }))
+    }
+
     function ThemePage({ papers = [], tags = [], paperActions = {}, paperCount = 0, onOpenPaper, onOpenChain, onOpenDraft, onOpenLibrary, onOpenWriting }) {
       const [themes, setThemes] = useState([])
       const [selectedId, setSelectedId] = useState('')
@@ -127,6 +149,27 @@
         title: '', description: '', tags: '',
         facets: [{ title: '', description: '', keywords: '' }],
       })
+
+      const startFromTag = (tag) => {
+        const name = String(tag || '').trim()
+        if (!name) return
+        setEditing({
+          title: `${name}研究`,
+          description: `围绕标签「${name}」梳理现状、方法、数据与缺口。`,
+          tags: name,
+          facets: templateFacets(['研究背景与问题', '代表性方法', '数据与评测', '局限与趋势'], name),
+        })
+      }
+
+      const applyTemplate = (key) => {
+        const template = RESEARCH_TEMPLATES[key]
+        if (!template) return
+        setEditing((current) => current ? {
+          ...current,
+          description: String(current.description || '').trim() || template.description,
+          facets: templateFacets(template.facets),
+        } : current)
+      }
 
       const startEdit = () => {
         const item = detail?.theme
@@ -442,6 +485,14 @@
             h('span', { className: 'litkb-themeModalTitle' }, editing.id ? '编辑研究' : '新建研究'),
             h('button', { type: 'button', className: 'litkb-close', onClick: () => setEditing(null), 'aria-label': '关闭' }, '×')),
           h('div', { className: 'litkb-themeModalBody' },
+            !editing.id
+              ? h('div', { className: 'litkb-templateRow' },
+                  h('span', { className: 'litkb-muted' }, '模板'),
+                  Object.entries(RESEARCH_TEMPLATES).map(([key, template]) => h('button', {
+                    key, type: 'button', className: 'litkb-miniBtn',
+                    onClick: () => applyTemplate(key),
+                  }, template.label)))
+              : null,
             h('label', { className: 'litkb-themeField' }, h('span', null, '研究标题'),
               h('input', {
                 className: 'litkb-input', value: editing.title, placeholder: '例如：多模态大模型在医学影像诊断中的应用',
@@ -588,6 +639,19 @@
               h('div', { className: 'litkb-wbTitle' }, '我的研究'),
               h('div', { className: 'litkb-wbSub' },
                 `${themes.length} 个研究 · ${themes.reduce((n, item) => n + item.stats.papers, 0)} 篇论文 · ${themes.reduce((n, item) => n + item.stats.confirmed, 0)} 条已确认链${themes.reduce((n, item) => n + item.stats.gaps, 0) ? ` · ${themes.reduce((n, item) => n + item.stats.gaps, 0)} 个缺口` : ''}`)),
+            tags.length
+              ? h('details', { className: 'litkb-moreMenu' },
+                  h('summary', { className: 'litkb-miniBtn' }, '从标签建 ▾'),
+                  h('div', { className: 'litkb-moreList' },
+                    tags.slice(0, 20).map((tag) => h('button', {
+                      key: tag, type: 'button',
+                      onClick: (event) => {
+                        startFromTag(tag)
+                        const details = event.currentTarget.closest('details')
+                        if (details) details.open = false
+                      },
+                    }, tag))))
+              : null,
             h('button', { type: 'button', className: 'litkb-btn', onClick: startNew }, '＋ 新建研究')),
           err ? h('div', { className: 'litkb-error' }, err) : null,
           notice ? h('div', { className: 'litkb-themeNotice' }, notice) : null,

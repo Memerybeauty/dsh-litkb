@@ -1206,5 +1206,8 @@
       '.litkb-selFab .litkb-askFab{position:static;padding:5px 9px;border:0;border-radius:7px;background:transparent;color:var(--litkb-text-2);box-shadow:none;font-size:12px}',
       '.litkb-selFab .litkb-askFab:hover{background:var(--litkb-fill-1);color:var(--litkb-text)}',
       '.litkb-selFab .litkb-askFab.is-accent{background:var(--litkb-accent);color:#fff}',
+      '.litkb-templateRow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:2px 0 6px}',
+      '.litkb-deepSectionHead{display:flex;align-items:center;justify-content:space-between;gap:8px}',
+      '.litkb-deepEdit{display:flex;flex-direction:column;gap:8px;margin-top:6px}',
     ].join('\n')
 

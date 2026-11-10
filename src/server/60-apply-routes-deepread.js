@@ -43,6 +43,30 @@
 
   webServer.register({
     kind: 'exact',
+    path: '/api/litkb/deepread/section',
+    handler: async (req, res) => {
+      try {
+        const body = JSON.parse((await readBody(req, 256 * 1024)).toString('utf8') || '{}')
+        const id = String(body.id || '')
+        const key = String(body.key || '')
+        const deepread = readDeepRead(id)
+        if (!deepread) { json(res, 404, { ok: false, error: '还没有精读' }); return }
+        const section = (deepread.sections || []).find((item) => item.key === key)
+        if (!section) { json(res, 404, { ok: false, error: '这段不存在' }); return }
+        section.markdown = String(body.markdown || '').slice(0, 20000)
+        section.editedAt = new Date().toISOString()
+        deepread.updatedAt = section.editedAt
+        deepread.markdown = (deepread.sections || []).map((item) => `## ${item.index}. ${item.title}\n\n${item.markdown.trim()}`).join('\n\n')
+        writeDeepRead(deepread)
+        json(res, 200, { ok: true, deepread })
+      } catch (error) {
+        json(res, 500, { ok: false, error: String(error?.message || error) })
+      }
+    },
+  })
+
+  webServer.register({
+    kind: 'exact',
     path: '/api/litkb/deepread/build',
     handler: async (req, res) => {
       try {
