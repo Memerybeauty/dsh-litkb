@@ -1,12 +1,12 @@
-# API 参考（v0.15.1）
+# API 参考（v0.16.0）
 
-所有接口前缀：`/api/litkb`；v0.15.1 共注册 **86** 条。请求/响应均为 JSON；PDF 上传为原始 body + `x-filename`；备份恢复为原始 zip body；错误统一为：
+所有接口前缀：`/api/litkb`；v0.16.0 共注册 **89** 条。请求/响应均为 JSON；PDF 上传为原始 body + `x-filename`；备份恢复为原始 zip body；错误统一为：
 
 ```json
 { "ok": false, "code": "error_code", "error": "人类可读信息" }
 ```
 
-## 产品化（v0.15.1）
+## 产品化（v0.16.0）
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
@@ -17,7 +17,7 @@
 
 恢复错误码：`confirm_required`(428)、`restore_busy`(409)、`too_large`(413)、`bad_zip`/`bad_entry`/`bad_manifest`/`no_data`(422)。
 
-## 入库自动管线（v0.15.1）
+## 入库自动管线（v0.16.0）
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
@@ -29,7 +29,7 @@
 
 任务状态：`queued → running → done | partial | failed`；`steps.blocks/card/deepread` 各有 `done / running / skipped / failed`。
 
-## 删除论文（v0.15.1）
+## 删除论文（v0.16.0）
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
@@ -39,7 +39,7 @@
 删除范围：index、PDF、text、blocks、卡片 JSON/MD/历史版本、译文、精读、`concepts/papers`、`cache/pages/<id>/`。
 证据链：只引用该论文的链删除；跨论文链移除该论文节点后保留；研究 `papers.include/exclude/lastMatch` 同步移除。
 
-## 工作台模型（v0.15.1）
+## 工作台模型（v0.16.0）
 
 `GET /settings` 返回 `settings.llm`：
 
@@ -57,6 +57,49 @@
 - `mode=host`：跟随 DSH 默认模型；
 - 环境变量 `LITKB_LLM_PROVIDER` / `LITKB_LLM_MODEL` 优先级最高；
 - DeepSeek V4 的 `reasoningEffort: off` 自动升为 `high`。
+
+## 方向分析（v0.16.0）
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| POST | `/themes/analyze` | 启动方向分析；body `{id, paperIds?, facetKeys?}` |
+| GET | `/themes/analysis?id=` | 读取分析结果 + 最近任务；无结果时 `analysis:null` |
+| POST | `/themes/analysis/chain` | 观点生成草稿链；body `{id, facetKey, viewpointId}` |
+
+分析结果：
+
+```json
+{
+  "themeId": "t-...",
+  "papers": {
+    "p-...": {
+      "facets": {
+        "f1": {
+          "relevance": 3,
+          "stance": "supports",
+          "summary": "...",
+          "claims": [{ "text": "...", "role": "result", "evidenceIds": ["q-..."] }]
+        }
+      },
+      "evidence": { "q-...": { "page": 2, "quote": "..." } }
+    }
+  },
+  "facets": {
+    "f1": {
+      "viewpoints": [{ "id": "v1", "statement": "...", "papers": ["p-..."], "evidence": [], "agreements": [], "disagreements": [] }],
+      "agreements": [],
+      "disagreements": [],
+      "gaps": []
+    }
+  },
+  "stats": { "papers": 11, "relevant": 9, "viewpoints": 14, "gaps": 1 }
+}
+```
+
+- `relevance`：0 不符合/未涉及，1 提及，2 部分符合，3 直接相关；
+- `stance`：`supports / contradicts / qualifies / mixed / mentions / not_relevant`；
+- 新引文回贴原文校验后生成 q-id；失败丢弃，不编造；
+- 分析任务逐篇保存，失败保留部分结果；无模型时任务失败。
 
 ## 库 / 健康
 

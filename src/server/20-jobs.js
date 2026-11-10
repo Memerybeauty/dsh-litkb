@@ -406,7 +406,7 @@ async function runIngestJob(id, job) {
       job.steps.blocks = { status: 'running', message: '准备解析' }
       job.step = '原文解析'
       try {
-        const blockJob = startBlocksJob(record, {})
+        startBlocksJob(record, {})
         const done = await waitIngestJob(blockJobs, id, INGEST_TIMEOUT.blocks)
         if (!done || done.status !== 'done') {
           job.steps.blocks = {
@@ -433,7 +433,7 @@ async function runIngestJob(id, job) {
         job.steps.card = { status: 'running', message: '调用模型生成' }
         job.step = '七段卡'
         try {
-          const cardJob = startCardJob(record)
+          startCardJob(record)
           const done = await waitIngestJob(jobs, id, INGEST_TIMEOUT.card)
           if (!done || done.status !== 'done') {
             job.steps.card = {
@@ -456,7 +456,7 @@ async function runIngestJob(id, job) {
         job.steps.deepread = { status: 'running', message: '调用模型生成' }
         job.step = '精读'
         try {
-          const deepJob = startDeepJob(record)
+          startDeepJob(record)
           const done = await waitIngestJob(deepJobs, id, INGEST_TIMEOUT.deepread)
           if (!done || done.status !== 'done') {
             job.steps.deepread = {

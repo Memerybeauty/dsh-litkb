@@ -39,6 +39,10 @@ import {
   matchTheme, readTheme, recordThemeMatch, saveTheme, setThemePaper, themeChainDrafts, themeChains,
   themePapers, themeStats, summaryState, updateThemeSummary,
 } from './themes.js'
+import {
+  analysisPapers, analysisStats, createViewpointChain, extractPaperAnalysis,
+  readAnalysis, saveAnalysis, synthesizeFacet,
+} from './theme-analysis.js'
 import { extractPdf } from './pdf.js'
 import { classify, matchTags } from './classify.js'
 import {

@@ -330,6 +330,27 @@ assert.equal(mergedAccept.data.merged, true)
 const afterMerge = await call('/api/litkb/themes/read', { url: `/api/litkb/themes/read?id=${themeId}` })
 assert.ok(!afterMerge.data.chains.some((chain) => chain.id === supplement.data.chain.id))
 
+/* ---------- 方向分析：无模型时任务失败、链生成 422 ---------- */
+const included = await call('/api/litkb/themes/papers', {
+  method: 'POST',
+  body: { id: themeId, paperId: 'p-r1', action: 'include' },
+})
+assert.equal(included.code, 200)
+const analysisStart = await call('/api/litkb/themes/analyze', { method: 'POST', body: { id: themeId } })
+assert.equal(analysisStart.code, 202)
+assert.ok(analysisStart.data.job.total >= 1)
+await new Promise((resolve) => setTimeout(resolve, 40))
+const analysisGet = await call('/api/litkb/themes/analysis', { url: `/api/litkb/themes/analysis?id=${themeId}` })
+assert.equal(analysisGet.code, 200)
+assert.equal(analysisGet.data.analysis, null)
+assert.equal(analysisGet.data.job.status, 'failed')
+const noAnalysisChain = await call('/api/litkb/themes/analysis/chain', {
+  method: 'POST',
+  body: { id: themeId, facetKey: 'f1', viewpointId: 'v1' },
+})
+assert.equal(noAnalysisChain.code, 422)
+assert.equal(noAnalysisChain.data.code, 'no_analysis')
+
 const deleted = await call('/api/litkb/themes/delete', { method: 'POST', body: { id: themeId } })
 assert.equal(deleted.code, 200)
 assert.ok(deleted.data.chainsKept >= 1)

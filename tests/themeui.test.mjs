@@ -13,7 +13,7 @@ globalThis.window = {
 }
 const source = readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8').replace(
   "return { name: 'dsh-litkb', inject: ['slots'], apply }",
-  "return { name: 'dsh-litkb', inject: ['slots'], apply, __test: { ThemePage } }",
+  "return { name: 'dsh-litkb', inject: ['slots'], apply, __test: { ThemePage, AnalysisView } }",
 )
 vm.runInThisContext(source, { filename: 'lib/client.js' })
 
@@ -152,6 +152,7 @@ assert.ok(papersTab.includes('匹配设置'))
 assert.ok(papersTab.includes('匹配明细'))
 assert.ok(papersTab.includes('证据链'))
 assert.ok(papersTab.includes('研究结论'))
+assert.ok(papersTab.includes('方向分析'))
 assert.ok(papersTab.includes('重新探索'))
 assert.ok(papersTab.includes('匹配论文 1'))
 assert.ok(papersTab.includes('Polar paper'))
@@ -329,8 +330,64 @@ assert.ok(editing.includes('AI 帮我拆'))
 assert.ok(editing.includes('综述'))
 assert.ok(editing.includes('方法对比'))
 
+/* ---------- 方向分析视图 ---------- */
+globalThis.__i = 0
+globalThis.__s = [undefined, undefined]
+const analysisHtml = JSON.stringify(
+  mod.__test.AnalysisView({
+    theme: { title: '方向', facets: [{ key: 'f1', title: '坐标注意力', enabled: true }] },
+    analysis: {
+      stats: { papers: 1, relevant: 1, viewpoints: 1, gaps: 0 },
+      papers: {
+        'p-1': {
+          paperId: 'p-1',
+          title: 'Polar paper',
+          facets: {
+            f1: {
+              relevance: 3,
+              stance: 'supports',
+              summary: '位置编码有效。',
+              rationale: '直接相关。',
+              claims: [{ text: '位置编码有效。', role: 'method', evidenceIds: ['q-11112222'] }],
+            },
+          },
+          evidence: { 'q-11112222': { page: 2, quote: 'Polar transform encodes position.' } },
+        },
+      },
+      facets: {
+        f1: {
+          relevantCount: 1,
+          viewpoints: [
+            {
+              id: 'v1',
+              statement: '坐标注意力提升位置敏感度。',
+              papers: ['p-1'],
+              evidence: [
+                { paperId: 'p-1', evidenceId: 'q-11112222', page: 2, quote: 'Polar transform encodes position.' },
+              ],
+              agreements: ['都认为位置信息重要'],
+              disagreements: [],
+            },
+          ],
+          agreements: ['都认为位置信息重要'],
+          disagreements: [],
+          gaps: [],
+        },
+      },
+    },
+    job: null,
+    busy: false,
+    onStart() {},
+    onChain() {},
+  }),
+)
+assert.ok(analysisHtml.includes('方向分析'))
+assert.ok(analysisHtml.includes('坐标注意力提升位置敏感度'))
+assert.ok(analysisHtml.includes('生成观点链'))
+assert.ok(analysisHtml.includes('一致'))
+
 console.log('  ✓ 卡片总览 / 空态')
-console.log('  ✓ 顶部总览 + 三视图切换')
+console.log('  ✓ 顶部总览 + 四视图切换')
 console.log('  ✓ 参考论文：筛选列表 + 精读详情')
 console.log('  ✓ 证据链分栏 / 结论左结论右链')
 console.log('\n4 passed')

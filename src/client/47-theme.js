@@ -52,6 +52,9 @@
       const [mergeOpen, setMergeOpen] = useState(null)
       const [showLegacy, setShowLegacy] = useState(false)
       const [showExcluded, setShowExcluded] = useState(false)
+      const [analysis, setAnalysis] = useState(null)
+      const [analysisJob, setAnalysisJob] = useState(null)
+      const [analysisBusy, setAnalysisBusy] = useState(false)
 
       const refreshList = useCallback(async () => {
         try {
@@ -83,6 +86,10 @@
           setShowLegacy(false)
           setShowExcluded(false)
           if (!keepView) setDeepreadPaper(null)
+          const analysisData = await api(`/api/litkb/themes/analysis?id=${encodeURIComponent(id)}`).catch(() => null)
+          setAnalysis(analysisData?.analysis || null)
+          setAnalysisJob(analysisData?.job || null)
+          setAnalysisBusy(Boolean(analysisData?.job && ['queued', 'running'].includes(analysisData.job.status)))
         } catch (e) {
           setErr(String(e.message || e))
         }
@@ -95,6 +102,9 @@
         setSelectedChain('')
         setSection('papers')
         setPaperId('')
+        setAnalysis(null)
+        setAnalysisJob(null)
+        setAnalysisBusy(false)
       }
 
       useEffect(() => { refreshList() }, [refreshList])
@@ -119,6 +129,25 @@
         }, 700)
         return () => clearTimeout(timer)
       }, [job, selectedId, refreshList, openTheme])
+
+      useEffect(() => {
+        if (!analysisJob || !['queued', 'running'].includes(analysisJob.status) || !selectedId) return undefined
+        const timer = setTimeout(async () => {
+          try {
+            const data = await api(`/api/litkb/themes/analysis?id=${encodeURIComponent(selectedId)}`)
+            setAnalysis(data.analysis || null)
+            setAnalysisJob(data.job || null)
+            if (data.job && !['queued', 'running'].includes(data.job.status)) {
+              setAnalysisBusy(false)
+              await refreshList()
+              setNotice(data.job.status === 'done' ? '方向分析完成' : '方向分析部分完成')
+            }
+          } catch (e) {
+            setErr(String(e.message || e))
+          }
+        }, 1200)
+        return () => clearTimeout(timer)
+      }, [analysisJob, selectedId, refreshList])
 
       useEffect(() => {
         if (chainFilter === 'all') return
@@ -723,10 +752,43 @@
           modal)
       }
 
+      const startAnalysis = async () => {
+        if (!selectedId) return
+        setAnalysisBusy(true)
+        setErr('')
+        try {
+          const data = await post('/api/litkb/themes/analyze', { id: selectedId })
+          setAnalysisJob(data.job)
+          setSection('analysis')
+          setNotice('方向分析已开始：逐篇审查全文')
+        } catch (e) {
+          setAnalysisBusy(false)
+          setErr(String(e.message || e))
+        }
+      }
+
+      const makeAnalysisChain = async (facetKey, viewpointId) => {
+        if (!selectedId) return
+        setErr('')
+        try {
+          const data = await post('/api/litkb/themes/analysis/chain', {
+            id: selectedId, facetKey, viewpointId,
+          })
+          await openTheme(selectedId, true)
+          setSection('chains')
+          setSelectedChain(data.chain.id)
+          setNotice('已生成观点链草稿，去「证据链」审核')
+        } catch (e) {
+          setErr(String(e.message || e))
+        }
+      }
+
       const views = h('div', { className: 'litkb-viewCards' },
         [
           ['papers', '▤', '参考论文', papersInTheme.length, '匹配论文'],
           ['chains', '☷', '证据链', chains.length, `${stats.confirmed || 0} 条已确认`],
+          ['analysis', '◎', '方向分析', analysis?.stats?.papers || 0,
+            analysis ? `${analysis.stats.viewpoints} 观点 / ${analysis.stats.gaps} 缺口` : '全文方向审查'],
           ['summary', '✎', '研究结论', confirmedChains.length, summaryInfo?.stale ? '结论过期' : '条支撑链'],
         ].map(([key, icon, label, value, hint]) => h('button', {
           key, type: 'button',
@@ -1001,7 +1063,18 @@
 
       const body = section === 'papers'
         ? papersView
-        : (section === 'chains' ? chainsView : summaryView)
+        : (section === 'chains'
+          ? chainsView
+          : (section === 'analysis'
+            ? h(AnalysisView, {
+                theme,
+                analysis,
+                job: analysisJob,
+                busy: analysisBusy,
+                onStart: startAnalysis,
+                onChain: makeAnalysisChain,
+              })
+            : summaryView))
 
       const matchDrawer = matchDetail ? h('div', {
         className: 'litkb-drawerWrap',

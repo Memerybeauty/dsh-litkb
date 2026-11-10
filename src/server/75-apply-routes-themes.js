@@ -24,7 +24,7 @@
   function themeErrorStatus(error) {
     const code = error?.code
     if (code === 'not_found') return 404
-    if (['empty_title', 'facet_title_required', 'too_many_facets', 'bad_paper', 'no_facets', 'bad_action', 'bad_mode'].includes(code)) return 422
+    if (['empty_title', 'facet_title_required', 'too_many_facets', 'bad_paper', 'no_facets', 'no_papers', 'bad_action', 'bad_mode'].includes(code)) return 422
     return 500
   }
 
@@ -121,6 +121,198 @@
       job.finishedAt = new Date().toISOString()
     }
   }
+
+  /* ---------------- 方向分析（v0.16.0） ---------------- */
+  const analysisJobs = new Map()
+  const lastAnalysisJob = new Map()
+  let analysisQueue = Promise.resolve()
+
+  function publicAnalysisJob(job) {
+    if (!job) return null
+    return {
+      id: job.id,
+      themeId: job.themeId,
+      status: job.status,
+      step: job.step,
+      total: job.total,
+      done: job.done,
+      papers: job.papers.slice(-80),
+      facets: job.facets.slice(-20),
+      errors: job.errors.slice(-20),
+      startedAt: job.startedAt,
+      finishedAt: job.finishedAt,
+    }
+  }
+
+  function startThemeAnalysisJob({ themeId, paperIds = [], facetKeys = [] } = {}) {
+    const theme = readTheme(themeId)
+    if (!theme) throw Object.assign(new Error('研究不存在'), { code: 'not_found' })
+    const enabled = theme.facets.filter((facet) => facet.enabled)
+    if (!enabled.length) throw Object.assign(new Error('这条研究还没有细分描述'), { code: 'no_facets' })
+    const wanted = Array.isArray(facetKeys) && facetKeys.length ? new Set(facetKeys) : null
+    const facets = wanted ? enabled.filter((facet) => wanted.has(facet.key)) : enabled
+    if (!facets.length) throw Object.assign(new Error('没有选中的细分描述'), { code: 'no_facets' })
+    const all = analysisPapers(theme)
+    const allowed = new Set(all.map((record) => record.id))
+    const requested = Array.isArray(paperIds) ? paperIds.map((id) => String(id || '')).filter((id) => allowed.has(id)) : []
+    const records = requested.length ? all.filter((record) => requested.includes(record.id)) : all
+    if (!records.length) throw Object.assign(new Error('没有可分析的论文（需要七段卡）'), { code: 'no_papers' })
+    const job = {
+      id: `analysis-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      themeId,
+      status: 'queued',
+      step: '排队中',
+      total: records.length + facets.length,
+      done: 0,
+      papers: [],
+      facets: [],
+      errors: [],
+      facetKeys: facets.map((facet) => facet.key),
+      startedAt: new Date().toISOString(),
+      finishedAt: null,
+    }
+    analysisJobs.set(job.id, job)
+    lastAnalysisJob.set(themeId, job)
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000
+    for (const [id, item] of analysisJobs) {
+      if (item.status !== 'running' && item.status !== 'queued' && Date.parse(item.finishedAt || item.startedAt) < cutoff) analysisJobs.delete(id)
+    }
+    analysisQueue = analysisQueue.then(() => runThemeAnalysisJob(job, { records, facets })).catch(() => {})
+    return job
+  }
+
+  async function runThemeAnalysisJob(job, { records, facets }) {
+    job.status = 'running'
+    const theme = readTheme(job.themeId)
+    if (!theme) {
+      job.status = 'failed'
+      job.step = '研究不存在'
+      job.finishedAt = new Date().toISOString()
+      return
+    }
+    const status = llmStatus(pluginCtx)
+    if (!status.available || !status.route) {
+      job.status = 'failed'
+      job.step = '宿主未提供可用模型'
+      job.errors.push({ code: 'no_model', message: '方向分析需要模型；请先在 DSH 设置模型' })
+      job.finishedAt = new Date().toISOString()
+      return
+    }
+    const analysis = readAnalysis(theme.id) || {
+      version: 1,
+      themeId: theme.id,
+      runId: job.id,
+      at: new Date().toISOString(),
+      model: `${status.route.provider}/${status.route.model}`,
+      papers: {},
+      facets: {},
+    }
+    analysis.runId = job.id
+    analysis.at = new Date().toISOString()
+    analysis.model = `${status.route.provider}/${status.route.model}`
+    analysis.papers = analysis.papers || {}
+    analysis.facets = analysis.facets || {}
+    for (const record of records) {
+      if (job.status === 'cancelled') break
+      job.step = `全文方向审查：${record.title || record.id}`
+      try {
+        const result = await extractPaperAnalysis({
+          ctx: pluginCtx, route: status.route, theme, record,
+          facetKeys: facets.map((facet) => facet.key),
+        })
+        analysis.papers[record.id] = result
+        job.papers.push({ paperId: record.id, title: result.title, facets: result.facets })
+      } catch (error) {
+        job.errors.push({ paperId: record.id, code: error?.code || 'error', message: String(error?.message || error) })
+      }
+      analysis.stats = analysisStats(analysis)
+      saveAnalysis(analysis)
+      job.done += 1
+    }
+    for (const facet of facets) {
+      if (job.status === 'cancelled') break
+      job.step = `观点对比：${facet.title}`
+      try {
+        const result = await synthesizeFacet({
+          ctx: pluginCtx, route: status.route, theme, facet,
+          papers: Object.values(analysis.papers),
+        })
+        analysis.facets[facet.key] = result
+        job.facets.push({ key: facet.key, title: facet.title, viewpoints: result.viewpoints.length, relevant: result.relevantCount })
+      } catch (error) {
+        job.errors.push({ facetKey: facet.key, code: error?.code || 'error', message: String(error?.message || error) })
+      }
+      analysis.stats = analysisStats(analysis)
+      saveAnalysis(analysis)
+      job.done += 1
+    }
+    analysis.stats = analysisStats(analysis)
+    saveAnalysis(analysis)
+    job.status = Object.keys(analysis.papers).length ? 'done' : 'failed'
+    job.step = job.status === 'done' ? '完成' : '没有论文完成分析'
+    job.finishedAt = new Date().toISOString()
+    lastAnalysisJob.set(theme.id, job)
+  }
+
+  webServer.register({
+    kind: 'exact',
+    path: '/api/litkb/themes/analyze',
+    handler: async (req, res) => {
+      try {
+        const body = JSON.parse((await readBody(req, 64 * 1024)).toString('utf8') || '{}')
+        const job = startThemeAnalysisJob({
+          themeId: String(body.id || ''),
+          paperIds: Array.isArray(body.paperIds) ? body.paperIds.map(String) : [],
+          facetKeys: Array.isArray(body.facetKeys) ? body.facetKeys.map(String) : [],
+        })
+        json(res, 202, { ok: true, job: publicAnalysisJob(job) })
+      } catch (error) {
+        json(res, themeErrorStatus(error), { ok: false, code: error?.code || 'error', error: String(error?.message || error) })
+      }
+    },
+  })
+
+  webServer.register({
+    kind: 'exact',
+    path: '/api/litkb/themes/analysis',
+    handler: async (req, res) => {
+      try {
+        const id = queryParam(req, 'id')
+        const theme = readTheme(id)
+        if (!theme) { json(res, 404, { ok: false, error: '研究不存在' }); return }
+        const analysis = readAnalysis(theme.id)
+        const job = lastAnalysisJob.get(theme.id) || null
+        json(res, 200, {
+          ok: true,
+          analysis,
+          stats: analysisStats(analysis),
+          job: publicAnalysisJob(job),
+        })
+      } catch (error) {
+        json(res, 500, { ok: false, error: String(error?.message || error) })
+      }
+    },
+  })
+
+  webServer.register({
+    kind: 'exact',
+    path: '/api/litkb/themes/analysis/chain',
+    handler: async (req, res) => {
+      try {
+        const body = JSON.parse((await readBody(req, 64 * 1024)).toString('utf8') || '{}')
+        const chain = createViewpointChain({
+          themeId: String(body.id || ''),
+          facetKey: String(body.facetKey || ''),
+          viewpointId: String(body.viewpointId || ''),
+        })
+        json(res, 200, { ok: true, chain })
+      } catch (error) {
+        const code = error?.code
+        const status = code === 'not_found' ? 404 : code === 'no_analysis' || code === 'no_evidence' ? 422 : 500
+        json(res, status, { ok: false, code: code || 'error', error: String(error?.message || error) })
+      }
+    },
+  })
 
   webServer.register({
     kind: 'exact',

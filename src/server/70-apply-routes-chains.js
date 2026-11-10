@@ -310,13 +310,22 @@
           const chain = readChain(id)
           if (!chain) { json(res, 404, { ok: false, error: '链不存在' }); return }
           const facetKey = chain.provenance?.facetKey || ''
+          const viewpointId = chain.provenance?.viewpointId || ''
           let primary = chain.provenance?.previousChainId ? readChain(chain.provenance.previousChainId) : null
-          if ((!primary || primary.status !== 'confirmed') && facetKey && chain.provenance?.themeId) {
+          if (viewpointId) {
+            // 观点链只和同一观点的 confirmed 合并，绝不并进 facet 主链。
+            if (!primary || primary.status !== 'confirmed' || primary.provenance?.viewpointId !== viewpointId) {
+              primary = themeChains(chain.provenance.themeId).list.find((item) => (
+                item.id !== id && item.status === 'confirmed' && item.provenance?.viewpointId === viewpointId
+              )) || null
+            }
+          } else if ((!primary || primary.status !== 'confirmed') && facetKey && chain.provenance?.themeId) {
             primary = themeChains(chain.provenance.themeId).list.find((item) => (
               item.id !== id && item.status === 'confirmed' && item.provenance?.facetKey === facetKey
             )) || null
           }
-          if (primary && primary.id !== id && primary.provenance?.facetKey === facetKey) {
+          if (primary && primary.id !== id && primary.provenance?.facetKey === facetKey
+            && (!viewpointId || primary.provenance?.viewpointId === viewpointId)) {
             const seen = new Set()
             const nodes = []
             for (const node of [...(primary.nodes || []), ...(chain.nodes || [])]) {
