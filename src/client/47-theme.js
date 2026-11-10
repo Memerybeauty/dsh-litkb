@@ -55,6 +55,7 @@
       const [analysis, setAnalysis] = useState(null)
       const [analysisJob, setAnalysisJob] = useState(null)
       const [analysisBusy, setAnalysisBusy] = useState(false)
+      const [summaryBusy, setSummaryBusy] = useState('')
 
       const refreshList = useCallback(async () => {
         try {
@@ -297,6 +298,8 @@
         try {
           const data = await post('/api/litkb/themes/papers', { id: selectedId, paperId: pid, action })
           setDetail((current) => (current ? { ...current, theme: data.theme, papers: data.papers, stats: data.stats } : current))
+          // 移出/恢复论文后，方向分析的矩阵与统计要跟着变，不能等下次进页面
+          if (data.analysis !== undefined) setAnalysis(data.analysis || null)
           refreshList()
         } catch (e) {
           setErr(String(e.message || e))
@@ -444,13 +447,39 @@
       }
 
       const generateSummary = async () => {
+        if (summaryBusy) return
+        setSummaryBusy('summary')
         try {
           const data = await post('/api/litkb/themes/summary', { id: selectedId })
           setSummaryDraft(data.summary.text || '')
           setSummaryEditing(true)
-          setNotice(data.summary.text ? '已生成，可修改后保存' : '还没有已确认的链，先审核')
+          const chars = String(data.summary.text || '').length
+          setNotice(!chars
+            ? '还没有已确认的链，先审核'
+            : (data.summary.mode === 'model' ? `已润色为 ${chars} 字，可修改后保存` : `已生成摘要 ${chars} 字（未配置模型，未润色）`))
         } catch (e) {
           setErr(String(e.message || e))
+        } finally {
+          setSummaryBusy('')
+        }
+      }
+
+      const generateReview = async () => {
+        if (summaryBusy) return
+        setSummaryBusy('review')
+        try {
+          const data = await post('/api/litkb/themes/review', { id: selectedId, mode: 'new' })
+          if (!data.draft) {
+            setNotice(data.warnings?.[0] || '已生成综述')
+            return
+          }
+          setNotice(`研究综述已写入文稿：${data.draft.title}（${data.chars} 字 · ${data.citations} 条引用）`)
+          await openTheme(selectedId)
+          if (onOpenDraft) onOpenDraft({ themeId: selectedId, draftId: data.draft.id })
+        } catch (e) {
+          setErr(String(e.message || e))
+        } finally {
+          setSummaryBusy('')
         }
       }
 
@@ -1032,7 +1061,14 @@
           h('div', { className: 'litkb-colHead' },
             h('span', { className: 'litkb-colTitle' }, '研究结论'),
             spacer(),
-            h('button', { type: 'button', className: 'litkb-miniBtn', onClick: generateSummary }, '生成'),
+            h('button', {
+              type: 'button', className: 'litkb-miniBtn', disabled: Boolean(summaryBusy), onClick: generateSummary,
+            }, summaryBusy === 'summary' ? '生成中…' : '生成'),
+            h('button', {
+              type: 'button', className: 'litkb-miniBtn', disabled: Boolean(summaryBusy) || !confirmedChains.length,
+              title: '按研究内容分节，把已确认证据链写成一份完整的研究综述，写入文稿',
+              onClick: generateReview,
+            }, summaryBusy === 'review' ? '正在写综述…' : '生成综述'),
             summaryEditing
               ? h('button', { type: 'button', className: 'litkb-miniBtn', onClick: saveSummary }, '保存')
               : h('button', { type: 'button', className: 'litkb-miniBtn', onClick: () => setSummaryEditing(true) }, '编辑')),
@@ -1046,7 +1082,7 @@
             : null,
           summaryEditing
             ? h('textarea', {
-                className: 'litkb-textarea', rows: 10, value: summaryDraft,
+                className: 'litkb-textarea', rows: 18, value: summaryDraft,
                 placeholder: '点「生成」汇总已确认链，或直接写',
                 onChange: (e) => setSummaryDraft(e.target.value),
               })

@@ -155,7 +155,7 @@
     if (!facets.length) throw Object.assign(new Error('没有选中的细分描述'), { code: 'no_facets' })
     let existingAnalysis = readAnalysis(themeId)
     if (existingAnalysis) {
-      const pruned = pruneAnalysis(existingAnalysis, new Set(readIndex().map((record) => record.id)))
+      const pruned = pruneAnalysis(existingAnalysis, analysisScope(theme))
       if (pruned.changed) existingAnalysis = saveAnalysis(pruned.analysis)
     }
     let records = []
@@ -225,7 +225,7 @@
       papers: {},
       facets: {},
     }
-    const pruned = pruneAnalysis(analysis, new Set(readIndex().map((record) => record.id)))
+    const pruned = pruneAnalysis(analysis, analysisScope(theme))
     analysis = pruned.analysis
     analysis.runId = job.id
     analysis.at = new Date().toISOString()
@@ -307,8 +307,9 @@
         if (!theme) { json(res, 404, { ok: false, error: '研究不存在' }); return }
         let analysis = readAnalysis(theme.id)
         if (analysis) {
-          const pruned = pruneAnalysis(analysis, new Set(readIndex().map((record) => record.id)))
-          if (pruned.changed) analysis = saveAnalysis(pruned.analysis)
+          // 只裁剪返回，不落盘：论文只是「移出参考论文」，随时可以恢复。
+          // 真正落盘发生在重新分析时（run 路径）。
+          analysis = pruneAnalysis(analysis, analysisScope(theme)).analysis
         }
         const job = lastAnalysisJob.get(theme.id) || null
         json(res, 200, {
@@ -570,12 +571,15 @@
         const action = ['include', 'exclude', 'restore'].includes(body.action) ? body.action : 'include'
         const theme = setThemePaper(String(body.id || ''), { paperId: String(body.paperId || ''), action })
         const chains = themeChains(theme.id)
+        const raw = readAnalysis(theme.id)
+        const analysis = raw ? pruneAnalysis(raw, analysisScope(theme)).analysis : null
         json(res, 200, {
           ok: true,
           action,
           theme,
           papers: themePapers(theme, chains.list),
           stats: themeStats(theme, chains.list),
+          analysis,
         })
       } catch (error) {
         json(res, themeErrorStatus(error), { ok: false, code: error?.code || 'error', error: String(error?.message || error) })
@@ -639,8 +643,68 @@
           json(res, 200, { ok: true, summary })
           return
         }
-        const generated = buildThemeSummary(theme)
-        json(res, 200, { ok: true, summary: generated })
+        const chains = themeChains(theme.id).list
+        if (body.polish === false) {
+          json(res, 200, { ok: true, summary: buildThemeSummary(theme, chains) })
+          return
+        }
+        // 研究结论：模型压到 500 字内；没有模型时自动退回确定性摘要
+        const summary = await polishSummary({ ctx: pluginCtx, theme, chains })
+        json(res, 200, { ok: true, summary, promptVersion: SUMMARY_PROMPT_VERSION })
+      } catch (error) {
+        json(res, themeErrorStatus(error), { ok: false, code: error?.code || 'error', error: String(error?.message || error) })
+      }
+    },
+  })
+
+  webServer.register({
+    kind: 'exact',
+    path: '/api/litkb/themes/review',
+    handler: async (req, res) => {
+      try {
+        const body = JSON.parse((await readBody(req, 256 * 1024)).toString('utf8') || '{}')
+        const theme = readTheme(body.id)
+        if (!theme) { json(res, 404, { ok: false, error: '研究不存在' }); return }
+        const chains = themeChains(theme.id).list
+        const review = body.preview
+          ? buildThemeReview(theme, chains)
+          : await composeReview({ ctx: pluginCtx, theme, chains, polish: body.polish !== false })
+        const mode = ['new', 'append', 'replace'].includes(body.mode) ? body.mode : 'new'
+        let draft = null
+        if (!body.preview) {
+          // 重复点「生成综述」时覆盖同一篇，不再产生同名的重复稿
+          const bound = theme.draftId ? readDraft(theme.draftId) : null
+          const sameReview = Boolean(bound) && String(bound.title || '') === `${theme.title} · 研究综述`
+          if (mode === 'new' && sameReview) {
+            draft = saveDraft(bound.id, { body: review.markdown })
+          } else if (mode !== 'new' && theme.draftId) {
+            const current = readDraft(theme.draftId)
+            if (current) {
+              const next = mode === 'append'
+                ? `${String(current.body || '').trimEnd()}\n\n${review.markdown}`
+                : review.markdown
+              draft = saveDraft(theme.draftId, { body: next })
+            }
+          }
+          if (!draft) {
+            draft = createDraft({ title: `${theme.title} · 研究综述`, type: '综述', body: review.markdown })
+            bindThemeDraft(theme.id, draft.id)
+          }
+        }
+        json(res, 200, {
+          ok: true,
+          markdown: review.markdown,
+          chars: String(review.markdown).length,
+          citations: review.citations,
+          chains: review.chains,
+          covered: review.covered,
+          total: review.total,
+          missing: review.missing || [],
+          polished: review.polished || 0,
+          warnings: review.warnings || [],
+          draft: draft ? { id: draft.id, title: draft.title, chars: String(draft.body || '').length } : null,
+          promptVersion: REVIEW_PROMPT_VERSION,
+        })
       } catch (error) {
         json(res, themeErrorStatus(error), { ok: false, code: error?.code || 'error', error: String(error?.message || error) })
       }

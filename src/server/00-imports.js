@@ -40,9 +40,10 @@ import {
   themePapers, themeStats, summaryState, updateThemeSummary,
 } from './themes.js'
 import {
-  analysisPapers, analysisStats, createViewpointChain, extractPaperAnalysis,
+  analysisPapers, analysisScope, analysisStats, createViewpointChain, extractPaperAnalysis,
   pruneAnalysis, readAnalysis, saveAnalysis, synthesizeFacet,
 } from './theme-analysis.js'
+import { buildThemeReview, composeReview, polishSummary, REVIEW_PROMPT_VERSION, SUMMARY_PROMPT_VERSION } from './review.js'
 import { extractPdf } from './pdf.js'
 import { classify, matchTags } from './classify.js'
 import {

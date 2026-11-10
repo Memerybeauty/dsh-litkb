@@ -16,6 +16,7 @@
       const [selected, setSelected] = useState(null)
       const [openEvidence, setOpenEvidence] = useState({})
       const [showAll, setShowAll] = useState(false)
+      const [hover, setHover] = useState({ r: '', c: '' })
       const running = Boolean(job && ['queued', 'running'].includes(job.status))
       const facets = (theme.facets || []).filter((facet) => facet.enabled)
       const missingFacets = analysis ? facets.filter((facet) => !analysis.facets?.[facet.key]) : []
@@ -73,27 +74,49 @@
         return counts
       }
 
+      // 每篇论文的命中条数（relevance > 0 的研究内容数）
+      const hitCount = (paper) => Object.values(paper.facets || {}).filter((item) => Number(item?.relevance) > 0).length
+      const shortTitle = (title) => String(title || '').replace(/^\s*\d+\s*/, '').replace(/\s+/g, ' ').trim()
+      const hotRow = (facetKey) => hover.r === facetKey
+      const hotCol = (paperId) => hover.c === paperId
+
       const headerRow = h('tr', null,
         h('th', { className: 'is-facet' }, '研究内容'),
         visiblePapers.map((paper) => h('th', {
           key: paper.paperId, className: 'is-paper', title: paper.title,
-        }, paperNumber.get(paper.paperId))))
+        }, paperNumber.get(paper.paperId))),
+        h('th', { className: 'is-sum' }, '覆盖'))
 
       const body = h('tbody', null,
         facets.map((facet) => {
           const row = analysis.facets?.[facet.key]
           const counts = facetCounts(facet.key)
-          const headCell = h('th', { className: 'is-facet', title: facet.title },
+          const relevant = Number(row?.relevantCount ?? 0)
+          const total = visiblePapers.length
+          const pct = total ? Math.round((relevant / total) * 100) : 0
+          const headCell = h('th', {
+            className: 'is-facet' + (hotRow(facet.key) ? ' is-hot' : ''),
+            title: facet.title,
+            onMouseEnter: () => setHover((h0) => ({ r: facet.key, c: h0.c })),
+            onMouseLeave: () => setHover((h0) => ({ r: '', c: h0.c })),
+          },
             h('div', { className: 'litkb-anFacetName' }, facet.title),
+            h('div', { className: 'litkb-anFacetBar', title: `相关 ${relevant}/${total}` },
+              h('i', { style: { width: `${pct}%` } })),
             h('div', { className: 'litkb-anFacetCounts' },
-              h('span', { className: 'is-relevant' }, `相关 ${row?.relevantCount ?? 0}`),
+              h('span', { className: 'is-relevant' }, `相关 ${relevant}`),
               counts.supports ? h('span', { className: 'is-support' }, `✓${counts.supports}`) : null,
               counts.qualifies ? h('span', { className: 'is-qualify' }, `△${counts.qualifies}`) : null,
-              counts.contradicts ? h('span', { className: 'is-contra' }, `✕${counts.contradicts}`) : null))
+              counts.contradicts ? h('span', { className: 'is-contra' }, `✕${counts.contradicts}`) : null,
+              counts.mentions ? h('span', { className: 'is-mention' }, `·${counts.mentions}`) : null))
           const cells = visiblePapers.map((paper) => {
             const cell = paper.facets?.[facet.key]
             const stance = analysisStance(cell?.stance)
-            return h('td', { key: paper.paperId },
+            return h('td', {
+              key: paper.paperId,
+              className: hotCol(paper.paperId) ? 'is-hot' : '',
+              onMouseEnter: () => setHover({ r: facet.key, c: paper.paperId }),
+            },
               h('button', {
                 type: 'button',
                 className: 'litkb-anStance is-icon ' + stance[1] + (selected?.paperId === paper.paperId && selected?.facetKey === facet.key ? ' is-on' : ''),
@@ -102,12 +125,35 @@
                 onClick: () => setSelected({ paperId: paper.paperId, facetKey: facet.key }),
               }, stance[2]))
           })
-          return h('tr', { key: facet.key }, headCell, cells)
+          return h('tr', { key: facet.key }, headCell, cells,
+            h('td', { className: 'is-sum' }, `${relevant}/${total}`))
         }))
 
-      const table = h('table', { className: 'litkb-anMatrix', 'aria-label': '研究内容与论文方向矩阵' },
+      const footRow = h('tfoot', null,
+        h('tr', null,
+          h('th', { className: 'is-facet' }, '每篇命中'),
+          visiblePapers.map((paper) => h('th', {
+            key: paper.paperId, className: 'is-paper', title: `${paper.title}：${hitCount(paper)} 条研究内容有匹配`,
+          }, hitCount(paper))),
+          h('th', { className: 'is-sum' }, '')))
+
+      const table = h('table', {
+        className: 'litkb-anMatrix',
+        'aria-label': '研究内容与论文方向矩阵',
+        onMouseLeave: () => setHover({ r: '', c: '' }),
+      },
         h('thead', null, headerRow),
-        body)
+        body,
+        footRow)
+
+      // 图例与论文编号移到表格上方，避免视线在表格与页脚之间来回跳
+      const legendRow = h('div', { className: 'litkb-anLegendGroup' },
+        Object.values(ANALYSIS_STANCE).map(([label, cls, icon]) => h('span', { key: label, className: 'litkb-anLegendItem ' + cls },
+          h('b', null, icon), label)))
+      const nameList = h('div', { className: 'litkb-anPaperLegend' },
+        visiblePapers.map((paper) => h('span', { key: paper.paperId, className: 'litkb-anPaperLegendItem', title: paper.title },
+          h('b', null, paperNumber.get(paper.paperId)),
+          shortTitle(paper.title).slice(0, 30))))
 
       const matrix = h('div', { className: 'litkb-anMatrixBlock' },
         h('div', { className: 'litkb-anMatrixHead' },
@@ -118,15 +164,8 @@
               onChange: (e) => setShowAll(e.target.checked),
             }),
             `显示全部论文（${allPapers.length}）`)),
+        h('div', { className: 'litkb-anMatrixAside' }, legendRow, nameList),
         h('div', { className: 'litkb-anMatrixWrap' }, table))
-
-      const legend = h('div', { className: 'litkb-anLegend' },
-        h('div', { className: 'litkb-anLegendGroup' },
-          Object.values(ANALYSIS_STANCE).map(([label, cls, icon]) => h('span', { key: label, className: 'litkb-anLegendItem ' + cls },
-            h('b', null, icon), label))),
-        h('div', { className: 'litkb-anPaperLegend' },
-          visiblePapers.map((paper) => h('span', { key: paper.paperId, className: 'litkb-anPaperLegendItem', title: paper.title },
-            h('b', null, paperNumber.get(paper.paperId)), paper.title))))
 
       const detail = selectedPaper && selectedAnalysis
         ? h('div', { className: 'litkb-anDetail' },
@@ -237,7 +276,6 @@
           h('span', null, `${stats.viewpoints} 个观点`),
           h('span', null, `${stats.gaps} 个缺口`)),
         matrix,
-        legend,
         detail,
         viewpointSections,
         job?.errors?.length

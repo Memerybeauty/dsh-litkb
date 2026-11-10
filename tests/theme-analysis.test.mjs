@@ -10,6 +10,7 @@ const { PATHS, ensureLibrary, upsert } = await import('../lib/library.js')
 const { writeCard, readCard } = await import('../lib/cards.js')
 const { saveTheme } = await import('../lib/themes.js')
 const {
+  analysisScope,
   analysisStats,
   createViewpointChain,
   extractPaperAnalysis,
@@ -335,5 +336,53 @@ assert.deepEqual(
   ['p-a'],
 )
 assert.equal(pruned.analysis.stats.papers, 1)
+
+/* ---------- 论文移出研究的参考清单后，分析范围也要跟着缩小 ---------- */
+const inTheme = { ...record, id: 'p-scope001' }
+const outTheme = { ...record, id: 'p-scope002' }
+upsert(inTheme)
+upsert(outTheme)
+const scopeTheme = {
+  ...theme,
+  papers: {
+    include: [],
+    exclude: [outTheme.id],
+    lastMatch: {
+      at: new Date().toISOString(),
+      papers: [{ paperId: inTheme.id }, { paperId: outTheme.id }],
+    },
+  },
+}
+const scope = analysisScope(scopeTheme)
+assert.ok(scope.has(inTheme.id), '留在参考清单里的论文应仍在分析范围内')
+assert.ok(!scope.has(outTheme.id), '被移出的论文必须从分析范围里剔除')
+
+const scoped = pruneAnalysis(
+  {
+    themeId: theme.id,
+    papers: {
+      [inTheme.id]: { paperId: inTheme.id, title: '留', facets: { f1: { relevance: 2, stance: 'supports' } } },
+      [outTheme.id]: { paperId: outTheme.id, title: '走', facets: { f1: { relevance: 0, stance: 'not_relevant' } } },
+    },
+    facets: {
+      f1: {
+        relevantCount: 1,
+        viewpoints: [
+          {
+            id: 'v1',
+            papers: [inTheme.id, outTheme.id],
+            evidence: [{ paperId: inTheme.id, evidenceId: 'q-aaaaaaaa' }],
+          },
+        ],
+        gaps: [],
+      },
+    },
+  },
+  scope,
+)
+assert.equal(scoped.changed, true)
+assert.deepEqual(Object.keys(scoped.analysis.papers), [inTheme.id])
+assert.deepEqual(scoped.analysis.facets.f1.viewpoints[0].papers, [inTheme.id])
+assert.equal(scoped.analysis.stats.papers, 1, '统计要跟着参考论文数走')
 
 console.log('theme analysis tests passed')

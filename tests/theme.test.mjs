@@ -265,6 +265,13 @@ assert.ok(outline.missing.includes('注意力机制'), '未确认的细分描述
 const summary = buildThemeSummary(readTheme(t.id))
 assert.ok(summary.text.includes('极坐标变换'))
 assert.ok(summary.citations >= 1)
+assert.ok(summary.text.startsWith('已确认证据链'), '结论应有一行总览')
+assert.ok(summary.text.includes('【1】'), '结论应按研究内容分节')
+assert.ok(summary.text.includes('支撑：'), '每条观点应列出支撑论文')
+assert.ok(summary.text.includes('证据：p.'), '每条观点应带页码引文')
+assert.ok(summary.text.includes('尚未覆盖的研究内容'), '未覆盖的研究内容要单列')
+assert.ok(summary.covered >= 1 && summary.total >= summary.covered)
+assert.ok(summary.papers >= 1)
 
 updateThemeSummary(t.id, { text: '手写结论', model: null })
 assert.equal(readTheme(t.id).summary.text, '手写结论')
