@@ -417,21 +417,7 @@
                 type: 'button', className: 'litkb-askFab',
                 onMouseDown: (event) => event.preventDefault(),
                 onClick: () => { if (onAsk) onAsk(selHint); setSelHint(null) },
-              }, '追问'),
-              onBuildChain
-                ? h('button', {
-                    type: 'button', className: 'litkb-askFab is-accent',
-                    onMouseDown: (event) => event.preventDefault(),
-                    onClick: () => buildFromSelection(selHint),
-                  }, '建链')
-                : null,
-              onComment
-                ? h('button', {
-                    type: 'button', className: 'litkb-askFab',
-                    onMouseDown: (event) => event.preventDefault(),
-                    onClick: () => { onComment(selHint); setSelHint(null) },
-                  }, '评论')
-                : null)
+              }, '追问'))
           : null,
         null)
     }
@@ -1311,14 +1297,7 @@
                 ? h('button', {
                     type: 'button', className: 'litkb-askFab is-accent',
                     onMouseDown: (event) => event.preventDefault(),
-                    onClick: () => {
-                      onBuildChain({
-                        paperId: paper.id, mode: 'claim', claim: selHint.text,
-                        page: selHint.page, blockId: selHint.blockId,
-                        source: 'parse', autoPropose: true,
-                      })
-                      setSelHint(null)
-                    },
+                    onClick: () => buildFromSelection(selHint),
                   }, '建链')
                 : null,
               onComment

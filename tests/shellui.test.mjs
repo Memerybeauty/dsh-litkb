@@ -54,6 +54,8 @@ assert.ok(source.includes('.litkb-theme-dark{'), '必须有显式深色主题类
 assert.ok(source.includes('.litkb-wbPage{position:relative}'), '抽屉必须相对工作台页定位')
 assert.ok(source.includes('.litkb-chainRel.litkb-input'), '关系下拉宽度不能被 .litkb-input 覆盖')
 assert.ok(source.includes('.litkb-chainCheck{width:14px'), '复选框类名不能撞添加证据面板')
+assert.ok(source.includes('onClick: () => buildFromSelection(selHint)'), '解析页选区建链必须走证据优先')
+assert.ok(!source.includes("mode: 'claim', claim: selHint.text"), '不能再把选句当论点')
 assert.ok(!source.includes('.litkb-chainPick{width:14px'), '添加证据面板不能被复选框样式压窄')
 assert.ok(
   source.includes('onLocate: (page, blockId, blockIds) => onOpenPdf(page, blockId, blockIds)'),
