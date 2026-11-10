@@ -28,18 +28,26 @@
 
     function LitkbSettings({ initial = null }) {
       const [snapshot, setSnapshot] = useState(initial)
+      const [info, setInfo] = useState(null)
       const [token, setToken] = useState('')
       const [model, setModel] = useState('PaddleOCR-VL-1.6')
       const [enabled, setEnabled] = useState(true)
       const [saving, setSaving] = useState(false)
+      const [restoring, setRestoring] = useState(false)
+      const [restoreNote, setRestoreNote] = useState('')
       const [err, setErr] = useState('')
       const [notice, setNotice] = useState('')
       const [maintaining, setMaintaining] = useState('')
+      const restoreRef = useRef(null)
 
       const load = useCallback(async () => {
         try {
-          const data = await api('/api/litkb/settings')
+          const [data, diag] = await Promise.all([
+            api('/api/litkb/settings'),
+            api('/api/litkb/diag').catch(() => null),
+          ])
           setSnapshot(data)
+          if (diag) setInfo(diag)
           setModel(data.settings?.paddle?.model || 'PaddleOCR-VL-1.6')
           setEnabled(data.settings?.paddle?.enabled !== false)
           setErr('')
@@ -96,6 +104,56 @@
         }
       }
 
+      const restoreFromFile = async (event) => {
+        const file = event.target?.files?.[0]
+        if (event.target) event.target.value = ''
+        if (!file || typeof window === 'undefined') return
+        if (!window.confirm(`将用「${file.name}」覆盖当前库。\n\n恢复前会自动把当前库快照到 cache/backups/；settings.json 与解析缓存不受影响。`)) return
+        const answer = window.prompt ? window.prompt('这是覆盖操作。请输入「恢复」两个字确认：') : '恢复'
+        if (answer !== '恢复') {
+          setNotice('已取消恢复')
+          return
+        }
+        setRestoring(true)
+        setErr('')
+        setNotice('')
+        try {
+          const data = await api('/api/litkb/restore?confirm=restore', {
+            method: 'POST',
+            headers: { 'content-type': 'application/zip' },
+            body: file,
+          })
+          setNotice(`已恢复 ${data.files} 个文件`)
+          setRestoreNote(`备份 ${data.manifest?.version || '未知版本'} · ${formatLocal(data.manifest?.createdAt || Date.now())} · 覆盖前快照 ${data.snapshot}`)
+          try { window.dispatchEvent(new CustomEvent('litkb:data')) } catch { /* 非浏览器环境 */ }
+          await load()
+        } catch (e) {
+          setErr(String(e.message || e))
+        } finally {
+          setRestoring(false)
+        }
+      }
+
+      const copyDiagnostics = async () => {
+        const counts = info?.library?.counts || {}
+        const llm = snapshot?.llm || {}
+        const route = llm.route
+        const text = [
+          `dsh-litkb ${info?.version || ''}`,
+          `库：${info?.library?.path || snapshot?.settings?.library || ''}`,
+          `论文 ${counts.papers || 0} · 卡片 ${counts.cards || 0} · 链 ${counts.chains || 0}（已确认 ${counts.confirmedChains || 0}）· 研究 ${counts.themes || 0} · 文稿 ${counts.drafts || 0}`,
+          `数据体积：${formatBytes(info?.library?.bytes || 0)}`,
+          `模型：${route ? `${route.provider} / ${route.model}` : (llm.available ? '未选择默认模型' : '宿主未提供')}`,
+          `运行：Node ${info?.runtime?.node || ''} / ${info?.runtime?.platform || ''} · 启动于 ${info?.runtime?.startedAt || ''}`,
+        ].join('\n')
+        try {
+          await navigator.clipboard.writeText(text)
+          setNotice('诊断信息已复制')
+        } catch {
+          if (typeof window !== 'undefined' && window.prompt) window.prompt('复制诊断信息：', text)
+        }
+      }
+
       if (!snapshot) {
         return h('div', { className: 'litkb-settingsPage' },
           err ? h('div', { className: 'litkb-error' }, err) : h('div', { className: 'litkb-muted' }, '加载中…'))
@@ -105,6 +163,9 @@
       const paddle = settings.paddle || {}
       const llm = snapshot.llm || {}
       const route = llm.route
+      const counts = info?.library?.counts || {}
+      const latest = info?.backup?.latest
+      const stat = (label, value) => h('span', { className: 'litkb-settingsStat' }, h('b', null, String(value)), label)
       return h('div', { className: 'litkb-settingsPage' },
         h('section', { className: 'litkb-settingsSection' },
           h('div', { className: 'litkb-settingsTitle' }, '文献工作台'),
@@ -113,6 +174,35 @@
             h('code', { className: 'litkb-settingsCode' }, settings.library || '—')),
           h('div', { className: 'litkb-settingsHint' },
             '修改库路径请设置环境变量 LITKB_LIBRARY 后重启 DSH；P4 暂不做运行中切库。')),
+        h('section', { className: 'litkb-settingsSection' },
+          h('div', { className: 'litkb-settingsTitle' }, '数据与备份'),
+          h('div', { className: 'litkb-settingsHint' },
+            '备份包含 PDF、卡片、版面块、译文、精读、证据链、研究与文稿；不含 settings.json（令牌）与 cache/（页图、检索历史）。恢复前会自动把当前库快照到 cache/backups/。'),
+          h('div', { className: 'litkb-settingsMini' },
+            stat('论文', counts.papers || 0),
+            stat('卡片', counts.cards || 0),
+            stat('证据链', counts.chains || 0),
+            stat('研究', counts.themes || 0),
+            stat('文稿', counts.drafts || 0),
+            stat('体积', formatBytes(info?.library?.bytes || 0))),
+          h('div', { className: 'litkb-settingsMini' },
+            h('a', {
+              className: 'litkb-btn', href: '/api/litkb/backup', download: '',
+              title: '下载整库 zip 备份',
+            }, '下载整库备份'),
+            h('button', {
+              type: 'button', className: 'litkb-miniBtn', disabled: restoring,
+              onClick: () => restoreRef.current?.click(),
+            }, restoring ? '恢复中…' : '从备份恢复…'),
+            h('input', {
+              ref: restoreRef, type: 'file', accept: '.zip,application/zip',
+              style: { display: 'none' }, onChange: restoreFromFile,
+            })),
+          h('div', { className: 'litkb-settingsHint' },
+            latest
+              ? `最近快照：${latest.name} · ${formatLocal(latest.mtime)} · ${formatBytes(latest.bytes)}（共 ${info?.library?.backups || 0} 个）`
+              : '还没有自动快照；恢复前会自动生成一个。'),
+          restoreNote ? h('div', { className: 'litkb-settingsHint' }, restoreNote) : null),
         h('section', { className: 'litkb-settingsSection' },
           h('div', { className: 'litkb-settingsTitle' }, 'PaddleOCR'),
           h('div', { className: 'litkb-settingsHint' },
@@ -163,6 +253,36 @@
                 maintaining === 'clear-pages' ? '清理中…' : '清理解析缓存'),
               h('button', { type: 'button', className: 'litkb-miniBtn', disabled: Boolean(maintaining), onClick: () => maintain('clear-history') },
                 maintaining === 'clear-history' ? '清理中…' : '清空搜索历史')))),
+        h('section', { className: 'litkb-settingsSection' },
+          h('div', { className: 'litkb-settingsTitle' }, '上手引导'),
+          h('div', { className: 'litkb-settingsHint' },
+            '工作台按真实库计算 5 步上手进度：导入论文 / 七段卡 / 证据链 / 研究 / 文稿；全部完成后自动隐藏。'),
+          h('div', { className: 'litkb-settingsMini' },
+            h('button', {
+              type: 'button', className: 'litkb-miniBtn',
+              onClick: () => { notifyGuide(false); setNotice('已重新显示上手引导') },
+            }, '重新显示上手引导'))),
+        h('section', { className: 'litkb-settingsSection' },
+          h('div', { className: 'litkb-settingsTitle' }, '关于'),
+          h('div', { className: 'litkb-aboutLine' }, h('span', null, '版本'), h('span', null, `v${info?.version || '—'}`)),
+          h('div', { className: 'litkb-aboutLine' },
+            h('span', null, '运行环境'),
+            h('span', null, info?.runtime ? `Node ${info.runtime.node} · ${info.runtime.platform}` : '—')),
+          h('div', { className: 'litkb-aboutLine' },
+            h('span', null, '数据体积'),
+            h('span', null, formatBytes(info?.library?.bytes || 0))),
+          h('div', { className: 'litkb-aboutPrivacy' },
+            '本地优先：论文、卡片、证据链、研究与文稿都保存在本机库目录；只有调用模型 / OCR 时，必要的文本才会发送给你配置的服务商。插件不上传遥测。'),
+          h('div', { className: 'litkb-settingsMini' },
+            h('button', { type: 'button', className: 'litkb-miniBtn', onClick: copyDiagnostics }, '复制诊断信息'),
+            h('a', {
+              className: 'litkb-link', href: 'https://github.com/Memerybeauty/dsh-litkb',
+              target: '_blank', rel: 'noreferrer',
+            }, '项目主页'),
+            h('a', {
+              className: 'litkb-link', href: 'https://github.com/Memerybeauty/dsh-litkb/tree/main/docs',
+              target: '_blank', rel: 'noreferrer',
+            }, '文档'))),
         err ? h('div', { className: 'litkb-error' }, err) : null,
         h('div', { className: 'litkb-settingsActions' },
           h('button', { type: 'button', className: 'litkb-btn', disabled: saving, onClick: save },
@@ -213,18 +333,26 @@
         const saved = storedWidth('litkb.pdfWidth', 520)
         return saved < 460 ? 520 : saved
       })
+      const [guide, setGuide] = useState(null)
+      const [guideHidden, setGuideHidden] = useState(() => guideStoredDismissed())
+      const [guideForce, setGuideForce] = useState(false)
       const fileRef = useRef(null)
       const splitRef = useRef(null)
 
       const load = useCallback(async () => {
         setLoading(true)
         try {
-          const [data, tagData] = await Promise.all([api('/api/litkb/papers'), api('/api/litkb/tags')])
+          const [data, tagData, guideData] = await Promise.all([
+            api('/api/litkb/papers'),
+            api('/api/litkb/tags'),
+            api('/api/litkb/onboarding').catch(() => null),
+          ])
           setPapers(data.papers || [])
           setStats(data.stats || {})
           setLibrary(data.library || '')
           setTags(tagData.tags || [])
           setTypes(tagData.types || [])
+          if (guideData) setGuide(guideData)
           setError('')
         } catch (err) {
           setError(String(err.message || err))
@@ -232,6 +360,32 @@
           setLoading(false)
         }
       }, [])
+
+      const dismissGuide = useCallback(() => {
+        setGuideHidden(true)
+        setGuideForce(false)
+        notifyGuide(true)
+      }, [])
+
+      useEffect(() => {
+        const onGuide = (event) => {
+          const hidden = event?.detail?.dismissed !== false
+          setGuideHidden(hidden)
+          setGuideStoredDismissed(hidden)
+          if (hidden) setGuideForce(false)
+          else {
+            setGuideForce(true)
+            load()
+          }
+        }
+        const onData = () => load()
+        window.addEventListener('litkb:guide', onGuide)
+        window.addEventListener('litkb:data', onData)
+        return () => {
+          window.removeEventListener('litkb:guide', onGuide)
+          window.removeEventListener('litkb:data', onData)
+        }
+      }, [load])
 
       const refreshCard = useCallback(() => {
         setCardRevision((value) => value + 1)
@@ -725,6 +879,11 @@
             onOpenLibrary: () => goLibrary(),
             onOpenWriting: () => openWriting(null),
             paperCount: papers.length,
+            guide,
+            guideDismissed: guideHidden,
+            guideForce,
+            onDismissGuide: dismissGuide,
+            onImportPaper: () => fileRef.current?.click(),
           })),
         h('div', { className: 'litkb-module' + (tab === '论文库' ? '' : ' is-hidden') },
           libraryView === '横向精读'
@@ -805,7 +964,8 @@
       h('footer', { className: 'litkb-foot' },
         h('span', { className: 'litkb-dot ' + (error ? 'is-err' : 'is-ok'), 'aria-hidden': 'true' }),
         h('span', { className: 'litkb-health' },
-          error ? `出错：${error}` : `库 ${library || '未初始化'} · ${stats.total ?? 0} 篇 · 未归类 ${stats.untagged ?? 0}`),
+          (error ? `出错：${error}` : `库 ${library || '未初始化'} · ${stats.total ?? 0} 篇 · 未归类 ${stats.untagged ?? 0}`)
+          + (guide?.version ? ` · v${guide.version}` : '')),
         h('button', { type: 'button', className: 'litkb-link', onClick: load }, '刷新')),
       h('input', {
         ref: fileRef, type: 'file', accept: 'application/pdf,.pdf', multiple: true,

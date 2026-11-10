@@ -27,7 +27,7 @@
       return names.map((title) => ({ title, description: '', keywords: keyword }))
     }
 
-    function ThemePage({ papers = [], tags = [], paperActions = {}, paperCount = 0, onOpenPaper, onOpenChain, onOpenDraft, onOpenLibrary, onOpenWriting }) {
+    function ThemePage({ papers = [], tags = [], paperActions = {}, paperCount = 0, guide = null, guideDismissed = false, guideForce = false, onOpenPaper, onOpenChain, onOpenDraft, onOpenLibrary, onOpenWriting, onDismissGuide, onImportPaper }) {
       const [themes, setThemes] = useState([])
       const [selectedId, setSelectedId] = useState('')
       const [detail, setDetail] = useState(null)
@@ -655,6 +655,16 @@
             h('button', { type: 'button', className: 'litkb-btn', onClick: startNew }, '＋ 新建研究')),
           err ? h('div', { className: 'litkb-error' }, err) : null,
           notice ? h('div', { className: 'litkb-themeNotice' }, notice) : null,
+          h(OnboardingPanel, {
+            guide,
+            dismissed: guideDismissed,
+            force: guideForce,
+            onDismiss: onDismissGuide,
+            onImport: onImportPaper,
+            onOpenLibrary,
+            onOpenWriting,
+            onCreateTheme: startNew,
+          }),
           h('div', { className: 'litkb-statRow' },
             h('div', { className: 'litkb-statCard is-violet' },
               h('span', { className: 'litkb-statIcon', 'aria-hidden': 'true' }, '◧'),

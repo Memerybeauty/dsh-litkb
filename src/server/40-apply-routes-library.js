@@ -26,6 +26,14 @@ export function apply(ctx) {
   }
 
   ensureLibrary()
+  try {
+    const recovery = recoverInterruptedRestore()
+    if (recovery.recovered) {
+      ctx.logger?.warn?.(`[dsh-litkb] recovered ${recovery.recovered} data roots from an interrupted restore`)
+    }
+  } catch (error) {
+    ctx.logger?.warn?.(`[dsh-litkb] restore recovery skipped: ${String(error?.message || error)}`)
+  }
 
   webServer.register({
     kind: 'exact',
@@ -514,6 +522,85 @@ export function apply(ctx) {
         json(res, 400, { ok: false, error: '未知维护动作' })
       } catch (error) {
         json(res, 500, { ok: false, error: String(error?.message || error) })
+      }
+    },
+  })
+
+  // 首次上手：按真实库计算里程碑，前端据此显示欢迎页/清单
+  webServer.register({
+    kind: 'exact',
+    path: '/api/litkb/onboarding',
+    handler: async (req, res) => {
+      try {
+        const counts = quickLibraryCounts()
+        const items = [
+          { key: 'paper', title: '导入第一篇论文', hint: 'PDF 拖拽，或「链接 / DOI」', done: counts.papers > 0, count: counts.papers, target: 'library' },
+          { key: 'card', title: '生成七段卡', hint: '打开论文 → 七段卡 → 生成', done: counts.cards > 0, count: counts.cards, target: 'library' },
+          { key: 'chain', title: '建一条证据链', hint: '自动建链后在审核队列确认', done: counts.confirmedChains > 0, count: counts.confirmedChains, target: 'library' },
+          { key: 'theme', title: '建一个研究并探索', hint: '工作台 → 新建研究 → 开始探索', done: counts.themes > 0, count: counts.themes, target: 'theme' },
+          { key: 'draft', title: '写一份文稿', hint: '写作 → 新建文稿 → 插入引用', done: counts.drafts > 0, count: counts.drafts, target: 'writing' },
+        ]
+        json(res, 200, {
+          ok: true,
+          version: pkg.version,
+          library: PATHS.root,
+          items,
+          completed: items.filter((item) => item.done).length,
+          total: items.length,
+          next: items.find((item) => !item.done)?.key || '',
+          counts,
+        })
+      } catch (error) {
+        json(res, 500, { ok: false, error: String(error?.message || error) })
+      }
+    },
+  })
+
+  // 整库备份：下载 zip（不含 settings.json / cache）
+  webServer.register({
+    kind: 'exact',
+    path: '/api/litkb/backup',
+    handler: async (req, res) => {
+      try {
+        const { buffer, filename } = buildBackupZip({ version: pkg.version })
+        res.writeHead(200, {
+          'content-type': 'application/zip',
+          'content-disposition': `attachment; filename="${filename}"`,
+          'content-length': buffer.length,
+          'cache-control': 'no-store',
+        })
+        res.end(buffer)
+      } catch (error) {
+        json(res, 500, { ok: false, error: String(error?.message || error) })
+      }
+    },
+  })
+
+  // 从备份恢复：覆盖前自动快照；必须显式 confirm=restore
+  webServer.register({
+    kind: 'exact',
+    path: '/api/litkb/restore',
+    handler: async (req, res) => {
+      try {
+        if (req.method !== 'POST') {
+          json(res, 405, { ok: false, error: '请使用 POST 上传备份' })
+          return
+        }
+        if (queryParam(req, 'confirm') !== 'restore') {
+          json(res, 428, { ok: false, code: 'confirm_required', error: '恢复会覆盖当前库，需要确认' })
+          return
+        }
+        const body = await readBody(req, MAX_RESTORE_BYTES)
+        const result = restoreBackup(body)
+        json(res, 200, { ok: true, ...result, library: PATHS.root, counts: libraryInfo() })
+      } catch (error) {
+        const rawCode = String(error?.code || 'error')
+        const code = rawCode === 'TOO_LARGE' ? 'too_large' : rawCode
+        const status = code === 'too_large' ? 413
+          : code === 'restore_busy' ? 409
+            : ['empty_zip', 'bad_zip', 'bad_entry', 'bad_manifest', 'no_data'].includes(code) ? 422
+              : 500
+        json(res, status, { ok: false, code, error: String(error?.message || error) })
       }
     },
   })

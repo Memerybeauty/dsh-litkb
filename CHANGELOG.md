@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.11.0 — 产品化：上手引导 / 整库备份与恢复 / 关于与诊断（2026-11-10）
+
+- 工作台新增首次上手欢迎页与 5 步里程碑清单（导入论文 / 七段卡 / 证据链 / 研究 / 文稿），按真实库计算，完成后自动隐藏，可在设置里重新显示；
+- 新增 `GET /api/litkb/backup`：整库 zip 备份，含 PDF、卡片、版面块、译文、精读、证据链、研究、文稿；排除 `settings.json`（令牌）与 `cache/`；
+- 新增 `POST /api/litkb/restore?confirm=restore`：校验 manifest / 路径穿越 / zip 体积，覆盖前自动快照到 `cache/backups/`，失败按已替换清单回滚；
+- 设置新增「数据与备份」「上手引导」「关于」：资产计数、体积、最近快照、下载/恢复、重新显示引导、版本/运行环境/本地优先说明、复制诊断信息；
+- `/diag` 扩展 `library / runtime / backup` 字段；页脚显示版本号；
+- 新增 `scripts/install.mjs`（`npm run plugin:install`）：按 profile 安装 tgz 或 link，自动补 bundle；
+- 新增 `npm run verify` 质量门（check + lint + format + test）；
+- 路由 81 → 84；新增 [42 产品化交付](docs/42_产品化交付.md)。
+- 测试：新增 backup / restore / onboarding / 诊断与上手 UI 用例。
+
 ## v0.10.0 — 研究模板 / 双栏顺序 / 逐段精读（2026-11-10）
 
 - 新建研究支持「综述 / 开题 / 方法对比」模板；

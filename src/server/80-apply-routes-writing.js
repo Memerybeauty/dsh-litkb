@@ -245,15 +245,27 @@
     kind: 'exact',
     path: '/api/litkb/diag',
     handler: async (req, res) => {
+      const counts = quickLibraryCounts()
       json(res, 200, {
         ok: true,
         version: pkg.version,
         stage: 'P5',
-        themes: listThemes().length,
+        themes: counts.themes,
         llm: llmStatus(pluginCtx),
         jobs: [...jobs.values()].map(publicJob),
         graphJob: publicGraphJob(graphJobs.get(GRAPH_JOB_ID)),
         pendingConcepts: conceptOverview().pending.length,
+        runtime: {
+          node: process.version,
+          platform: process.platform,
+          startedAt: STARTED_AT,
+        },
+        library: {
+          path: PATHS.root,
+          ...libraryInfo(),
+          counts,
+        },
+        backup: backupDirInfo(),
         time: new Date().toISOString(),
       })
     },

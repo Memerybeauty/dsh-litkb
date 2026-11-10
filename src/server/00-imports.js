@@ -41,9 +41,14 @@ import {
 } from './themes.js'
 import { extractPdf } from './pdf.js'
 import { classify, matchTags } from './classify.js'
+import {
+  backupDirInfo, buildBackupZip, libraryInfo, MAX_RESTORE_BYTES, quickLibraryCounts,
+  recoverInterruptedRestore, restoreBackup,
+} from './backup.js'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const pkg = JSON.parse(readFileSync(join(HERE, '..', 'package.json'), 'utf8'))
+export const STARTED_AT = new Date().toISOString()
 
 export const name = 'dsh-litkb'
 export const inject = ['webServer']
