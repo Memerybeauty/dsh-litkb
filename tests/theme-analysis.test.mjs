@@ -9,8 +9,15 @@ process.env.LITKB_LIBRARY = root
 const { PATHS, ensureLibrary, upsert } = await import('../lib/library.js')
 const { writeCard, readCard } = await import('../lib/cards.js')
 const { saveTheme } = await import('../lib/themes.js')
-const { analysisStats, createViewpointChain, extractPaperAnalysis, readAnalysis, saveAnalysis, synthesizeFacet } =
-  await import('../lib/theme-analysis.js')
+const {
+  analysisStats,
+  createViewpointChain,
+  extractPaperAnalysis,
+  pruneAnalysis,
+  readAnalysis,
+  saveAnalysis,
+  synthesizeFacet,
+} = await import('../lib/theme-analysis.js')
 ensureLibrary()
 
 const theme = saveTheme({
@@ -284,5 +291,49 @@ const truncCtx = {
 const split = await extractPaperAnalysis({ ctx: truncCtx, route, theme, record, facetKeys: ['f1', 'f2'] })
 assert.equal(split.facets.f1.summary, '逐条回退 f1')
 assert.equal(split.facets.f2.summary, '逐条回退 f2')
+
+/* ---------- 删除论文后动态清理矩阵/观点 ---------- */
+const pruned = pruneAnalysis(
+  {
+    stats: { papers: 2, relevant: 1, viewpoints: 2, gaps: 0 },
+    papers: {
+      'p-a': { paperId: 'p-a', facets: { f1: { relevance: 2 } } },
+      'p-b': { paperId: 'p-b', facets: { f1: { relevance: 0 } } },
+    },
+    facets: {
+      f1: {
+        relevantCount: 1,
+        viewpoints: [
+          {
+            id: 'v1',
+            statement: '共同观点',
+            papers: ['p-a', 'p-b'],
+            evidence: [
+              { paperId: 'p-a', evidenceId: 'q-aaaaaaaa' },
+              { paperId: 'p-b', evidenceId: 'q-bbbbbbbb' },
+            ],
+          },
+          {
+            id: 'v2',
+            statement: '只属于 b',
+            papers: ['p-b'],
+            evidence: [{ paperId: 'p-b', evidenceId: 'q-bbbbbbbb' }],
+          },
+        ],
+        gaps: [],
+      },
+    },
+  },
+  new Set(['p-a']),
+)
+assert.equal(pruned.changed, true)
+assert.deepEqual(Object.keys(pruned.analysis.papers), ['p-a'])
+assert.equal(pruned.analysis.facets.f1.viewpoints.length, 1)
+assert.deepEqual(pruned.analysis.facets.f1.viewpoints[0].papers, ['p-a'])
+assert.deepEqual(
+  pruned.analysis.facets.f1.viewpoints[0].evidence.map((item) => item.paperId),
+  ['p-a'],
+)
+assert.equal(pruned.analysis.stats.papers, 1)
 
 console.log('theme analysis tests passed')

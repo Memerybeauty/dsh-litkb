@@ -1,12 +1,14 @@
-# 内部业务 Agent：职责与协作设计
+# 内部业务模块收口：职责与协作设计
 
 > 状态：**待规划（Backlog），未排期**
 >
 > 目标版本：v0.17.0（待定）
 >
-> 当前基础：dsh-litkb v0.16.2，90 条路由，12 个 `lit_*` 工具
+> 当前基础：dsh-litkb v0.16.3，90 条路由，12 个 `lit_*` 工具
 >
-> 目标：把散落在 jobs / themes / chains / writing 里的业务逻辑，收拢成 4 个内容 Owner + 2 个横切能力 + 1 个编排器。
+> **2026-11-10 修订**：原叫「内部业务 Agent」。查代码后确认 12 个模型调用点全部是单次请求、没有一处需要自主决策，遂改名，并砍掉为 Agent 想象配套的编排器契约。改动清单见 §0.2。
+>
+> 目标：把散落在 jobs / themes / chains / writing 里的业务逻辑，收拢成 4 个内容 Owner + 2 个横切能力，**每个产物有唯一写入者**，并用一张 run 表解决失败定位。
 
 ---
 
@@ -17,10 +19,31 @@ Intake 收文 → Research 研究方向 → Evidence 证据 → Writing 写作
                          ↑
                     Review 质量门
 Answer 只读旁路
-Orchestrator 只调度，不判断内容
+路由 + run 记录 只记录，不判断内容
 ```
 
 **单进程、模块化单体**，不做微服务、不做独立 Agent 进程、不先上事件总线中间件。
+
+### 0.1 这不是 Agent 架构
+
+查过 v0.16.3 代码：14 个 `callModel()` 调用点、12 个业务能力，**全部是「拼输入 → 收文本 → 校验 / 降级」的单次请求，没有一处需要模型决定下一步做什么**（清单见附录 A）。
+
+那四个 Owner 也不是 Agent：没有对话循环，不自己决定顺序，本质是四个带唯一写入权的模块，加一张 run 记录表。
+
+所以本版改名，并把原方案里为「Agent」想象配套的那部分砍掉。
+
+### 0.2 2026-11-10 修订：砍掉了什么
+
+| 原文 | 处置 |
+|---|---|
+| 原 §3.1 Command、§3.2 Event、§3.4 Agent 返回、§3.5 错误码表、§3.6 幂等键 | **删除**。单进程里这些就是函数返回值，一次上五套信封只是负担 |
+| 原 §6 Orchestrator 的并发 / 超时 / 取消 / 重试矩阵 | **收缩**成一张 run 记录表，只解决「失败能定位到哪个 unit」 |
+| 原 §10.1 新增 4 个 API | **不做**，run 先只落文件 |
+| 原 §13 Phase 1（行为不变 + 140 项测试全过） | **不做**。没有任何人看得出区别的阶段 |
+| 原 §3.3 产物信封（`basis`） | **保留**，成为新的 §3.1 |
+| 原 §2.1 四个 Owner 的写入权 | **保留**。这是本方案唯一被验证有价值的部分 |
+
+**保留不动**：§4 四个 Owner 的职责与验收、§5 两个横切能力、§7 业务流程、§8 状态机、§9 数据布局、§11 失败与恢复、§12 测试与评测。
 
 ---
 
@@ -45,7 +68,7 @@ Orchestrator 只调度，不判断内容
 | 状态不一致 | 论文状态、精读任务、卡片任务、分析任务各有一套 |
 | 失败不可定位 | 只看到“某任务失败”，不知道哪个业务环节 |
 | 无法版本化 | prompt/schema 改了，旧产物没有失效标记 |
-| Agent 工具碎片化 | 12 个工具是能力，不是业务 Agent |
+| 工具与业务脱节 | 12 个 `lit_*` 工具是能力，不代表业务边界；谁有权写哪个产物没有定义 |
 
 ### 1.3 非目标
 
@@ -65,8 +88,8 @@ Orchestrator 只调度，不判断内容
 └──────────────────────┬─────────────────────────────┘
                        │ command
 ┌──────────────────────▼─────────────────────────────┐
-│                  Orchestrator                      │
-│  dispatch / run state / retry / cancel / confirm   │
+│                  路由 + Run 记录                   │
+│          只记录 command / status，不调度           │
 └───┬──────────┬──────────┬──────────┬───────────────┘
     │          │          │          │
 ┌───▼───┐ ┌────▼────┐ ┌───▼─────┐ ┌──▼─────┐
@@ -100,59 +123,22 @@ Orchestrator 只调度，不判断内容
 - **Review**：质量门，独立审核；不拥有内容，只产出 review report 和 verdict；
 - **Answer**：只读检索/问答/图谱；不写库。
 
-### 2.3 编排器
+### 2.3 路由与 run 记录
 
-- 只管命令、状态、队列、并发、超时、取消、重试、人工确认；
-- 不调用模型；
-- 不写业务产物；
-- 记录 run 与 event。
+- 只做三件事：调用 Owner、记一条 run、把状态给 UI；
+- 不调用模型、不写业务产物、不做内容判断；
+- **不管**并发 / 超时 / 取消 / 自动重试（沿用现有 job 的实现）；
+- 详见 §6。
 
 ---
 
-## 3. 通用契约
+## 3. 只保留两条契约
 
-### 3.1 Command
+原方案的 Command / Event / Agent 返回 / 错误码 / 幂等键五套信封全部删除。单进程里这些就是函数返回值，一次上全套等于同一个约定写三份。
 
-工作台只发命令：
+### 3.1 产物信封：schema / version / basis
 
-```json
-{
-  "command": "theme.analyze",
-  "runId": "run-20261110-abc123",
-  "actor": { "type": "user", "id": "local" },
-  "idempotencyKey": "theme:t-87b767e9:analyze:v1",
-  "payload": {
-    "themeId": "t-87b767e9",
-    "facetKeys": ["f1", "f2"],
-    "paperIds": []
-  },
-  "options": {
-    "dryRun": false,
-    "force": false,
-    "confirm": false
-  }
-}
-```
-
-### 3.2 Event
-
-```json
-{
-  "id": "evt-20261110-001",
-  "type": "theme.analysis.ready",
-  "at": "2026-11-10T07:10:00.000Z",
-  "runId": "run-20261110-abc123",
-  "subject": { "type": "theme", "id": "t-87b767e9" },
-  "payload": {
-    "analysisId": "t-87b767e9",
-    "stats": { "papers": 11, "relevant": 9, "viewpoints": 14, "gaps": 1 }
-  }
-}
-```
-
-### 3.3 Artifact envelope
-
-每个跨 Owner 的产物都要有：
+每个跨 Owner 的产物带：
 
 ```json
 {
@@ -160,7 +146,6 @@ Orchestrator 只调度，不判断内容
   "id": "t-87b767e9",
   "version": 3,
   "owner": "research",
-  "runId": "run-20261110-abc123",
   "createdAt": "2026-11-10T07:10:00.000Z",
   "basis": {
     "themeUpdatedAt": "2026-11-10T06:50:00.000Z",
@@ -171,63 +156,38 @@ Orchestrator 只调度，不判断内容
 }
 ```
 
-`basis` 任一变化 → 产物标记 stale。
+规则只有三条：
 
-### 3.4 Agent 返回
+- `basis` 任一字段变化 → 产物标 `stale`，**不删、不自动重算**；
+- 只有 Owner 能写自己的产物（§2.1）；
+- `version` 只增不减，用于 UI 判断新旧，不做版本协商。
 
-```json
-{
-  "ok": true,
-  "agentId": "research",
-  "runId": "run-20261110-abc123",
-  "artifacts": [
-    { "type": "theme-analysis", "id": "t-87b767e9", "version": 3 }
-  ],
-  "warnings": [],
-  "metrics": {
-    "units": 11,
-    "failed": 0,
-    "tokens": 120000,
-    "durationMs": 180000
-  }
-}
-```
+**`basis` 是优先项**：它同时被 [48 待规划](48_待规划.md) 的「分析 stale 标记」需要，是本方案里唯一应当先于架构落地的部分。
 
-### 3.5 错误
+### 3.2 run 记录：一张表
+
+每次操作落一条，存 `cache/agents/runs/`（不备份）：
 
 ```json
 {
-  "ok": false,
-  "agentId": "research",
-  "code": "truncated",
-  "message": "模型输出被截断（max-tokens），请重试",
-  "unit": { "paperId": "p-7336f3a9", "facetKey": "f1" },
-  "retryable": true
+  "id": "run-20261110-abc123",
+  "command": "theme.analyze",
+  "payload": { "themeId": "t-87b767e9", "facetKeys": ["f1", "f2"] },
+  "status": "partial",
+  "units": { "total": 66, "done": 65, "failed": 1 },
+  "error": { "code": "truncated", "unit": { "paperId": "p-7336f3a9", "facetKey": "f5" } },
+  "startedAt": "2026-11-10T07:00:00.000Z",
+  "endedAt": "2026-11-10T07:12:00.000Z"
 }
 ```
 
-错误码：
+状态：`queued → running → done / partial / failed / cancelled`。
 
-| code | 含义 | 处理 |
-|---|---|---|
-| `truncated` | 输出超预算 | 拆分/增大预算重试 |
-| `bad_json` | JSON 不合法 | 修复 prompt 重试一次 |
-| `no_model` | 无可用模型 | 立即失败，提示配置 |
-| `no_card` | 论文无七段卡 | 不重试，提示先补全 |
-| `no_evidence` | 观点无可锚定 q-id | 标记缺口，不重试 |
-| `rate_limit` | 限流 | 退避重试 |
-| `timeout` | 超时 | 重试一次 |
-| `cancelled` | 用户取消 | 保存已完成部分 |
+`error.code` 沿用现有分类，不新建枚举：`truncated`、`bad_json`、`no_model`、`no_llm`、`no_card`、`no_evidence`、`rate_limit`、`timeout`、`cancelled`。
 
-### 3.6 幂等键
+**这张表只解决一件事**：66 个单元里挂了哪一个。v0.16.1 / v0.16.3 修截断时最痛的就是说不清是哪篇的哪个 facet。
 
-```text
-paper.ingest:       paper:<paperId>:<fileHash>
-theme.analyze:      theme:<themeId>:<basisHash>
-viewpoint.chain:    theme:<themeId>:facet:<facetKey>:viewpoint:<fingerprint>
-summary.generate:   theme:<themeId>:<chainFingerprint>
-draft.save:         draft:<draftId>:<contentHash>
-```
+**这张表不做**：不做自动重试、不做重试矩阵、不做事件订阅、不做幂等键。重试由人点，或在原有 job 里就地重试。
 
 ---
 
@@ -683,103 +643,88 @@ graph.query     图谱查询
 
 ---
 
-## 6. Orchestrator：编排器
+## 6. 路由与 run 记录（原 Orchestrator）
 
 ### 职责
 
-- 接收 command；
-- 分派给 Owner；
-- 维护 run 状态；
-- 记录事件；
-- 控制并发/超时/取消/重试；
-- 执行人工确认策略。
+只有三条：
+
+1. 接到请求，调用对应的 Owner 模块；
+2. 记一条 run（§3.2），带失败单元；
+3. 把 run 状态交给 UI 显示进度。
 
 ### 不做什么
 
-- 不调模型；
-- 不写论文/分析/链/文稿；
-- 不做内容判断。
+- 不调模型（调用点都在各 Owner 内部，见附录 A）；
+- 不写业务产物；
+- 不做内容判断；
+- **不管并发 / 超时 / 取消**——沿用现有 job 的实现；
+- **不做自动重试矩阵**。
 
-### Run 状态
+### 为什么能砍到这么小
 
-```text
-queued → running → done
-                 → partial
-                 → failed
-                 → cancelled
-```
+原方案的重试矩阵（`truncated` 拆分重试、`rate_limit` 指数退避）听着完整，但实际上**已经各自实现过了**：
 
-### 重试矩阵
+- `generateCardSection`（`lib/cardgen.js:320`）——单段超预算就缩粒度重试；
+- 方向分析（`lib/theme-analysis.js:209`、`:353`）——截断后紧凑重试 + 逐篇回退。
 
-| 错误 | 自动重试 | 策略 |
-|---|---|---|
-| `truncated` | 是 | 拆分 unit / 增大预算 |
-| `bad_json` | 是 | 修复 prompt 一次 |
-| `rate_limit` | 是 | 指数退避 |
-| `timeout` | 是 | 一次 |
-| `no_model` | 否 | 提示配置 |
-| `no_card` | 否 | 提示补全 |
-| `no_evidence` | 否 | 标缺口 |
-| `cancelled` | 否 | 保存部分 |
+形态都是 `for` 循环里的 `try/catch`。再在编排器里造一套，等于同一策略两份实现、两处维护。
 
-### 取消
-
-- 检查 `cancelled` 在每个 unit 边界；
-- 已完成 unit 不回滚；
-- 产物保存 partial；
-- UI 显示“已停止”。
+**先把这些既有的就地重试抽成共用函数，比新造一个编排器划算。**
 
 ---
 
 ## 7. 业务流程
 
+> 下文图中的「路由」= §6 的路由 + run 记录，只记录不判断。
+
 ### 7.1 导入论文
 
 ```text
-UI → Orchestrator: paper.ingest
-Orchestrator → Intake
+UI → 路由: paper.ingest
+路由 → Intake
 Intake: 解析 → 卡片 → 精读 → 质量检查
-Intake → event: paper.ready
-Orchestrator: 若论文在某个主题中 → event: theme.analysis.stale
+Intake → 状态: paper.ready
+路由: 若论文在某个主题中 → 标记 theme.analysis stale
 UI: 进度条
 ```
 
 ### 7.2 方向分析
 
 ```text
-UI → Orchestrator: theme.analyze
-Orchestrator → Research
+UI → 路由: theme.analyze
+路由 → Research
 Research:
   plan
   per paper: analyze（fan-out，2–3 并行）
   per facet: viewpoints（fan-in）
   save analysis
-Research → event: theme.analysis.ready
-Orchestrator → Review: 分析质检（可选）
+Research → 状态: theme.analysis.ready
+路由 → Review: 分析质检（可选）
 UI: 矩阵/观点/缺口
 ```
 
 ### 7.3 观点建链
 
 ```text
-UI → Orchestrator: viewpoint.chain
-Orchestrator → Evidence
-Evidence: 校验 q-id → 生成 draft → event: chain.draft.created
-Orchestrator → Review: chain.audit
+UI → 路由: viewpoint.chain
+路由 → Evidence
+Evidence: 校验 q-id → 生成 draft → 状态: chain.draft.created
+路由 → Review: chain.audit
 Review → report
 UI: 人工确认
-Orchestrator → Evidence: chain.confirm
-Evidence → event: chain.confirmed
-Orchestrator → Writing: 标记结论 stale
+路由 → Evidence: chain.confirm
+Evidence → 状态: chain.confirmed
+路由 → Writing: 标记结论 stale
 ```
 
 ### 7.4 写作
 
 ```text
-UI → Orchestrator: summary.generate
-Orchestrator → Writing
-Writing: 读 confirmed → 生成 → event: draft.generated
-Orchestrator → Review: draft.audit
+UI → 路由: summary.generate
+路由 → Writing
+Writing: 读 confirmed → 生成 → 状态: draft.generated
+路由 → Review: draft.audit
 Review → report
 UI: 编辑/保存
 ```
@@ -787,8 +732,8 @@ UI: 编辑/保存
 ### 7.5 问答
 
 ```text
-UI → Orchestrator: question.ask
-Orchestrator → Answer
+UI → 路由: question.ask
+路由 → Answer
 Answer: 检索 → 回答 + citations
 ```
 
@@ -850,8 +795,7 @@ generated/edited → stale（链变化）
   drafts/
   cache/
     pages/
-    agents/runs/       # 运行记录（不备份）
-    agents/events/     # 事件日志（不备份）
+    agents/runs/       # run 记录（不备份）
 ```
 
 ### 9.2 代码
@@ -859,7 +803,7 @@ generated/edited → stale（链变化）
 ```text
 lib/agents/
   registry.js
-  orchestrator.js
+  runs.js            # run 记录
   intake/
     index.js
     profile.js
@@ -890,14 +834,21 @@ profiles/
 
 ### 9.3 路由
 
-路由只做：
+路由只做三件事：调 Owner、记 run、返回状态。
 
 ```js
-const run = orchestrator.dispatch(command, payload)
-json(res, 202, { run })
+const run = runs.start('theme.analyze', payload)
+try {
+  const result = await research.analyze(payload)   // 业务在 Owner 里
+  runs.finish(run, result)
+  json(res, 200, { ok: true, ...result })
+} catch (error) {
+  runs.fail(run, error)                            // 带 unit
+  json(res, 500, { ok: false, code: error.code, unit: error.unit })
+}
 ```
 
-不再直接调用业务函数。
+不再直接改 paper / chain / draft，也不在路由里拼业务逻辑。
 
 ---
 
@@ -905,18 +856,13 @@ json(res, 202, { run })
 
 ### 10.1 新 API
 
-| 方法 | 路径 | 说明 |
-|---|---|---|
-| GET | `/api/litkb/agents` | Agent 目录、职责、状态 |
-| GET | `/api/litkb/runs?id=` | 运行记录 |
-| POST | `/api/litkb/runs/cancel` | 取消运行 |
-| POST | `/api/litkb/runs/retry` | 重试失败单元 |
+**本版不加。** run 记录先只落文件，不做查询接口。等真的需要按 unit 重试时再加 `GET /api/litkb/runs` 和 `POST /api/litkb/runs/retry`。
 
-现有业务接口保留，内部改为 dispatch。
+现有业务接口保留，内部改为调用 Owner 模块。
 
 ### 10.2 UI
 
-- 关于/设置 →「内部 Agent」目录：4 Owner + Review + Answer；
+- 关于/设置 → 模块目录：**推后**，本版不做；
 - 任务条显示：当前 Agent、步骤、进度、取消；
 - 论文详情显示：由 Intake 生成；
 - 研究方向显示：由 Research 分析；
@@ -932,7 +878,7 @@ json(res, 202, { run })
 - 重试只重试失败 unit；
 - 取消保存部分；
 - 旧产物不删除，标 stale；
-- 失败原因落到 run/event，UI 可定位到 paperId/facetKey。
+- 失败原因落到 run 记录的 `unit`，能定位到 paperId/facetKey。
 
 ---
 
@@ -960,42 +906,38 @@ json(res, 202, { run })
 
 ---
 
-## 13. 迁移计划
+## 13. 迁移计划（修订）
 
-### Phase 0：文档与骨架
+### 前置：先做 48 的三件事
 
-- 本文档；
-- `agents/registry.js`、`orchestrator.js` 骨架；
-- 不改行为。
+[48 待规划](48_待规划.md) 给本方案设了启动条件，目前**不满足**：
 
-### Phase 1：Intake 收口
+| 项 | 现状 |
+|---|---|
+| 分析结果完整性 | 待观察 |
+| 分析 stale 标记 | 待规划 |
+| 观点指纹稳定 | 待规划 |
 
-- 20-jobs → Intake；
-- 路由 dispatch；
-- run/event 日志；
-- 行为、数据、UI 不变；
-- 验收：现有 140 项测试全过。
+这三件里，**stale 标记就是 §3.1 的 `basis`**。先把它做掉，既拿到产品价值，也验证了本方案唯一值得保留的机制。其余不动。
 
-### Phase 2：Research 收口
+### Phase A：写入权收口（行为不变）
 
-- themes + theme-analysis → Research；
-- 分析 stale；
-- 行为不变；
-- 验收：方向分析结果与 v0.16.1 一致。
+- `applyAutoStatus` 收进 Intake；`createViewpointChain` 收进 Evidence；
+- Writing 不再直接改 chain 状态；
+- 只改调用位置，不改产物、不改 UI；
+- 验收：140 项测试全过 + 手工跑一遍导入 / 分析 / 建链 / 写作。
 
-### Phase 3：Evidence + Review
+### Phase B：run 记录 + 失败定位
 
-- chains + createViewpointChain → Evidence；
-- Review 质量门；
-- 观点链、审核；
-- 验收：同一观点幂等、审核不串链。
+- 每次 job 写一条 run（§3.2）；
+- 失败带 `unit`（paperId / facetKey）；
+- 只加记录，不改流程；
+- 验收：故意让一篇论文或一个 facet 失败，能指到是哪篇哪个 facet。
 
-### Phase 4：Writing + Answer
+### Phase C：Review（可选，看 Phase B 的真实失败分布再定）
 
-- summary/outline/draft → Writing；
-- Answer 接入 registry；
-- Agent 目录 UI；
-- 验收：结论只读 confirmed，引用可追溯。
+- 先做质量门（`chain.audit` / `draft.audit`），不做第五个 Owner；
+- 验收：q-id 失效、引文不支持能被拦下。
 
 ---
 
@@ -1010,24 +952,63 @@ json(res, 202, { run })
 
 ### 待定
 
-1. Review 先做质量门，还是直接第五个 Owner？
+1. ~~Review 先做质量门，还是直接第五个 Owner？~~ **已定**：先做质量门，不作为第五个 Owner（§13 Phase C）。
 2. 论文 ready 后是否自动触发主题分析？（建议否，只标 stale）
 3. 观点是否自动生成 draft 链？（建议默认否）
 4. 论文分析并发数？（建议 2–3）
 5. CardProfile 是否开放 UI 配置？（建议先文件配置，稳定后 UI）
-6. runs/events 放 cache 还是备份？（建议 cache，不备份）
+6. ~~runs/events 放 cache 还是备份？~~ **已定**：`cache/agents/runs/`，不备份（§3.2）。
 
 ---
 
 ## 15. 验收清单
 
-- [ ] 4 个 Owner 有明确目录和 `run(command)`；
-- [ ] 路由不再直接调业务函数；
-- [ ] 每个产物有 owner/schema/version/basis；
-- [ ] 论文/主题/链变化能标 stale；
-- [ ] 单篇/单 facet 失败可重试；
-- [ ] 取消能停；
+### 本版范围（做完才算收口成功）
+
+- [ ] 4 个 Owner 有明确目录，每个产物有唯一写入者；
+- [ ] 路由不再直接改 paper / chain / draft；
+- [ ] 产物带 `schema / version / basis`，`basis` 变了能标 stale；
+- [ ] run 记录落盘，失败能指到 `paperId / facetKey`；
 - [ ] Review 不生成内容；
 - [ ] Writing 只读 confirmed；
-- [ ] Agent 目录 UI 可见；
-- [ ] 现有 140 项测试全过。
+- [ ] 现有 140 项测试全过；
+- [ ] 手工跑通：导入 → 分析 → 建链 → 审核 → 写作。
+
+### 推后（不做，写在这里防止被偷偷加回来）
+
+- [ ] Command / Event / Agent 返回 / 错误码 / 幂等键五套信封；
+- [ ] 自动重试矩阵；
+- [ ] `/api/litkb/agents`、`/runs`、`/runs/cancel`、`/runs/retry`；
+- [ ] 模块目录 UI；
+- [ ] Review 作为第五个 Owner。
+
+---
+
+## 附录 A：模型调用点清单
+
+> 依据 v0.16.3 代码实查：14 个 `callModel()` 调用点、12 个业务能力（七段卡占两行）。网关是 `lib/cardgen.js` 的 `callModel()`，模型路由由 `resolveRoute()` 决定：`LITKB_LLM_*` 环境变量 > `settings.llm` 的 fixed > 宿主 `agentDefaultModel`。
+
+| 阶段 | 能力 | 入口 | 调用点 | prompt |
+|---|---|---|---|---|
+| Intake | 七段卡 | `generateCard` | `lib/cardgen.js:279` | seven-sections.v2 |
+| Intake | 七段卡逐段补 | `generateCardSection` | `lib/cardgen.js:332` | seven-sections.v2 |
+| Intake | 精读 | `buildDeepRead` | `lib/deepread.js:257`（:260 重试） | deep-read.v1 |
+| Intake | 图谱抽取 | `analyzePaper` | `lib/graph.js:350` | graph-extract.v1 |
+| Intake | 图谱概念归一 | `modelMappings` | `lib/graph.js:157` | graph-normalize.v1 |
+| Intake | 翻译 | `translateBatch` | `lib/translate.js:169` | translate-zh.v1 |
+| Research | 研究方向拆分 facet | `/api/litkb/themes/suggest` | `src/server/75-apply-routes-themes.js:660` | 内联 |
+| Research | 逐篇 × 逐 facet 抽取 | `extractPaperAnalysis` | `lib/theme-analysis.js:179` | 内联 `EXTRACT_SYSTEM` |
+| Research | 逐 facet 观点综合 | `synthesizeFacet` | `lib/theme-analysis.js:372` | 内联 `EXTRACT_SYSTEM` |
+| Evidence | 观点 → claim 建议 | `suggestClaim` | `lib/chains.js:459` | chain-claim.v1 |
+| Writing | 文稿段落辅助 | `assistDraft` | `lib/drafts.js:315` | write-evidence.v1 |
+| 旁路 | 库内问答 | `answerQuestion` | `lib/answer.js:179` | chain-answer.v1 |
+| 旁路 | 划词追问 | `askPaper` | `lib/ask.js:213` | ask-page-cited.v1 |
+
+两条结论：
+
+1. **核心链上只有两个**：七段卡和方向分析。其余 10 个都可以失败，而且多数已经写了降级——问答降级为抽取式、图谱归一降级为字符串相似度、研究方向拆分降级为规则拆分。
+2. **两个最容易挂的地方都已就地重试**：`generateCardSection` 和方向分析都带「缩粒度重试」，也就是 v0.16.1 / v0.16.3 修的东西。这类重试在代码里是 `for` + `try/catch`，换成模型自主循环会立刻失去落点。
+
+这就是改名和砍编排器的依据。
+
+> 附注：`prompts/seven-sections.v1.md` 已无代码引用，只剩 v2 在用；`lib/index.js` 是 `scripts/build-server.mjs` 拼 `src/server/*.js` 的产物，改代码请改 `src/server/`。

@@ -384,6 +384,10 @@ const analysisHtml = JSON.stringify(
 assert.ok(analysisHtml.includes('方向分析'))
 assert.ok(analysisHtml.includes('坐标注意力提升位置敏感度'))
 assert.ok(analysisHtml.includes('生成观点链'))
+assert.ok(analysisHtml.includes('研究内容 × 论文'))
+assert.ok(analysisHtml.includes('P1'))
+assert.ok(analysisHtml.includes('✓'))
+assert.ok(analysisHtml.includes('显示全部论文'))
 assert.ok(analysisHtml.includes('一致'))
 
 console.log('  ✓ 卡片总览 / 空态')

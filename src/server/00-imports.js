@@ -41,7 +41,7 @@ import {
 } from './themes.js'
 import {
   analysisPapers, analysisStats, createViewpointChain, extractPaperAnalysis,
-  readAnalysis, saveAnalysis, synthesizeFacet,
+  pruneAnalysis, readAnalysis, saveAnalysis, synthesizeFacet,
 } from './theme-analysis.js'
 import { extractPdf } from './pdf.js'
 import { classify, matchTags } from './classify.js'

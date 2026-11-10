@@ -1,6 +1,6 @@
 /** 删除论文：影响面、二次确认、索引/卡片/解析/精读/链/研究清理。 */
 import assert from 'node:assert/strict'
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -75,6 +75,40 @@ writeFileSync(
   'utf8',
 )
 writeFileSync(join(PATHS.drafts, 'd-del0001.md'), `---\ntitle: 引用待删除论文\n---\n\n见 [q-del00001]。\n`, 'utf8')
+mkdirSync(join(PATHS.themes, 'analysis'), { recursive: true })
+writeFileSync(
+  join(PATHS.themes, 'analysis', 't-del0001.json'),
+  JSON.stringify(
+    {
+      version: 1,
+      themeId: 't-del0001',
+      papers: { [record.id]: { paperId: record.id, title: record.title, facets: { f1: { relevance: 3 } } } },
+      facets: {
+        f1: {
+          key: 'f1',
+          title: '待删除研究内容',
+          relevantCount: 1,
+          paperCount: 1,
+          viewpoints: [
+            {
+              id: 'v1',
+              statement: '待删除观点',
+              papers: [record.id],
+              evidence: [{ paperId: record.id, evidenceId: 'q-del00001' }],
+            },
+          ],
+          agreements: [],
+          disagreements: [],
+          gaps: [],
+        },
+      },
+      stats: { papers: 1, relevant: 1, viewpoints: 1, gaps: 0 },
+    },
+    null,
+    2,
+  ),
+  'utf8',
+)
 
 const server = await import('../lib/index.js')
 const routes = []
@@ -160,6 +194,9 @@ const theme = JSON.parse(readFileSync(join(PATHS.themes, 't-del0001.json'), 'utf
 assert.deepEqual(theme.papers.include, [])
 assert.deepEqual(theme.papers.lastMatch.papers, [])
 assert.ok(existsSync(join(PATHS.drafts, 'd-del0001.md')), '文稿保留，只提示缺失引用')
+const analysis = JSON.parse(readFileSync(join(PATHS.themes, 'analysis', 't-del0001.json'), 'utf8'))
+assert.deepEqual(analysis.papers, {})
+assert.equal(analysis.facets.f1.viewpoints.length, 0)
 
 /* ---------- 不存在 ---------- */
 const missing = await call('/api/litkb/delete', { method: 'POST', body: { id: 'p-missing', confirm: true } })

@@ -1,6 +1,6 @@
-# API 参考（v0.16.2）
+# API 参考（v0.16.3）
 
-所有接口前缀：`/api/litkb`；v0.16.2 共注册 **90** 条。请求/响应均为 JSON；PDF 上传为原始 body + `x-filename`；备份恢复为原始 zip body；错误统一为：
+所有接口前缀：`/api/litkb`；v0.16.3 共注册 **90** 条。请求/响应均为 JSON；PDF 上传为原始 body + `x-filename`；备份恢复为原始 zip body；错误统一为：
 
 ```json
 { "ok": false, "code": "error_code", "error": "人类可读信息" }

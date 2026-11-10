@@ -1,6 +1,6 @@
 {
   "name": "dsh-litkb",
-  "version": "0.16.2",
+  "version": "0.16.3",
   "private": false,
   "type": "module",
   "description": "文献工作台：个人工作台 + 论文库 + 写作",

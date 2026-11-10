@@ -153,7 +153,11 @@
     const wanted = Array.isArray(facetKeys) && facetKeys.length ? new Set(facetKeys) : null
     let facets = wanted ? enabled.filter((facet) => wanted.has(facet.key)) : enabled
     if (!facets.length) throw Object.assign(new Error('没有选中的细分描述'), { code: 'no_facets' })
-    const existingAnalysis = readAnalysis(themeId)
+    let existingAnalysis = readAnalysis(themeId)
+    if (existingAnalysis) {
+      const pruned = pruneAnalysis(existingAnalysis, new Set(readIndex().map((record) => record.id)))
+      if (pruned.changed) existingAnalysis = saveAnalysis(pruned.analysis)
+    }
     let records = []
     if (retryFailed) {
       if (!existingAnalysis) throw Object.assign(new Error('还没有方向分析，无法重试'), { code: 'no_analysis' })
@@ -212,7 +216,7 @@
       job.finishedAt = new Date().toISOString()
       return
     }
-    const analysis = readAnalysis(theme.id) || {
+    let analysis = readAnalysis(theme.id) || {
       version: 1,
       themeId: theme.id,
       runId: job.id,
@@ -221,6 +225,8 @@
       papers: {},
       facets: {},
     }
+    const pruned = pruneAnalysis(analysis, new Set(readIndex().map((record) => record.id)))
+    analysis = pruned.analysis
     analysis.runId = job.id
     analysis.at = new Date().toISOString()
     analysis.model = `${status.route.provider}/${status.route.model}`
@@ -299,7 +305,11 @@
         const id = queryParam(req, 'id')
         const theme = readTheme(id)
         if (!theme) { json(res, 404, { ok: false, error: '研究不存在' }); return }
-        const analysis = readAnalysis(theme.id)
+        let analysis = readAnalysis(theme.id)
+        if (analysis) {
+          const pruned = pruneAnalysis(analysis, new Set(readIndex().map((record) => record.id)))
+          if (pruned.changed) analysis = saveAnalysis(pruned.analysis)
+        }
         const job = lastAnalysisJob.get(theme.id) || null
         json(res, 200, {
           ok: true,
