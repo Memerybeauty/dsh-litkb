@@ -2,7 +2,7 @@
 
 > 装进 DeepSeek Harness 的本地文献知识库：收文 → 精读/七段卡 → 证据链 → 横向对比/图谱 → 可追溯问答 → 写作。
 
-**版本**：**0.16.1**
+**版本**：**0.16.2**
 **状态**：P0–P5 已交付，并完成产品化收口（上手引导 / 数据备份恢复 / 安装器 / 关于与诊断）；产品形态为**个人工作台 + 论文库 + 写作**三块。
 
 **代码仓库**：https://github.com/Memerybeauty/dsh-litkb（private）  
@@ -66,7 +66,7 @@
 - 数据目录：默认 `~/Documents/文献库`，可用 `LITKB_LIBRARY` 覆盖；
 - 安装：`npm run plugin:install -- --profile desktop`（默认安装本版本 tgz；开发模式加 `--link`），**完全重启 DSH**；
 - 前端缓存：重启后 `Cmd+Shift+R`；
-- 健康检查：`GET /api/litkb/health` 应显示 `0.16.1`；
+- 健康检查：`GET /api/litkb/health` 应显示 `0.16.2`；
 - 升级前：在「设置 → 文献工作台 → 数据与备份」下载整库备份；恢复前会自动快照当前库。
 
 ## 开发
@@ -75,7 +75,7 @@
 npm run build     # 从 src/ 生成 lib/
 npm test          # 140 项 / 39 个测试文件
 npm run verify    # check + lint + format:check + test
-npm pack          # 产出 dsh-litkb-0.16.1.tgz
+npm pack          # 产出 dsh-litkb-0.16.2.tgz
 ```
 
 目录：
@@ -113,7 +113,8 @@ docs/assets/ 截图与架构图
 | [入库自动管线](docs/44_入库自动管线.md) | 导入后自动解析 / 七段卡 / 精读：状态机、降级、补全、设置 |
 | [阅读状态自动标记](docs/45_阅读状态自动标记.md) | 七段卡→略读、精读→精读；手动优先与旧库迁移 |
 | [方向分析与观点链](docs/46_方向分析与观点链.md) | 全文方向审查、符合/不符合矩阵、观点聚类、一致/分歧、观点链 |
-| [内部业务 Agent 设计](docs/47_内部业务Agent设计.md) | 4 个内容 Owner + 审核质量门 + 编排器：职责、契约、流程、迁移 |
+| [内部业务 Agent 设计](docs/47_内部业务Agent设计.md) | 待规划：4 个内容 Owner + 审核质量门 + 编排器：职责、契约、流程、迁移 |
+| [待规划](docs/48_待规划.md) | 当前优先问题、Agent 架构、质量评测、启动条件 |
 | [正式交付说明](docs/27_正式交付说明.md) | 安装、验收步骤、已知边界、维护入口 |
 | [文档索引](docs/README.md) | 当前文档 / 历史文档边界 |
 | [API 参考](docs/28_API参考.md) | 90 条路由分组与关键请求/响应 |

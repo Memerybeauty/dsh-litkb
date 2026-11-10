@@ -351,6 +351,13 @@ const noAnalysisChain = await call('/api/litkb/themes/analysis/chain', {
 assert.equal(noAnalysisChain.code, 422)
 assert.equal(noAnalysisChain.data.code, 'no_analysis')
 
+const retryWithoutAnalysis = await call('/api/litkb/themes/analyze', {
+  method: 'POST',
+  body: { id: themeId, retryFailed: true },
+})
+assert.equal(retryWithoutAnalysis.code, 422)
+assert.equal(retryWithoutAnalysis.data.code, 'no_analysis')
+
 const deleted = await call('/api/litkb/themes/delete', { method: 'POST', body: { id: themeId } })
 assert.equal(deleted.code, 200)
 assert.ok(deleted.data.chainsKept >= 1)

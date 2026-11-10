@@ -12,11 +12,12 @@
       return ANALYSIS_STANCE[value] || ANALYSIS_STANCE.not_relevant
     }
 
-    function AnalysisView({ theme, analysis, job, busy, onStart, onStop, onChain }) {
+    function AnalysisView({ theme, analysis, job, busy, onStart, onStop, onRetry, onChain }) {
       const [selected, setSelected] = useState(null)
       const [openEvidence, setOpenEvidence] = useState({})
       const running = Boolean(job && ['queued', 'running'].includes(job.status))
       const facets = (theme.facets || []).filter((facet) => facet.enabled)
+      const missingFacets = analysis ? facets.filter((facet) => !analysis.facets?.[facet.key]) : []
       const papers = analysis ? Object.values(analysis.papers || {}).sort((a, b) => String(a.title).localeCompare(String(b.title))) : []
       const stats = analysis?.stats || { papers: 0, relevant: 0, viewpoints: 0, gaps: 0 }
       const selectedPaper = selected ? analysis?.papers?.[selected.paperId] : null
@@ -114,7 +115,8 @@
               h('div', { className: 'litkb-anFacetTitle' }, facet.title),
               h('div', { className: 'litkb-anFacetMeta' },
                 `${row?.relevantCount ?? 0} 篇涉及 · ${viewpoints.length} 个观点` +
-                (row?.disagreements?.length ? ` · ${row.disagreements.length} 处分歧` : ''))),
+                (row?.disagreements?.length ? ` · ${row.disagreements.length} 处分歧` : '') +
+                (row?.fallback ? ' · 已回退' : ''))),
             h('span', { className: 'litkb-anFacetKey' }, facet.key)),
           viewpoints.length
             ? viewpoints.map((viewpoint) => h('div', { key: viewpoint.id, className: 'litkb-anVp' },
@@ -152,6 +154,9 @@
                   : h('div', { className: 'litkb-anUnsupported' }, '这个观点还没有绑定 q-id 证据')))
             : h('div', { className: 'litkb-anGap' },
                 `空缺：${row?.gaps?.[0] || '还没有论文涉及这条研究内容'}`),
+          row?.fallback
+            ? h('div', { className: 'litkb-anGap' }, '观点综合被截断，已回退为逐篇观点，建议重试这条研究内容。')
+            : null,
           (row?.agreements || []).length
             ? h('div', { className: 'litkb-anCmp is-agree' }, h('b', null, '整体一致'), row.agreements.join('；'))
             : null,
@@ -168,6 +173,10 @@
               '逐篇全文审查：符合 / 部分符合 / 不符合，观点、一致与分歧。')),
           h('div', { className: 'litkb-anActions' },
             running ? h('button', { type: 'button', className: 'litkb-miniBtn', onClick: onStop }, '停止') : null,
+            !running && missingFacets.length
+              ? h('button', { type: 'button', className: 'litkb-miniBtn', onClick: onRetry },
+                  `重试失败项 ${missingFacets.length}`)
+              : null,
             h('button', {
               type: 'button', className: 'litkb-btn', disabled: running || busy,
               onClick: onStart,

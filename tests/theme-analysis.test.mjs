@@ -231,6 +231,30 @@ const supplement = createViewpointChain({ themeId: theme.id, facetKey: 'f1', vie
 assert.notEqual(supplement.id, chain.id, 'confirmed 后应生成补充草稿')
 assert.equal(supplement.provenance.previousChainId, chain.id)
 
+/* ---------- 观点综合截断：回退为逐篇观点 ---------- */
+const synthTruncCtx = {
+  get(name) {
+    if (name !== 'llm') return undefined
+    return {
+      stream() {
+        return (async function* () {
+          yield { type: 'finish', reason: { kind: 'max-tokens' } }
+        })()
+      },
+    }
+  },
+}
+const fallbackSynth = await synthesizeFacet({
+  ctx: synthTruncCtx,
+  route,
+  theme,
+  facet: theme.facets[0],
+  papers: [first, second],
+})
+assert.equal(fallbackSynth.fallback, true)
+assert.equal(fallbackSynth.viewpoints.length, 2)
+assert.ok(fallbackSynth.viewpoints.every((item) => item.papers.length === 1))
+
 /* ---------- 截断回退：逐条研究内容重跑 ---------- */
 let truncIndex = 0
 const truncResponses = [

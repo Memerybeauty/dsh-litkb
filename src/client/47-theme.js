@@ -752,15 +752,15 @@
           modal)
       }
 
-      const startAnalysis = async () => {
+      const startAnalysis = async (retryFailed = false) => {
         if (!selectedId) return
         setAnalysisBusy(true)
         setErr('')
         try {
-          const data = await post('/api/litkb/themes/analyze', { id: selectedId })
+          const data = await post('/api/litkb/themes/analyze', { id: selectedId, retryFailed })
           setAnalysisJob(data.job)
           setSection('analysis')
-          setNotice('方向分析已开始：逐篇审查全文')
+          setNotice(retryFailed ? '重试失败的研究内容' : '方向分析已开始：逐篇审查全文')
         } catch (e) {
           setAnalysisBusy(false)
           setErr(String(e.message || e))
@@ -1084,8 +1084,9 @@
                 analysis,
                 job: analysisJob,
                 busy: analysisBusy,
-                onStart: startAnalysis,
+                onStart: () => startAnalysis(false),
                 onStop: stopAnalysis,
+                onRetry: () => startAnalysis(true),
                 onChain: makeAnalysisChain,
               })
             : summaryView))
