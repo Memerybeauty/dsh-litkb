@@ -1,6 +1,6 @@
 {
   "name": "dsh-litkb",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "private": false,
   "type": "module",
   "description": "文献工作台：个人工作台 + 论文库 + 写作",
@@ -22,7 +22,8 @@
     "lint": "eslint .",
     "coverage": "c8 --reporter=text-summary --reporter=lcov --check-coverage --lines 70 --functions 65 --exclude 'tests/**' --exclude 'scripts/**' --exclude 'lib/client.js' npm test",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "eval": "node scripts/eval-quality.mjs"
   },
   "dsh": {
     "bundle": {
