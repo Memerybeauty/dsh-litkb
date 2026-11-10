@@ -182,6 +182,10 @@
   }
 
   async function runThemeAnalysisJob(job, { records, facets }) {
+    if (job.status === 'cancelled') {
+      job.finishedAt = new Date().toISOString()
+      return
+    }
     job.status = 'running'
     const theme = readTheme(job.themeId)
     if (!theme) {
