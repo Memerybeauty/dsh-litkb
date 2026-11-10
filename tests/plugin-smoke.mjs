@@ -18,7 +18,7 @@ server.apply({
   webServer: { register: (r) => routes.push(r) },
   logger: { info() {}, warn() {} },
 })
-assert.equal(routes.length, 84, 'eighty-four routes registered')
+assert.equal(routes.length, 85, 'eighty-five routes registered')
 const paths = routes.map((r) => r.path).sort()
 assert.deepEqual(paths, [
   '/api/litkb/ask',
@@ -75,6 +75,7 @@ assert.deepEqual(paths, [
   '/api/litkb/health',
   '/api/litkb/import',
   '/api/litkb/import/link',
+  '/api/litkb/ingest',
   '/api/litkb/maintenance',
   '/api/litkb/onboarding',
   '/api/litkb/page',

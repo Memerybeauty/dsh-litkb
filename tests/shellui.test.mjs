@@ -55,6 +55,7 @@ assert.ok(source.includes('.litkb-wbPage{position:relative}'), '抽屉必须相�
 assert.ok(source.includes('.litkb-body.is-graph{'), '图谱页必须有独立高度上下文')
 assert.ok(source.includes('.litkb-body.is-graph .litkb-graphPage{height:100%'), '图谱页需占满可用高度')
 assert.ok(source.includes('.litkb-moreList{') && source.includes('max-height:min(60vh,420px)'), '标签菜单需限高可滚动')
+assert.ok(source.includes('.litkb-ingestBar{'), '入库自动处理需要进度条样式')
 assert.ok(
   !source.includes('flex-direction:column;gap:12px;overflow:hidden;padding:18px 24px}'),
   '工作台页不能裁掉下拉菜单',

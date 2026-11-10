@@ -13,7 +13,7 @@ globalThis.window = {
 }
 const source = readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8').replace(
   "return { name: 'dsh-litkb', inject: ['slots'], apply }",
-  "return { name: 'dsh-litkb', inject: ['slots'], apply, __test: { OnboardingPanel, formatBytes, LitkbSettings } }",
+  "return { name: 'dsh-litkb', inject: ['slots'], apply, __test: { OnboardingPanel, formatBytes, LitkbSettings, ingestSummary } }",
 )
 vm.runInThisContext(source, { filename: 'lib/client.js' })
 
@@ -113,6 +113,8 @@ const settingsHtml = JSON.stringify(
   }),
 )
 assert.match(settingsHtml, /数据与备份/)
+assert.match(settingsHtml, /入库自动化/)
+assert.match(settingsHtml, /入库后自动完成原文解析、七段卡与精读/)
 assert.match(settingsHtml, /下载整库备份/)
 assert.match(settingsHtml, /从备份恢复/)
 assert.match(settingsHtml, /上手引导/)
@@ -120,13 +122,22 @@ assert.match(settingsHtml, /重新显示上手引导/)
 assert.match(settingsHtml, /关于/)
 assert.match(settingsHtml, /复制诊断信息/)
 
+assert.equal(
+  mod.__test.ingestSummary({
+    steps: { blocks: { status: 'done' }, card: { status: 'running' }, deepread: { status: 'queued' } },
+  }),
+  '原文解析 ✓ · 七段卡 … · 精读 ·',
+)
+
 const client = readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8')
 for (const text of [
   '/api/litkb/backup',
   '/api/litkb/restore?confirm=restore',
+  '/api/litkb/ingest',
   '下载整库备份',
   '从备份恢复',
   '复制诊断信息',
+  '正在自动处理',
 ]) {
   assert.ok(client.includes(text), `client 包含 ${text}`)
 }

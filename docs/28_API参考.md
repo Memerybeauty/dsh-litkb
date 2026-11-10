@@ -1,12 +1,12 @@
-# API 参考（v0.11.1）
+# API 参考（v0.12.0）
 
-所有接口前缀：`/api/litkb`；v0.11.1 共注册 **84** 条。请求/响应均为 JSON；PDF 上传为原始 body + `x-filename`；备份恢复为原始 zip body；错误统一为：
+所有接口前缀：`/api/litkb`；v0.12.0 共注册 **85** 条。请求/响应均为 JSON；PDF 上传为原始 body + `x-filename`；备份恢复为原始 zip body；错误统一为：
 
 ```json
 { "ok": false, "code": "error_code", "error": "人类可读信息" }
 ```
 
-## 产品化（v0.11.1）
+## 产品化（v0.12.0）
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
@@ -16,6 +16,18 @@
 | GET | `/diag` | 版本、模型、任务、运行时、库计数、最近快照 |
 
 恢复错误码：`confirm_required`(428)、`restore_busy`(409)、`too_large`(413)、`bad_zip`/`bad_entry`/`bad_manifest`/`no_data`(422)。
+
+## 入库自动管线（v0.12.0）
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/ingest` | 最近 20 条任务；`?id=` 查单篇，没有任务返回 `job:null` |
+| POST | `/ingest` | `{id}` 手动补全：已有解析/卡片/精读自动跳过 |
+| GET | `/diag` | 额外返回 `ingest`（最近 5 条） |
+
+导入响应（`POST /import`、`POST /import/link`）新增 `ingest` 字段；`autoIngest:false` 时为 `null`。
+
+任务状态：`queued → running → done | partial | failed`；`steps.blocks/card/deepread` 各有 `done / running / skipped / failed`。
 
 ## 库 / 健康
 

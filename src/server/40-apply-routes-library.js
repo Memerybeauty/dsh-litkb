@@ -466,6 +466,9 @@ export function apply(ctx) {
         const body = JSON.parse((await readBody(req, 32 * 1024)).toString('utf8'))
         const paddle = body.paddle || {}
         const patch = { paddle: {} }
+        if (typeof body.autoIngest === 'boolean') {
+          patch.autoIngest = body.autoIngest
+        }
         if (typeof paddle.token === 'string') {
           patch.paddle.token = paddle.token.trim()
         }
@@ -550,6 +553,35 @@ export function apply(ctx) {
           next: items.find((item) => !item.done)?.key || '',
           counts,
         })
+      } catch (error) {
+        json(res, 500, { ok: false, error: String(error?.message || error) })
+      }
+    },
+  })
+
+  // 入库自动管线：GET 查询任务 / POST 手动补全
+  webServer.register({
+    kind: 'exact',
+    path: '/api/litkb/ingest',
+    handler: async (req, res) => {
+      try {
+        if (req.method === 'GET') {
+          const id = queryParam(req, 'id')
+          if (id) {
+            json(res, 200, { ok: true, job: publicIngestJob(ingestJobs.get(id)) })
+            return
+          }
+          json(res, 200, { ok: true, jobs: listIngestJobs() })
+          return
+        }
+        const body = JSON.parse((await readBody(req, 16 * 1024)).toString('utf8') || '{}')
+        const record = readIndex().find((row) => row.id === String(body.id || ''))
+        if (!record) {
+          json(res, 404, { ok: false, error: '论文不存在' })
+          return
+        }
+        const job = startIngestJob(record)
+        json(res, 202, { ok: true, job: publicIngestJob(job) })
       } catch (error) {
         json(res, 500, { ok: false, error: String(error?.message || error) })
       }

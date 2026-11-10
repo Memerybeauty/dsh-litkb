@@ -32,6 +32,7 @@
       const [token, setToken] = useState('')
       const [model, setModel] = useState('PaddleOCR-VL-1.6')
       const [enabled, setEnabled] = useState(true)
+      const [autoIngest, setAutoIngest] = useState(true)
       const [saving, setSaving] = useState(false)
       const [restoring, setRestoring] = useState(false)
       const [restoreNote, setRestoreNote] = useState('')
@@ -50,6 +51,7 @@
           if (diag) setInfo(diag)
           setModel(data.settings?.paddle?.model || 'PaddleOCR-VL-1.6')
           setEnabled(data.settings?.paddle?.enabled !== false)
+          setAutoIngest(data.settings?.autoIngest !== false)
           setErr('')
         } catch (e) {
           setErr(String(e.message || e))
@@ -67,7 +69,7 @@
           if (token.trim()) paddle.token = token.trim()
           const data = await api('/api/litkb/settings', {
             method: 'POST', headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ paddle }),
+            body: JSON.stringify({ paddle, autoIngest }),
           })
           setSnapshot((prev) => ({ ...prev, settings: data.settings, llm: data.llm || prev?.llm }))
           setToken('')
@@ -174,6 +176,16 @@
             h('code', { className: 'litkb-settingsCode' }, settings.library || '—')),
           h('div', { className: 'litkb-settingsHint' },
             '修改库路径请设置环境变量 LITKB_LIBRARY 后重启 DSH；P4 暂不做运行中切库。')),
+        h('section', { className: 'litkb-settingsSection' },
+          h('div', { className: 'litkb-settingsTitle' }, '入库自动化'),
+          h('label', { className: 'litkb-settingsCheck' },
+            h('input', {
+              type: 'checkbox', checked: autoIngest,
+              onChange: (e) => setAutoIngest(e.target.checked),
+            }),
+            ' 入库后自动完成原文解析、七段卡与精读'),
+          h('div', { className: 'litkb-settingsHint' },
+            '后台串行执行：原文解析 → 七段卡 → 精读。没有可用模型时只完成原文解析，卡片与精读跳过；七段卡与精读会调用模型。')),
         h('section', { className: 'litkb-settingsSection' },
           h('div', { className: 'litkb-settingsTitle' }, '数据与备份'),
           h('div', { className: 'litkb-settingsHint' },
@@ -336,16 +348,18 @@
       const [guide, setGuide] = useState(null)
       const [guideHidden, setGuideHidden] = useState(() => guideStoredDismissed())
       const [guideForce, setGuideForce] = useState(false)
+      const [ingestJobs, setIngestJobs] = useState([])
       const fileRef = useRef(null)
       const splitRef = useRef(null)
 
       const load = useCallback(async () => {
         setLoading(true)
         try {
-          const [data, tagData, guideData] = await Promise.all([
+          const [data, tagData, guideData, ingestData] = await Promise.all([
             api('/api/litkb/papers'),
             api('/api/litkb/tags'),
             api('/api/litkb/onboarding').catch(() => null),
+            api('/api/litkb/ingest').catch(() => null),
           ])
           setPapers(data.papers || [])
           setStats(data.stats || {})
@@ -353,6 +367,7 @@
           setTags(tagData.tags || [])
           setTypes(tagData.types || [])
           if (guideData) setGuide(guideData)
+          if (ingestData) setIngestJobs(ingestData.jobs || [])
           setError('')
         } catch (err) {
           setError(String(err.message || err))
@@ -386,6 +401,45 @@
           window.removeEventListener('litkb:data', onData)
         }
       }, [load])
+
+      const startIngest = useCallback(async (paper) => {
+        if (!paper?.id) return
+        try {
+          const data = await api('/api/litkb/ingest', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ id: paper.id }),
+          })
+          if (data.job) {
+            setIngestJobs((prev) => [data.job, ...prev.filter((job) => job.id !== data.job.id)])
+            setToast({ kind: 'ok', title: '已加入自动处理', detail: paper.title || paper.id })
+          }
+        } catch (e) {
+          setToast({ kind: 'err', title: '启动自动处理失败', detail: String(e.message || e) })
+        }
+      }, [])
+
+      useEffect(() => {
+        if (!ingestJobs.some((job) => job.status === 'queued' || job.status === 'running')) return undefined
+        const timer = setTimeout(async () => {
+          const data = await api('/api/litkb/ingest').catch(() => null)
+          if (!data) return
+          const jobs = data.jobs || []
+          setIngestJobs(jobs)
+          if (!jobs.some((job) => job.status === 'queued' || job.status === 'running')) {
+            const latest = jobs[0]
+            await load()
+            if (latest) {
+              setToast({
+                kind: latest.status === 'done' ? 'ok' : 'warn',
+                title: latest.status === 'done' ? '自动处理完成' : '自动处理部分完成',
+                detail: `${latest.title || latest.paperId} · ${latest.step || ''}`,
+              })
+            }
+          }
+        }, 1200)
+        return () => clearTimeout(timer)
+      }, [ingestJobs, load])
 
       const refreshCard = useCallback(() => {
         setCardRevision((value) => value + 1)
@@ -482,7 +536,10 @@
             return { ...base, status: 'duplicate', paper: body.paper, reason: '文件已在库中，未重复入库' }
           }
           if (body.ok) {
-            return { ...base, status: 'added', paper: body.paper, warning: body.warning, reason: body.warningText || '' }
+            return {
+              ...base, status: 'added', paper: body.paper, warning: body.warning,
+              reason: body.warningText || '', ingest: body.ingest || null,
+            }
           }
           return { ...base, status: 'failed', code: body.code || 'server_error', reason: body.error || '导入失败' }
         } catch (e) {
@@ -510,17 +567,25 @@
         if (files.length === 1) {
           const it = items[0]
           if (it.status === 'added') {
-            setToast({ kind: it.warning ? 'warn' : 'ok', title: it.warning ? '已导入（质量偏低）' : '已导入', detail: it.paper?.title || it.name, action: 'open', paper: it.paper })
+            setToast({
+              kind: it.warning ? 'warn' : 'ok',
+              title: it.ingest ? '已导入，正在自动处理' : (it.warning ? '已导入（质量偏低）' : '已导入'),
+              detail: it.ingest
+                ? `${it.paper?.title || it.name} · 原文解析 → 七段卡 → 精读`
+                : (it.paper?.title || it.name),
+              action: 'open', paper: it.paper,
+            })
           } else if (it.status === 'duplicate') {
             setToast({ kind: 'warn', title: '已在库中', detail: `${it.paper?.title || it.name} · 未重复入库`, action: 'open', paper: it.paper })
           } else {
             setToast({ kind: 'err', title: '导入失败', detail: it.reason, action: 'results' })
           }
         } else {
+          const auto = items.filter((x) => x.ingest).length
           setToast({
             kind: failed ? 'err' : dup ? 'warn' : 'ok',
             title: `成功 ${added} · 重复 ${dup} · 失败 ${failed}`,
-            detail: failed ? '点「查看」看失败原因' : '',
+            detail: failed ? '点「查看」看失败原因' : (auto ? `${auto} 篇开始自动处理` : ''),
             action: 'results',
           })
         }
@@ -601,6 +666,8 @@
       const showList = !splitTab || !panelWidth || panelWidth >= 1260
       const narrow = splitTab && panelWidth > 0 && panelWidth < 980
       const reader = selected && shown.some((p) => p.id === selected.id) ? selected : null
+      const activeIngest = ingestJobs.filter((job) => job.status === 'queued' || job.status === 'running')
+      const currentIngest = activeIngest.find((job) => job.status === 'running') || activeIngest[0] || null
       const showRail = Boolean(reader) && !narrow
       const listView = h(PaperList, {
         papers: shown, loading, filter, onFilter: setFilter, filterCounts,
@@ -609,6 +676,7 @@
         onOpen: (paper) => { setSelected(paper); setManaging(false); setListDrawer(false) }, onImport: () => fileRef.current?.click(),
         onAutoChain: (paper) => setAutoChain({ paperId: paper.id, paperTitle: paper.title || '', reviewOnly: false }),
         onReview: () => setAutoChain({ paperId: '', paperTitle: '', reviewOnly: true }),
+        onIngest: startIngest,
         onManage: () => setManaging(true),
         toolbar: true,
         selectedId: reader?.id,
@@ -711,8 +779,10 @@
           if (data.paper) setSelected(data.paper)
           setToast({
             kind: data.duplicate ? 'warn' : (data.warning ? 'warn' : 'ok'),
-            title: data.duplicate ? '已在库中' : (data.warning ? '已导入（质量偏低）' : '已导入'),
-            detail: data.paper?.title || value,
+            title: data.duplicate ? '已在库中' : (data.ingest ? '已导入，正在自动处理' : (data.warning ? '已导入（质量偏低）' : '已导入')),
+            detail: data.ingest
+              ? `${data.paper?.title || value} · 原文解析 → 七段卡 → 精读`
+              : (data.paper?.title || value),
             action: 'open', paper: data.paper,
           })
         } catch (e) {
@@ -864,6 +934,26 @@
       },
         busy ? h('div', { className: 'litkb-progress' }, `正在解析 ${busy.done}/${busy.total} …`) : null,
         error ? h('div', { className: 'litkb-error' }, error) : null,
+        activeIngest.length && tab !== '写作'
+          ? h('div', { className: 'litkb-ingestBar', role: 'status' },
+              h('span', { className: 'litkb-pulse', 'aria-hidden': 'true' }),
+              h('div', { className: 'litkb-ingestMain' },
+                h('div', { className: 'litkb-ingestTitle' },
+                  `自动处理《${currentIngest.title || currentIngest.paperId}》`),
+                h('div', { className: 'litkb-ingestStage' },
+                  `${currentIngest.step || '排队中'} · ${ingestSummary(currentIngest)}`)),
+              activeIngest.length > 1
+                ? h('span', { className: 'litkb-ingestMore' }, `另 ${activeIngest.length - 1} 篇排队`)
+                : null,
+              h('span', { className: 'litkb-spacer' }),
+              h('button', {
+                type: 'button', className: 'litkb-miniBtn',
+                onClick: () => {
+                  const target = papers.find((paper) => paper.id === currentIngest.paperId)
+                  if (target) { setSelected(target); goLibrary() }
+                },
+              }, '查看'))
+          : null,
         h('div', { className: 'litkb-module' + (tab === '个人工作台' ? '' : ' is-hidden') },
           h(ThemePage, {
             papers,
@@ -1081,7 +1171,7 @@
           h('div', { className: 'litkb-skelLine is-tags' }))))
     }
 
-    function PaperList({ papers, loading, emptyText, emptyDesc, onOpen, onImport, onManage, onAutoChain, onReview, toolbar, selectedId, filter = '全部', onFilter, filterCounts = {} }) {
+    function PaperList({ papers, loading, emptyText, emptyDesc, onOpen, onImport, onManage, onAutoChain, onReview, onIngest, toolbar, selectedId, filter = '全部', onFilter, filterCounts = {} }) {
       const rows = papers.map((p) => {
         const status = p.status || '待读'
         const topics = p.topics || []
@@ -1109,8 +1199,13 @@
             topics.slice(0, 2).map((t) => h('span', { key: t, className: 'litkb-chip is-tag tone-' + tagTone(t) }, t)),
             topics.length > 2 ? h('span', { className: 'litkb-rowMore' }, `+${topics.length - 2}`) : null)),
         h('div', { className: 'litkb-rowRight' },
-          onAutoChain || onReview
+          onAutoChain || onReview || onIngest
             ? h('div', { className: 'litkb-rowActions' },
+                onIngest ? h('button', {
+                  type: 'button', className: 'litkb-rowAct',
+                  title: '自动完成原文解析、七段卡与精读',
+                  onClick: (event) => { event.stopPropagation(); onIngest(p) },
+                }, '补全') : null,
                 onAutoChain ? h('button', {
                   type: 'button', className: 'litkb-rowAct',
                   onClick: (event) => { event.stopPropagation(); onAutoChain(p) },

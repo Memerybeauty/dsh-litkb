@@ -266,6 +266,7 @@
           counts,
         },
         backup: backupDirInfo(),
+        ingest: listIngestJobs(5),
         time: new Date().toISOString(),
       })
     },
@@ -289,6 +290,7 @@
         }
         json(res, 200, {
           ok: true, paper: result.paper, sourceUrl: link.url,
+          ingest: publicIngestJob(maybeStartIngest(result.paper)),
           warning: result.quality < 0.4 ? 'low_quality' : undefined,
           warningText: result.quality < 0.4 ? '解析质量偏低，建议人工核对' : undefined,
         })

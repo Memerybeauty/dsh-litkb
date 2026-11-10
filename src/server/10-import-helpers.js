@@ -113,6 +113,7 @@ async function importPdf(req, res) {
     json(res, 200, {
       ok: true,
       paper: result.paper,
+      ingest: publicIngestJob(maybeStartIngest(result.paper)),
       warning: result.quality < 0.4 ? 'low_quality' : undefined,
       warningText: result.quality < 0.4 ? '解析质量偏低，建议人工核对' : undefined,
     })

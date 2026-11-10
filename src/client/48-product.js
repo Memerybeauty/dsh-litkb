@@ -90,3 +90,23 @@
           : null,
         h('div', { className: 'litkb-guideList' }, steps))
     }
+
+    /* ---------------- 产品化：入库自动管线状态 ---------------- */
+    const INGEST_STEPS = [
+      ['blocks', '原文解析'],
+      ['card', '七段卡'],
+      ['deepread', '精读'],
+    ]
+
+    function ingestMark(status) {
+      if (status === 'done') return '✓'
+      if (status === 'running') return '…'
+      if (status === 'failed') return '!'
+      if (status === 'skipped') return '–'
+      return '·'
+    }
+
+    function ingestSummary(job) {
+      if (!job?.steps) return ''
+      return INGEST_STEPS.map(([key, label]) => `${label} ${ingestMark(job.steps[key]?.status)}`).join(' · ')
+    }
