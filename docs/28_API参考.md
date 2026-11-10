@@ -1,12 +1,12 @@
-# API 参考（v0.12.0）
+# API 参考（v0.13.0）
 
-所有接口前缀：`/api/litkb`；v0.12.0 共注册 **85** 条。请求/响应均为 JSON；PDF 上传为原始 body + `x-filename`；备份恢复为原始 zip body；错误统一为：
+所有接口前缀：`/api/litkb`；v0.13.0 共注册 **86** 条。请求/响应均为 JSON；PDF 上传为原始 body + `x-filename`；备份恢复为原始 zip body；错误统一为：
 
 ```json
 { "ok": false, "code": "error_code", "error": "人类可读信息" }
 ```
 
-## 产品化（v0.12.0）
+## 产品化（v0.13.0）
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
@@ -17,7 +17,7 @@
 
 恢复错误码：`confirm_required`(428)、`restore_busy`(409)、`too_large`(413)、`bad_zip`/`bad_entry`/`bad_manifest`/`no_data`(422)。
 
-## 入库自动管线（v0.12.0）
+## 入库自动管线（v0.13.0）
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
@@ -28,6 +28,16 @@
 导入响应（`POST /import`、`POST /import/link`）新增 `ingest` 字段；`autoIngest:false` 时为 `null`。
 
 任务状态：`queued → running → done | partial | failed`；`steps.blocks/card/deepread` 各有 `done / running / skipped / failed`。
+
+## 删除论文（v0.13.0）
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/delete?id=` | 影响面：cards/blocks/deepread/translations/files/chains/chainsRemoved/chainsUpdated/themes/drafts |
+| POST | `/delete` | `{id, confirm:true}` 执行删除；缺少 confirm 返回 428；有解析/卡片/精读任务在跑返回 409 `busy` |
+
+删除范围：index、PDF、text、blocks、卡片 JSON/MD/历史版本、译文、精读、`concepts/papers`、`cache/pages/<id>/`。
+证据链：只引用该论文的链删除；跨论文链移除该论文节点后保留；研究 `papers.include/exclude/lastMatch` 同步移除。
 
 ## 库 / 健康
 

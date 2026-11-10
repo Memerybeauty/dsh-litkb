@@ -559,6 +559,58 @@ export function apply(ctx) {
     },
   })
 
+  // 删除论文：GET 影响面 / POST 执行（confirm=true）
+  webServer.register({
+    kind: 'exact',
+    path: '/api/litkb/delete',
+    handler: async (req, res) => {
+      try {
+        if (req.method === 'GET') {
+          const impact = paperDeleteImpact(queryParam(req, 'id'))
+          if (!impact) {
+            json(res, 404, { ok: false, error: '论文不存在' })
+            return
+          }
+          json(res, 200, { ok: true, ...impact })
+          return
+        }
+        const body = JSON.parse((await readBody(req, 16 * 1024)).toString('utf8') || '{}')
+        if (body.confirm !== true) {
+          json(res, 428, { ok: false, code: 'confirm_required', error: '删除论文需要 confirm=true' })
+          return
+        }
+        const id = String(body.id || '')
+        const active = (map) => {
+          const job = map.get(id)
+          return Boolean(job && (job.status === 'queued' || job.status === 'running'))
+        }
+        const autoRunning = [...autoChainJobs.values()].some(
+          (job) => (job.status === 'queued' || job.status === 'running') && (job.paperIds || []).includes(id),
+        )
+        if (active(ingestJobs) || active(jobs) || active(deepJobs) || active(blockJobs) || autoRunning) {
+          json(res, 409, {
+            ok: false,
+            code: 'busy',
+            error: '这篇论文正在自动处理 / 生成中，请等任务完成后再删除',
+          })
+          return
+        }
+        const result = deletePaper(id)
+        if (!result) {
+          json(res, 404, { ok: false, error: '论文不存在' })
+          return
+        }
+        ingestJobs.delete(id)
+        jobs.delete(id)
+        deepJobs.delete(id)
+        blockJobs.delete(id)
+        json(res, 200, { ok: true, ...result })
+      } catch (error) {
+        json(res, 500, { ok: false, error: String(error?.message || error) })
+      }
+    },
+  })
+
   // 入库自动管线：GET 查询任务 / POST 手动补全
   webServer.register({
     kind: 'exact',

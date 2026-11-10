@@ -134,6 +134,8 @@ for (const text of [
   '/api/litkb/backup',
   '/api/litkb/restore?confirm=restore',
   '/api/litkb/ingest',
+  '/api/litkb/delete',
+  '论文已删除',
   '下载整库备份',
   '从备份恢复',
   '复制诊断信息',

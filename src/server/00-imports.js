@@ -45,6 +45,7 @@ import {
   backupDirInfo, buildBackupZip, libraryInfo, MAX_RESTORE_BYTES, quickLibraryCounts,
   recoverInterruptedRestore, restoreBackup,
 } from './backup.js'
+import { deletePaper, paperDeleteImpact } from './paper-delete.js'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const pkg = JSON.parse(readFileSync(join(HERE, '..', 'package.json'), 'utf8'))
