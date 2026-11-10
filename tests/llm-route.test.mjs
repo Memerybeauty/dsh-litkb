@@ -53,7 +53,7 @@ assert.deepEqual(resolveRoute(hostCtx()), { provider: 'env-provider', model: 'en
 delete process.env.LITKB_LLM_PROVIDER
 delete process.env.LITKB_LLM_MODEL
 
-/* ---------- DeepSeek V4 不支持 off，映射为 low ---------- */
+/* ---------- DeepSeek V4 不支持 off，映射为 high ---------- */
 function streamCtx() {
   const captured = []
   return {
@@ -79,7 +79,7 @@ const first = streamCtx()
 await callModel(first.ctx, { provider: 'deepseek-official', model: 'deepseek-v4-pro' }, 's', 'u', null, {
   reasoningEffort: 'off',
 })
-assert.equal(first.captured[0].reasoningEffort, 'low')
+assert.equal(first.captured[0].reasoningEffort, 'high')
 
 const second = streamCtx()
 await callModel(second.ctx, { provider: 'deepseek-account', model: 'deepseek-flash' }, 's', 'u', null, {

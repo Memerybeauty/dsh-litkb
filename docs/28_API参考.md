@@ -1,12 +1,12 @@
-# API 参考（v0.14.0）
+# API 参考（v0.14.1）
 
-所有接口前缀：`/api/litkb`；v0.14.0 共注册 **86** 条。请求/响应均为 JSON；PDF 上传为原始 body + `x-filename`；备份恢复为原始 zip body；错误统一为：
+所有接口前缀：`/api/litkb`；v0.14.1 共注册 **86** 条。请求/响应均为 JSON；PDF 上传为原始 body + `x-filename`；备份恢复为原始 zip body；错误统一为：
 
 ```json
 { "ok": false, "code": "error_code", "error": "人类可读信息" }
 ```
 
-## 产品化（v0.14.0）
+## 产品化（v0.14.1）
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
@@ -17,7 +17,7 @@
 
 恢复错误码：`confirm_required`(428)、`restore_busy`(409)、`too_large`(413)、`bad_zip`/`bad_entry`/`bad_manifest`/`no_data`(422)。
 
-## 入库自动管线（v0.14.0）
+## 入库自动管线（v0.14.1）
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
@@ -29,7 +29,7 @@
 
 任务状态：`queued → running → done | partial | failed`；`steps.blocks/card/deepread` 各有 `done / running / skipped / failed`。
 
-## 删除论文（v0.14.0）
+## 删除论文（v0.14.1）
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
@@ -39,7 +39,7 @@
 删除范围：index、PDF、text、blocks、卡片 JSON/MD/历史版本、译文、精读、`concepts/papers`、`cache/pages/<id>/`。
 证据链：只引用该论文的链删除；跨论文链移除该论文节点后保留；研究 `papers.include/exclude/lastMatch` 同步移除。
 
-## 工作台模型（v0.14.0）
+## 工作台模型（v0.14.1）
 
 `GET /settings` 返回 `settings.llm`：
 
@@ -56,7 +56,7 @@
 - `mode=fixed`：七段卡/精读/翻译/检索答案/主题建链/图谱抽取全部走该路由；
 - `mode=host`：跟随 DSH 默认模型；
 - 环境变量 `LITKB_LLM_PROVIDER` / `LITKB_LLM_MODEL` 优先级最高；
-- DeepSeek V4 的 `reasoningEffort: off` 自动降为 `low`。
+- DeepSeek V4 的 `reasoningEffort: off` 自动升为 `high`。
 
 ## 库 / 健康
 

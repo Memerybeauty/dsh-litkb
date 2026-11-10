@@ -58,7 +58,7 @@ function fakeCtx(calls, script) {
 
 const record = { id: 'p-test', title: '测试论文', chars: 100, quality: 0.9, topics: [] }
 
-test('生成参数：关闭思考 + 8192 输出上限', async () => {
+test('生成参数：16384 输出上限（DeepSeek 高思考在 llm-route 覆盖）', async () => {
   const calls = []
   const ctx = fakeCtx(calls, [
     [
@@ -69,7 +69,7 @@ test('生成参数：关闭思考 + 8192 输出上限', async () => {
   const card = await generateCard({ ctx, record, pages })
   assert.equal(calls.length, 1)
   assert.equal(calls[0].reasoningEffort, 'off')
-  assert.equal(calls[0].maxTokens, 8192)
+  assert.equal(calls[0].maxTokens, 16384)
   assert.equal(card.promptVersion, 'seven-sections.v2')
 })
 
