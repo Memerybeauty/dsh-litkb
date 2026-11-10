@@ -767,6 +767,19 @@
         }
       }
 
+      const stopAnalysis = async () => {
+        if (!analysisJob?.id) return
+        setErr('')
+        try {
+          const data = await post('/api/litkb/themes/analysis/cancel', { id: analysisJob.id })
+          setAnalysisJob(data.job || null)
+          setAnalysisBusy(false)
+          setNotice('分析已停止')
+        } catch (e) {
+          setErr(String(e.message || e))
+        }
+      }
+
       const makeAnalysisChain = async (facetKey, viewpointId) => {
         if (!selectedId) return
         setErr('')
@@ -1072,6 +1085,7 @@
                 job: analysisJob,
                 busy: analysisBusy,
                 onStart: startAnalysis,
+                onStop: stopAnalysis,
                 onChain: makeAnalysisChain,
               })
             : summaryView))

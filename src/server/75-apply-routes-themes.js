@@ -248,8 +248,12 @@
     }
     analysis.stats = analysisStats(analysis)
     saveAnalysis(analysis)
-    job.status = Object.keys(analysis.papers).length ? 'done' : 'failed'
-    job.step = job.status === 'done' ? '完成' : '没有论文完成分析'
+    if (job.status !== 'cancelled') {
+      job.status = Object.keys(analysis.papers).length ? 'done' : 'failed'
+      job.step = job.status === 'done' ? '完成' : '没有论文完成分析'
+    } else {
+      job.step = '已取消'
+    }
     job.finishedAt = new Date().toISOString()
     lastAnalysisJob.set(theme.id, job)
   }
@@ -288,6 +292,26 @@
           stats: analysisStats(analysis),
           job: publicAnalysisJob(job),
         })
+      } catch (error) {
+        json(res, 500, { ok: false, error: String(error?.message || error) })
+      }
+    },
+  })
+
+  webServer.register({
+    kind: 'exact',
+    path: '/api/litkb/themes/analysis/cancel',
+    handler: async (req, res) => {
+      try {
+        const body = JSON.parse((await readBody(req, 16 * 1024)).toString('utf8') || '{}')
+        const job = analysisJobs.get(String(body.id || ''))
+        if (!job) { json(res, 404, { ok: false, error: '分析任务不存在' }); return }
+        if (job.status === 'queued' || job.status === 'running') {
+          job.status = 'cancelled'
+          job.step = '已取消'
+          job.finishedAt = new Date().toISOString()
+        }
+        json(res, 200, { ok: true, job: publicAnalysisJob(job) })
       } catch (error) {
         json(res, 500, { ok: false, error: String(error?.message || error) })
       }

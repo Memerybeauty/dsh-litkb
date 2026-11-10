@@ -1139,6 +1139,7 @@
       '.litkb-statHint{margin-left:auto;font-size:11px;color:var(--litkb-text-3);white-space:nowrap}',
       '.litkb-anPage{display:flex;flex-direction:column;gap:14px;min-width:0}',
       '.litkb-anHead{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}',
+      '.litkb-anActions{display:flex;align-items:center;gap:6px;flex:none}',
       '.litkb-anIntro{margin-top:4px;max-width:760px;font-size:12px;line-height:1.6;color:var(--litkb-text-3)}',
       '.litkb-anStats{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:12px;color:var(--litkb-text-2)}',
       '.litkb-anProgress{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px solid var(--litkb-border);border-radius:10px;background:var(--litkb-fill-1)}',

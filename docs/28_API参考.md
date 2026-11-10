@@ -1,6 +1,6 @@
-# API 参考（v0.16.0）
+# API 参考（v0.16.1）
 
-所有接口前缀：`/api/litkb`；v0.16.0 共注册 **89** 条。请求/响应均为 JSON；PDF 上传为原始 body + `x-filename`；备份恢复为原始 zip body；错误统一为：
+所有接口前缀：`/api/litkb`；v0.16.1 共注册 **90** 条。请求/响应均为 JSON；PDF 上传为原始 body + `x-filename`；备份恢复为原始 zip body；错误统一为：
 
 ```json
 { "ok": false, "code": "error_code", "error": "人类可读信息" }
@@ -65,6 +65,7 @@
 | POST | `/themes/analyze` | 启动方向分析；body `{id, paperIds?, facetKeys?}` |
 | GET | `/themes/analysis?id=` | 读取分析结果 + 最近任务；无结果时 `analysis:null` |
 | POST | `/themes/analysis/chain` | 观点生成草稿链；body `{id, facetKey, viewpointId}` |
+| POST | `/themes/analysis/cancel` | 停止分析任务；body `{id}`（任务 id） |
 
 分析结果：
 

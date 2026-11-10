@@ -12,7 +12,7 @@
       return ANALYSIS_STANCE[value] || ANALYSIS_STANCE.not_relevant
     }
 
-    function AnalysisView({ theme, analysis, job, busy, onStart, onChain }) {
+    function AnalysisView({ theme, analysis, job, busy, onStart, onStop, onChain }) {
       const [selected, setSelected] = useState(null)
       const [openEvidence, setOpenEvidence] = useState({})
       const running = Boolean(job && ['queued', 'running'].includes(job.status))
@@ -41,10 +41,12 @@
               h('div', { className: 'litkb-colTitle' }, '方向分析'),
               h('div', { className: 'litkb-anIntro' },
                 '对进入这个研究方向的每篇论文做全文审查：哪些内容符合、哪些不符合，每篇论文是什么观点，再归纳观点之间的一致与分歧。')),
-            h('button', {
-              type: 'button', className: 'litkb-btn', disabled: running || busy,
-              onClick: onStart,
-            }, running ? '分析中…' : '开始分析')),
+            h('div', { className: 'litkb-anActions' },
+              running ? h('button', { type: 'button', className: 'litkb-miniBtn', onClick: onStop }, '停止') : null,
+              h('button', {
+                type: 'button', className: 'litkb-btn', disabled: running || busy,
+                onClick: onStart,
+              }, running ? '分析中…' : '开始分析'))),
           progress,
           h('div', { className: 'litkb-anEmpty' },
             h('div', { className: 'litkb-anEmptyTitle' }, '还没有方向分析'),
@@ -164,10 +166,12 @@
             h('div', { className: 'litkb-colTitle' }, '方向分析'),
             h('div', { className: 'litkb-anIntro' },
               '逐篇全文审查：符合 / 部分符合 / 不符合，观点、一致与分歧。')),
-          h('button', {
-            type: 'button', className: 'litkb-btn', disabled: running || busy,
-            onClick: onStart,
-          }, running ? '分析中…' : '重新分析')),
+          h('div', { className: 'litkb-anActions' },
+            running ? h('button', { type: 'button', className: 'litkb-miniBtn', onClick: onStop }, '停止') : null,
+            h('button', {
+              type: 'button', className: 'litkb-btn', disabled: running || busy,
+              onClick: onStart,
+            }, running ? '分析中…' : '重新分析'))),
         progress,
         h('div', { className: 'litkb-anStats' },
           h('span', null, `${stats.papers} 篇已分析`),

@@ -231,4 +231,34 @@ const supplement = createViewpointChain({ themeId: theme.id, facetKey: 'f1', vie
 assert.notEqual(supplement.id, chain.id, 'confirmed 后应生成补充草稿')
 assert.equal(supplement.provenance.previousChainId, chain.id)
 
+/* ---------- 截断回退：逐条研究内容重跑 ---------- */
+let truncIndex = 0
+const truncResponses = [
+  null,
+  JSON.stringify({ facets: { f1: { relevance: 2, stance: 'supports', summary: '逐条回退 f1', claims: [] } } }),
+  JSON.stringify({ facets: { f2: { relevance: 1, stance: 'mentions', summary: '逐条回退 f2', claims: [] } } }),
+]
+const truncCtx = {
+  get(name) {
+    if (name !== 'llm') return undefined
+    return {
+      stream() {
+        const response = truncResponses[Math.min(truncIndex, truncResponses.length - 1)]
+        truncIndex += 1
+        return (async function* () {
+          if (!response) {
+            yield { type: 'finish', reason: { kind: 'max-tokens' } }
+            return
+          }
+          yield { type: 'text-delta', text: response }
+          yield { type: 'finish', reason: { kind: 'stop' } }
+        })()
+      },
+    }
+  },
+}
+const split = await extractPaperAnalysis({ ctx: truncCtx, route, theme, record, facetKeys: ['f1', 'f2'] })
+assert.equal(split.facets.f1.summary, '逐条回退 f1')
+assert.equal(split.facets.f2.summary, '逐条回退 f2')
+
 console.log('theme analysis tests passed')
