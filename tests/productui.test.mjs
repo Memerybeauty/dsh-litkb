@@ -115,6 +115,8 @@ const settingsHtml = JSON.stringify(
 assert.match(settingsHtml, /数据与备份/)
 assert.match(settingsHtml, /入库自动化/)
 assert.match(settingsHtml, /入库后自动完成原文解析、七段卡与精读/)
+assert.match(settingsHtml, /固定使用 DeepSeek/)
+assert.match(settingsHtml, /DeepSeek 模型/)
 assert.match(settingsHtml, /下载整库备份/)
 assert.match(settingsHtml, /从备份恢复/)
 assert.match(settingsHtml, /上手引导/)

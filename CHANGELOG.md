@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.14.0 — 工作台固定 DeepSeek 模型（2026-11-10）
+
+- 设置新增「文献工作台固定使用 DeepSeek」：七段卡、精读、翻译、检索答案、主题建链、图谱抽取全部走固定 provider，不跟随聊天默认模型；
+- 可选 `deepseek-v4-pro`（质量优先）/ `deepseek-flash`（速度优先）；密钥仍存 DSH 凭据库 `DEEPSEEK_API_KEY`；
+- `resolveRoute` 优先级：环境变量 > 工作台固定模型 > 宿主默认；默认跟随宿主，避免无密钥环境被强绑；
+- DeepSeek V4 不支持 `reasoningEffort: off`，统一映射为 `low`，避免 structured JSON 调用报 unsupported effort；
+- 当前库 `settings.json` 已固定为 `deepseek-official / deepseek-v4-pro`；
+- 新增 `tests/llm-route.test.mjs`；设置页可随时切回「跟随宿主」。
+
 ## v0.13.0 — 删除论文（2026-11-10）
 
 - 论文详情头部新增「删除」：先查影响面（卡片/解析稿/精读/译文/文件/链/研究/文稿引用），确认后再输入「删除」二次确认；

@@ -2,7 +2,13 @@
  * 七段卡生成：模型参数与截断重试（不联网）。
  */
 import assert from 'node:assert/strict'
-import { applySection, generateCard, generateCardSection } from '../lib/cardgen.js'
+import { mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
+// 隔离用户库的 settings.json：固定模型配置会让 resolveRoute 覆盖 fake ctx。
+process.env.LITKB_LIBRARY = mkdtempSync(join(tmpdir(), 'dsh-litkb-cardgen-'))
+const { applySection, generateCard, generateCardSection } = await import('../lib/cardgen.js')
 
 let passed = 0
 const pending = []

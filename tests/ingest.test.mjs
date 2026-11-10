@@ -115,6 +115,15 @@ assert.equal(saved.data.settings.autoIngest, false)
 settings = await call('/api/litkb/settings')
 assert.equal(settings.data.settings.autoIngest, false)
 
+/* ---------- 固定模型写入 ---------- */
+const llmSaved = await call('/api/litkb/settings', {
+  method: 'POST',
+  body: { llm: { mode: 'fixed', provider: 'deepseek-official', model: 'deepseek-flash' } },
+})
+assert.equal(llmSaved.code, 200)
+assert.equal(llmSaved.data.settings.llm.mode, 'fixed')
+assert.equal(llmSaved.data.settings.llm.model, 'deepseek-flash')
+
 /* ---------- 不存在论文 ---------- */
 const notFound = await call('/api/litkb/ingest', { method: 'POST', body: { id: 'p-missing' } })
 assert.equal(notFound.code, 404)

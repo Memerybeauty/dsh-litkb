@@ -33,6 +33,8 @@
       const [model, setModel] = useState('PaddleOCR-VL-1.6')
       const [enabled, setEnabled] = useState(true)
       const [autoIngest, setAutoIngest] = useState(true)
+      const [llmFixed, setLlmFixed] = useState(false)
+      const [llmModel, setLlmModel] = useState('deepseek-v4-pro')
       const [saving, setSaving] = useState(false)
       const [restoring, setRestoring] = useState(false)
       const [restoreNote, setRestoreNote] = useState('')
@@ -52,6 +54,8 @@
           setModel(data.settings?.paddle?.model || 'PaddleOCR-VL-1.6')
           setEnabled(data.settings?.paddle?.enabled !== false)
           setAutoIngest(data.settings?.autoIngest !== false)
+          setLlmFixed(data.settings?.llm?.mode === 'fixed')
+          setLlmModel(data.settings?.llm?.model || 'deepseek-v4-pro')
           setErr('')
         } catch (e) {
           setErr(String(e.message || e))
@@ -69,7 +73,11 @@
           if (token.trim()) paddle.token = token.trim()
           const data = await api('/api/litkb/settings', {
             method: 'POST', headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ paddle, autoIngest }),
+            body: JSON.stringify({
+              paddle,
+              autoIngest,
+              llm: { mode: llmFixed ? 'fixed' : 'host', provider: 'deepseek-official', model: llmModel },
+            }),
           })
           setSnapshot((prev) => ({ ...prev, settings: data.settings, llm: data.llm || prev?.llm }))
           setToken('')
@@ -250,8 +258,22 @@
             h('span', { className: 'litkb-settingsLabel' }, '当前模型'),
             h('span', { className: 'litkb-settingsValue' },
               route ? `${route.provider} / ${route.model}` : (llm.available ? '宿主未选择默认模型' : '宿主未提供模型服务'))),
+          h('label', { className: 'litkb-settingsCheck' },
+            h('input', {
+              type: 'checkbox', checked: llmFixed,
+              onChange: (e) => setLlmFixed(e.target.checked),
+            }),
+            ' 文献工作台固定使用 DeepSeek（本插件全部模型调用）'),
+          h('div', { className: 'litkb-settingsRow' },
+            h('span', { className: 'litkb-settingsLabel' }, 'DeepSeek 模型'),
+            h('select', {
+              className: 'litkb-input', value: llmModel, disabled: !llmFixed,
+              onChange: (e) => setLlmModel(e.target.value),
+            },
+              h('option', { value: 'deepseek-v4-pro' }, 'DeepSeek V4 Pro（质量优先）'),
+              h('option', { value: 'deepseek-flash' }, 'DeepSeek V4.1 Flash（速度优先）'))),
           h('div', { className: 'litkb-settingsHint' },
-            '分类、七段卡、翻译、追问都走宿主默认模型；在 DSH「设置 → 模型」里更换。')),
+            '固定后七段卡、精读、翻译、检索答案、主题建链、图谱抽取都走 DeepSeek，密钥存 DSH 凭据库；取消固定则跟随 DSH 默认模型。')),
         h('section', { className: 'litkb-settingsSection' },
           h('div', { className: 'litkb-settingsTitle' }, '维护'),
           h('div', { className: 'litkb-settingsHint' },
