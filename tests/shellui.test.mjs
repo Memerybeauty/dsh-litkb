@@ -52,6 +52,13 @@ assert.ok(source.includes('--litkb-text-3:color-mix'), 'text-3 必须定义')
 assert.ok(source.includes('.litkb-theme-light{'), '必须有显式浅色主题类')
 assert.ok(source.includes('.litkb-theme-dark{'), '必须有显式深色主题类')
 assert.ok(source.includes('.litkb-wbPage{position:relative}'), '抽屉必须相对工作台页定位')
+assert.ok(source.includes('.litkb-body.is-graph{'), '图谱页必须有独立高度上下文')
+assert.ok(source.includes('.litkb-body.is-graph .litkb-graphPage{height:100%'), '图谱页需占满可用高度')
+assert.ok(source.includes('.litkb-moreList{') && source.includes('max-height:min(60vh,420px)'), '标签菜单需限高可滚动')
+assert.ok(
+  !source.includes('flex-direction:column;gap:12px;overflow:hidden;padding:18px 24px}'),
+  '工作台页不能裁掉下拉菜单',
+)
 assert.ok(source.includes('.litkb-chainRel.litkb-input'), '关系下拉宽度不能被 .litkb-input 覆盖')
 assert.ok(source.includes('.litkb-chainCheck{width:14px'), '复选框类名不能撞添加证据面板')
 assert.ok(source.includes('onClick: () => buildFromSelection(selHint)'), '解析页选区建链必须走证据优先')

@@ -858,7 +858,10 @@
               h('option', { value: '' }, '选择论文'),
               shown.map((p) => h('option', { key: p.id, value: p.id }, p.title || p.id)))
             : null)),
-      h('main', { className: 'litkb-body' + (splitTab ? ' is-split' : '') + (tab === '写作' ? ' is-writing' : '') },
+      h('main', {
+        className: 'litkb-body' + (splitTab ? ' is-split' : '') + (tab === '写作' ? ' is-writing' : '')
+          + (tab === '论文库' && libraryView === '图谱' ? ' is-graph' : ''),
+      },
         busy ? h('div', { className: 'litkb-progress' }, `正在解析 ${busy.done}/${busy.total} …`) : null,
         error ? h('div', { className: 'litkb-error' }, error) : null,
         h('div', { className: 'litkb-module' + (tab === '个人工作台' ? '' : ' is-hidden') },
