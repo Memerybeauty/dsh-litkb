@@ -847,7 +847,7 @@
       const [active, setActive] = useState('')
       const [showHeaders, setShowHeaders] = useState(false)
       const [byPara, setByPara] = useState(true)
-      const [showPage, setShowPage] = useState(!flat)
+      const [showPage] = useState(!flat)
       const [selHint, setSelHint] = useState(null)
 
       const load = useCallback(async () => {

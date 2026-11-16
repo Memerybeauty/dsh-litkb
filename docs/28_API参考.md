@@ -1,10 +1,25 @@
-# API 参考（v0.18.2）
+# API 参考（v0.19.0）
 
-所有接口前缀：`/api/litkb`；v0.17.2 共注册 **91** 条。请求/响应均为 JSON；PDF 上传为原始 body + `x-filename`；备份恢复为原始 zip body；错误统一为：
+所有接口前缀：`/api/litkb`；v0.19.0 共注册 **91** 条。请求/响应均为 JSON；PDF 上传为原始 body + `x-filename`；备份恢复为原始 zip body；错误统一为：
 
 ```json
 { "ok": false, "code": "error_code", "error": "人类可读信息" }
 ```
+
+## 实现位置（v0.19.0）
+
+91 条路由按域拆在 `src/server/` 下，`90-apply.js` 只做装配；改某一域只动对应文件，单个域装配失败不影响插件启动。
+
+| 文件 | 负责的接口 |
+|---|---|
+| `40-routes-library.js` | `/health` `/papers` `/card*` `/tags` `/tags/create` `/tags/delete` `/reclassify` `/pdf` `/blocks*` `/page` `/settings` `/maintenance` `/onboarding` `/delete` `/ingest` `/backup` `/restore` `/glossary` `/evidence/*` `/translate` |
+| `50-routes-graph.js` | `/graph*` `/concepts*` `/compare` `/ask` `/export` |
+| `60-routes-deepread.js` | `/deepread*` |
+| `70-routes-chains.js` | `/chains*`、`/vendor/cytoscape.js` |
+| `75-routes-themes.js` | `/themes*`（含 `/themes/analysis*`、`/themes/review`、`/themes/summary`、`/themes/outline`） |
+| `80-routes-writing.js` | `/drafts*` `/search*` `/evidence/search` `/import*` `/update` `/diag` |
+
+支撑层：`05-http.js`（JSON 响应 / 请求体 / 错误码 / `createRouter`）、`10-library-service.js`（导入管线、标签、状态）、`20-jobs.js`（任务队列）。详见 [49 解耦与模块边界](49_解耦与模块边界.md)。
 
 ## 产品化（v0.16.0）
 

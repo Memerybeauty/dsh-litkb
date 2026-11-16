@@ -192,9 +192,6 @@ function registerWritingRoutes({ route }) {
     })
   })
 
-  route('/api/litkb/tags/create', createTag)
-  route('/api/litkb/tags/delete', deleteTag)
-  route('/api/litkb/reclassify', reclassify)
   route('/api/litkb/import', importPdf)
   route('/api/litkb/import/link', async (req, res) => {
     try {

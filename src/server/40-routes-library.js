@@ -20,6 +20,11 @@ function registerLibraryRoutes({ route }) {
     json(res, 405, { ok: false, error: 'method not allowed' })
   })
 
+  // 旧入口：保留 /tags/create 与 /tags/delete，新代码用 GET/POST /tags
+  route('/api/litkb/tags/create', createTag)
+  route('/api/litkb/tags/delete', deleteTag)
+  route('/api/litkb/reclassify', reclassify)
+
   // 读卡片：卡片本体 + 生成任务 + 模型可用性（前端据此决定按钮是否可点）
   route('/api/litkb/card', async (req, res) => {
     const id = queryParam(req, 'id')
