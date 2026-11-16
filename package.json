@@ -25,12 +25,13 @@
     "coverage": "c8 --reporter=text-summary --reporter=lcov --check-coverage --lines 70 --functions 65 --branches 55 --exclude 'tests/**' --exclude 'scripts/**' --exclude 'lib/client.js' npm test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "verify": "npm run check && npm run check:boundaries && npm run lint && npm run format:check && npm run version:check && npm run pack:check && npm test",
+    "verify": "npm run check && npm run check:boundaries && npm run check:routes && npm run lint && npm run format:check && npm run version:check && npm run pack:check && npm test",
     "plugin:install": "node scripts/install.mjs",
     "version:check": "node scripts/check-version.mjs",
     "eval": "node scripts/eval-quality.mjs",
     "check:boundaries": "node scripts/check-client-boundaries.mjs",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "check:routes": "node scripts/check-routes.mjs"
   },
   "dsh": {
     "bundle": {

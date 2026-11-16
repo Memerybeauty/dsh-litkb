@@ -12,6 +12,7 @@
 - **文档**：新增 [49 解耦与模块边界](docs/49_解耦与模块边界.md)；README、文档索引、安装文档同步到 v0.19.0；
 - **死代码清理**：删除客户端 4 处确认无引用的实现（`Entry`、`navIcon`、`PdfViewer`、`distanceToSegment`）与 4 处死状态/死映射（`TABS`、`byId`、`edges`、`positions`），净减约 130 行；`computeForceLayout` / `drawGraph` 保留（`graphui` 测试仍直接调用，属于回退路径），ESLint 警告 **12 → 3**；
 - **路由归位**：`/tags/create`、`/tags/delete`、`/reclassify` 三条旧入口从写作域移回论文库域（`40-routes-library.js`），域边界更一致；客户端 `showPage` 已确认自 v0.1.0 起 setter 从未被调用，改为只读 state，语义不变；
+- **路由归属守门**：新增 `scripts/check-routes.mjs` 与 `src/server/routes.json`，把「路径 → 域文件」固化，交叉校验代码、清单、`docs/28` 路由总数三处一致；CI 与 `verify` 已接入，新路由加错文件或文档没跟上会直接失败；
 - 测试：`npm test` 44 个文件全绿（新增 store / prompts），91 条路由注册数不变。
 
 ## v0.18.2 — P2 收尾：任务表回收、dist/ 收纳、retryFailed 真正生效（2026-11-11）

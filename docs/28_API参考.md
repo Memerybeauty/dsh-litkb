@@ -19,6 +19,8 @@
 | `75-routes-themes.js` | `/themes*`（含 `/themes/analysis*`、`/themes/review`、`/themes/summary`、`/themes/outline`） |
 | `80-routes-writing.js` | `/drafts*` `/search*` `/evidence/search` `/import*` `/update` `/diag` |
 
+路由归属固化在 `src/server/routes.json`（路径 → 域文件），`npm run check:routes` 会校验代码、清单、本文档三处一致；新增或移动路由需跑 `node scripts/check-routes.mjs --update` 并一起提交。
+
 支撑层：`05-http.js`（JSON 响应 / 请求体 / 错误码 / `createRouter`）、`10-library-service.js`（导入管线、标签、状态）、`20-jobs.js`（任务队列）。详见 [49 解耦与模块边界](49_解耦与模块边界.md)。
 
 ## 产品化（v0.16.0）

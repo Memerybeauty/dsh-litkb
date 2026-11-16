@@ -26,6 +26,8 @@ jobs:
 
       - name: Client boundaries
         run: npm run check:boundaries
+      - name: Route ownership
+        run: npm run check:routes
       - name: Pack size
         run: npm run pack:check
       - name: Format check
