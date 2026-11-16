@@ -1,5 +1,44 @@
 # Changelog
 
+## v0.18.2 — P2 收尾：任务表回收、dist/ 收纳、retryFailed 真正生效（2026-11-11）
+
+- **历史发布包收纳**：根目录 55 个 `.tgz`（262MB）移入 `dist/`；安装器优先在 `dist/` 找包，`npm pack` 产物也自动收进 `dist/`；新增 `npm run clean:dist -- --keep 5 [--dry-run]`，默认只保留最近 5 个（本次只做了收纳，没有自动删包）；
+- **任务表回收**：深度精读 / 解析稿 / 翻译 / 图谱四张任务表原来只增不删，改为非运行态 24h 回收（卡片任务保持 1h），长跑进程不再缓慢涨内存；
+- **`retryFailed` 生效**：`POST /themes/chain` 一直传这个参数但 `startThemeChainJob` 没接收，点「只重试失败项」实际会全量重跑；现在只补没有链的细分描述，全都成功时返回 422 `no_failed_facets`，不再白烧 token；
+- **死代码与过期文案**：删除无人调用且会留 `.deleted` 垃圾文件的 `deleteAnalysis`；卡片截断文案的 8192 改成实际的 `MAX_OUTPUT_TOKENS`（16384）；启动日志不再手写 15 个路由名，改为打印实际注册数；
+- 测试：`theme-routes` 增加 `retryFailed` 断言；`npm test` 42 个文件全绿。
+
+## v0.18.1 — P0 可靠性修复：不再丢稿、不再半写、构建不再假成功（2026-11-11）
+
+- **写作页三条丢稿路径修掉**：
+  - 关面板/切页时最后 ≤1.2s 输入丢失 → 卸载时用 `navigator.sendBeacon`（退回 `fetch keepalive`）补发未保存内容；
+  - 切稿时 `saveNow` 失败仍继续切换、脏内容被新稿覆盖 → 保存失败就停在当前稿并提示；
+  - 从研究/链详情跳转写作时不保存 → 先保存成功再切（失败不切）；
+  - `loadDraft` 增加请求序号 + dirty 守卫，慢响应不再盖掉用户正在输入的内容；
+- **数据写入安全**：
+  - `readIndex` 遇到坏行会跳过，下一次全量重写会让该论文永久消失 → 首次发现坏行即保留 `index.jsonl.bak`，`/diag` 返回 `library.badIndexLines`，启动时写 warn 日志；
+  - 卡片 JSON/Markdown、`settings.json`、删除论文时的链/研究写回改为「临时文件 + rename」原子写，不再可能留下半截 JSON；
+  - `writeCard` 以索引里的最新记录为准，后台生成任务结束回写时不会用旧 record 覆盖用户新改的标题/标签；
+- **构建不再「成功但产物坏了」**：两个拼接脚本改为写临时文件 → `node --check` → 原子替换；坏源码以非零退出且保留上一份可用产物（实测：注入语法错误后 `lib/client.js` 哈希不变）；
+- **CI 新增两道门**：`artifacts:check`（build 后 `git diff --exit-code -- lib/`，防止改了 `src/` 忘记重建就提交）、`pack:check`（发布包体积/内容断言）；
+- **发布包瘦身**：`files` 去掉 `src/` 与 `docs/`，解包体积 **7.61MB → 1.52MB**（docs 截图占了 5.4MB），运行时文件（lib/prompts/清单）一个不少；
+- 测试：新增 `tests/writing-save.test.mjs`（退出保存的 beacon/keepalive 回退）与 `tests/library-safety.test.mjs`（坏行备份、原子写、陈旧 record 不覆盖新元数据）；`npm test` 42 个文件全绿。
+
+## v0.18.0 — P1 结构性优化（2026-11-11）
+
+七项工程改造，行为有两处可见变化（结论/综述改异步任务），其余为内部重构。
+
+- **链/主题读取不再 N+1**：`listChains` 原先对每条链每个节点做一次 `findEvidence`（每次 `readIndex` + `readCard`），300 条链 / 1200 节点实测 336ms；改为一次扫描建证据索引，`listChains({withObjects:true})` 返回完整链，`themeChains` 不再 list 一遍再 readChain 一遍；同机实测降到 21ms（冷）/10ms（热）；
+- **索引读取加缓存**：`readIndex` 按 `index.jsonl` 的 mtime+size 缓存，写入后失效；顺带记录被跳过的坏行数（`indexBadLines()`），为后续坏行告警留口子；
+- **91 条路由收口**：全部 `webServer.register({kind,path,handler})` 改为 `route(path, handler)`，统一 `{ok,code,error}` 错误返回、`TOO_LARGE`→413、JSON 解析失败→400；删掉 61 处重复的 `json(res,500,...)` 样板；`route()` 支持方法白名单（GET 路由放行 HEAD，其余方法 405），`/health`、`/papers` 已声明；
+- **超大请求不再断连**：`readBody` 超限改为 `reject + pause`（原来直接 `req.destroy()`，413 经常发不出去），冒烟测试覆盖 400/405/413 三种契约；
+- **结论/综述改为任务**：`POST /themes/summary`（不带 text）与 `POST /themes/review` 现在返回 **202 + job**，前端轮询 `/themes/jobs?id=`；`preview:true` 与带 text 保存仍是同步 200；`/themes/jobs/cancel` 会 abort 正在跑的模型调用（`polishSummary`/`composeReview` 新增 `signal`）；
+- **客户端渲染降耗**：Workspace 的搜索/筛选/计数（每次渲染约 9 遍全表）改为 `useMemo`，列表行重建改为按依赖缓存，写作预览的整篇 Markdown 解析只在正文变化时重算；相关回调改 `useCallback`，全仓此前 0 个 `useMemo`；
+- **质量门禁收口**：客户端产物（lib/client.js）纳入 ESLint（此前整文件被 `eslint-disable` 跳过），新增 `scripts/check.mjs` 全量校验 lib 下 40 个 JS + 3 个 JSON（旧脚本手工枚举 28 个，漏 `theme-analysis.js` 等），覆盖率加 `--branches 55` 门槛；
+- **版本一致性**：新增 `scripts/check-version.mjs`（package.json / lock / dsh.plugin.json / CHANGELOG / README 五处），接入 `verify` 与 CI；README、API 参考、安装文档的陈旧版本号一并校正，API 文档补齐 4 条漏记路由；
+- **修复**：客户端「只跑这条」按钮引用了不存在的 `runChain`（点一下抛 ReferenceError），补上单 facet 建链实现——这个 bug 是本次打开客户端 ESLint 后 `no-undef` 抓到的；
+- 测试：新增 `tests/markdown-link.test.mjs`（内联链接协议白名单）与综述任务用例；`npm test` 40 个文件全绿，覆盖率 81.0% 行 / 58.4% 分支。
+
 ## v0.17.2 — 结论不再「半句截断」（2026-11-10）
 
 - 结论超过 500 字时，原逻辑在最后一个逗号处硬切并补 `…`，出现「…，」这种断在半句的结尾；

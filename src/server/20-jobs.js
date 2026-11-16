@@ -6,6 +6,20 @@ const deepJobs = new Map()
 const autoChainJobs = new Map()
 let autoChainQueue = Promise.resolve()
 
+/**
+ * 非运行态任务保留 24 小时。
+ * 深度精读 / 解析稿 / 翻译 / 图谱这四张表原来只增不删，长跑进程会缓慢涨内存。
+ */
+const JOB_TTL_MS = 24 * 60 * 60 * 1000
+function pruneJobMap(map, ttl = JOB_TTL_MS) {
+  const cutoff = Date.now() - ttl
+  for (const [id, job] of map) {
+    if (!job || job.status === 'queued' || job.status === 'running') continue
+    const at = Date.parse(job.finishedAt || job.startedAt || job.createdAt || '') || 0
+    if (at && at < cutoff) map.delete(id)
+  }
+}
+
 function publicAutoChainJob(job) {
   if (!job) return null
   return {
@@ -142,6 +156,7 @@ function startDeepJob(record) {
     sections: null,
   }
   deepJobs.set(record.id, job)
+  pruneJobMap(deepJobs)
   deepChain = deepChain.then(() => runDeepJob(record.id, job)).catch(() => {})
   return job
 }
@@ -182,11 +197,7 @@ function publicJob(job) {
 }
 
 function pruneJobs() {
-  const cutoff = Date.now() - 60 * 60 * 1000
-  for (const [id, job] of jobs) {
-    const at = Date.parse(job.finishedAt || job.startedAt)
-    if (job.status !== 'running' && job.status !== 'queued' && at < cutoff) jobs.delete(id)
-  }
+  pruneJobMap(jobs, 60 * 60 * 1000)
 }
 
 function startCardJob(record, options = {}) {
@@ -265,6 +276,7 @@ function startBlocksJob(record, options) {
     startedAt: new Date().toISOString(), finishedAt: null, error: null,
   }
   blockJobs.set(record.id, job)
+  pruneJobMap(blockJobs)
   blockChain = blockChain.then(() => runBlocksJob(record.id, job, options)).catch(() => {})
   return job
 }
@@ -502,6 +514,7 @@ function startTranslateJob(record, params) {
     startedAt: new Date().toISOString(), finishedAt: null, error: null, summary: null,
   }
   translateJobs.set(record.id, job)
+  pruneJobMap(translateJobs)
   translateChain = translateChain.then(() => runTranslateJob(record.id, job, params)).catch(() => {})
   return job
 }
@@ -558,6 +571,7 @@ function startGraphJob(params) {
     startedAt: new Date().toISOString(), finishedAt: null, error: null, summary: null,
   }
   graphJobs.set(GRAPH_JOB_ID, job)
+  pruneJobMap(graphJobs)
   graphChain = graphChain.then(() => runGraphJob(job, params)).catch(() => {})
   return job
 }

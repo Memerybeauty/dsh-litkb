@@ -1361,7 +1361,10 @@
           else if (token.startsWith('`')) out.push(h('code', { key: `c-${index}-${match.index}` }, token.slice(1, -1)))
           else if (token.startsWith('[')) {
             const link = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/)
-            out.push(link ? h('a', { key: `l-${index}-${match.index}`, href: link[2], target: '_blank', rel: 'noreferrer' }, link[1]) : token)
+            const href = link ? safeHref(link[2]) : null
+            out.push(href
+              ? h('a', { key: `l-${index}-${match.index}`, href, target: '_blank', rel: 'noreferrer noopener' }, link[1])
+              : token)
           } else out.push(h('em', { key: `i-${index}-${match.index}` }, token.slice(1, -1)))
           last = match.index + token.length
           match = pattern.exec(part.text)

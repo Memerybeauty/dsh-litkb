@@ -13,7 +13,7 @@
  * 安装后需要完全退出 DSH 再启动；服务端路由和 Agent 工具只在进程启动时注册。
  */
 import { execFileSync } from 'node:child_process'
-import { copyFileSync, existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -76,12 +76,21 @@ function ensureTgz(options) {
     if (!existsSync(file)) throw new Error(`tgz 不存在：${file}`)
     return file
   }
-  const expected = join(ROOT, `dsh-litkb-${pkg.version}.tgz`)
-  if (existsSync(expected)) return expected
-  console.log(`[install] 未找到 dsh-litkb-${pkg.version}.tgz，执行 npm pack…`)
+  const name = `dsh-litkb-${pkg.version}.tgz`
+  // 先找 dist/（发布产物目录），再兼容根目录的历史布局
+  for (const base of ['dist', '']) {
+    const candidate = join(ROOT, base, name)
+    if (existsSync(candidate)) return candidate
+  }
+  console.log(`[install] 未找到 ${name}，执行 npm pack…`)
   execFileSync('npm', ['pack'], { cwd: ROOT, stdio: 'inherit' })
-  if (!existsSync(expected)) throw new Error(`npm pack 后仍找不到 ${expected}`)
-  return expected
+  const packed = join(ROOT, name)
+  if (!existsSync(packed)) throw new Error(`npm pack 后仍找不到 ${packed}`)
+  // 打出来的包统一收进 dist/，根目录不再堆积
+  mkdirSync(join(ROOT, 'dist'), { recursive: true })
+  const target = join(ROOT, 'dist', name)
+  renameSync(packed, target)
+  return target
 }
 
 function main() {

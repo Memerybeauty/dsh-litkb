@@ -27,6 +27,7 @@ const ReactStub = {
   useState: (value) => [typeof value === 'function' ? value() : value, () => {}],
   useEffect: () => {},
   useCallback: (fn) => fn,
+  useMemo: (fn) => fn(),
   useRef: (value) => ({ current: value }),
 }
 const mod = captured.factory((name) => {

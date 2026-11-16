@@ -4,5 +4,6 @@ data/
 .chrome-*/
 .DS_Store
 coverage/
+dist/
 .eslintcache
 eval/

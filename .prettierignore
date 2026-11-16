@@ -1,5 +1,7 @@
 node_modules
 coverage
+# lib/ 是构建产物；src/client、src/server 是共享作用域的片段（不是独立 Program），
+# 三者单独格式化都不安全。格式检查只覆盖 tests/scripts/配置，样式由 lint + 构建保证。
 lib
 src/client
 src/server

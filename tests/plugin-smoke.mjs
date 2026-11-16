@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import vm from 'node:vm'
+import { EventEmitter } from 'node:events'
 
 // 测试库放到临时目录，避免写用户的 ~/Documents/文献库
 const testLibrary = mkdtempSync(join(tmpdir(), 'dsh-litkb-smoke-'))
@@ -134,6 +135,69 @@ assert.equal(payload.ok, true)
 assert.equal(payload.plugin, 'dsh-litkb')
 assert.ok(payload.version)
 
+/* ---------- 路由包装器：统一错误契约 ---------- */
+function bodyReq(raw) {
+  const req = new EventEmitter()
+  req.method = 'POST'
+  req.destroy = () => {}
+  process.nextTick(() => {
+    req.emit('data', Buffer.from(raw))
+    req.emit('end')
+  })
+  return req
+}
+function freshRes() {
+  return {
+    code: 0,
+    headers: null,
+    body: '',
+    writeHead(c, h) {
+      this.code = c
+      this.headers = h
+    },
+    end(b) {
+      this.body = b
+    },
+  }
+}
+
+const summaryRoute = routes.find((r) => r.path === '/api/litkb/themes/summary')
+
+// 坏 JSON → 400 / bad_json（旧实现是 500 + 原始 SyntaxError 文案）
+{
+  const out = freshRes()
+  await summaryRoute.handler(bodyReq('{not json'), out)
+  assert.equal(out.code, 400, '坏 JSON 应返回 400')
+  const body = JSON.parse(out.body)
+  assert.equal(body.ok, false)
+  assert.equal(body.code, 'bad_json')
+}
+
+// 超过 body 上限 → 413 / TOO_LARGE（旧实现是 500）
+{
+  const out = freshRes()
+  await summaryRoute.handler(bodyReq(JSON.stringify({ id: 't-1', pad: 'x'.repeat(300 * 1024) })), out)
+  assert.equal(out.code, 413, '超限 body 应返回 413')
+  assert.equal(JSON.parse(out.body).code, 'TOO_LARGE')
+}
+
+// 方法白名单：GET 路由收到 POST 应 405，HEAD 视同 GET
+{
+  const papersRoute = routes.find((r) => r.path === '/api/litkb/papers')
+  const okRes = freshRes()
+  await papersRoute.handler({ method: 'GET' }, okRes)
+  assert.equal(okRes.code, 200)
+
+  const badRes = freshRes()
+  await papersRoute.handler({ method: 'POST' }, badRes)
+  assert.equal(badRes.code, 405)
+  assert.equal(JSON.parse(badRes.body).code, 'method_not_allowed')
+
+  const headRes = freshRes()
+  await health.handler({ method: 'HEAD' }, headRes)
+  assert.equal(headRes.code, 200, 'HEAD 应等同 GET')
+}
+
 /* ---------- client ---------- */
 let captured = null
 globalThis.window = {
@@ -153,6 +217,7 @@ const ReactStub = {
   useState: (v) => [v, () => {}],
   useEffect: () => {},
   useCallback: (fn) => fn,
+  useMemo: (fn) => fn(),
 }
 const mod = captured.factory((name) => {
   if (name === 'react') return ReactStub

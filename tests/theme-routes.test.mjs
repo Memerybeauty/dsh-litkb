@@ -168,6 +168,11 @@ assert.equal(job.status, 'done')
 assert.ok(job.created >= 2, '两条细分描述都应生成草稿')
 assert.equal(job.failed, 0)
 
+// retryFailed 只重跑没有链的 facet：全都成功时应该 422 而不是白跑一遍
+const retryDone = await call('/api/litkb/themes/chain', { method: 'POST', body: { id: themeId, retryFailed: true } })
+assert.equal(retryDone.code, 422)
+assert.equal(retryDone.data.code, 'no_failed_facets')
+
 const afterChain = await call('/api/litkb/themes/read', { url: `/api/litkb/themes/read?id=${themeId}` })
 assert.equal(afterChain.data.facetChains[0].chain.status, 'draft')
 assert.ok(afterChain.data.papers.some((row) => row.paperId === 'p-r1'))
@@ -203,8 +208,10 @@ const restored = await call('/api/litkb/themes/papers', {
 assert.ok(restored.data.papers.some((row) => row.paperId === 'p-r1'))
 
 const emptySummary = await call('/api/litkb/themes/summary', { method: 'POST', body: { id: themeId } })
-assert.equal(emptySummary.code, 200)
-assert.equal(emptySummary.data.summary.text, '')
+assert.equal(emptySummary.code, 202)
+const emptySummaryJob = await waitJob(emptySummary.data.job.id)
+assert.equal(emptySummaryJob.kind, 'summary')
+assert.equal(emptySummaryJob.result.summary.text, '')
 
 const accept = await call('/api/litkb/chains/review', {
   method: 'POST',
@@ -213,11 +220,27 @@ const accept = await call('/api/litkb/chains/review', {
 assert.equal(accept.code, 200)
 
 const summary = await call('/api/litkb/themes/summary', { method: 'POST', body: { id: themeId } })
-assert.ok(summary.data.summary.text.includes('极坐标变换'))
+assert.equal(summary.code, 202)
+const summaryJob = await waitJob(summary.data.job.id)
+assert.equal(summaryJob.status, 'done')
+assert.ok(summaryJob.result.summary.text.includes('极坐标变换'))
 const manual = await call('/api/litkb/themes/summary', { method: 'POST', body: { id: themeId, text: '手写结论' } })
 assert.equal(manual.data.summary.text, '手写结论')
 const manualRead = await call('/api/litkb/themes/read', { url: `/api/litkb/themes/read?id=${themeId}` })
 assert.equal(manualRead.data.theme.summary.text, '手写结论')
+
+// 综述成文走任务：202 + 轮询，结果里带落稿信息（不再同步等模型）
+const reviewStart = await call('/api/litkb/themes/review', { method: 'POST', body: { id: themeId, mode: 'new' } })
+assert.equal(reviewStart.code, 202)
+const reviewJob = await waitJob(reviewStart.data.job.id)
+assert.equal(reviewJob.status, 'done')
+assert.equal(reviewJob.kind, 'review')
+assert.ok(reviewJob.result.draft && reviewJob.result.draft.id, '综述应落成文稿')
+assert.ok(reviewJob.result.markdown.includes('# 视盘分割综述'))
+
+const reviewPreview = await call('/api/litkb/themes/review', { method: 'POST', body: { id: themeId, preview: true } })
+assert.equal(reviewPreview.code, 200)
+assert.equal(reviewPreview.data.draft, null)
 
 const outlineDry = await call('/api/litkb/themes/outline', { method: 'POST', body: { id: themeId } })
 assert.equal(outlineDry.code, 200)

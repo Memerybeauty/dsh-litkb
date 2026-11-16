@@ -7,6 +7,8 @@
     return {
       id: job.id,
       themeId: job.themeId,
+      kind: job.kind || 'chain',
+      result: job.result || null,
       status: job.status,
       step: job.step,
       total: job.total,
@@ -47,14 +49,20 @@
     } catch { /* ignore */ }
   }
 
-  function startThemeChainJob({ themeId, facetKeys = [] } = {}) {
+  function startThemeChainJob({ themeId, facetKeys = [], retryFailed = false } = {}) {
     const theme = readTheme(themeId)
     if (!theme) throw Object.assign(new Error('研究不存在'), { code: 'not_found' })
     const enabled = theme.facets.filter((facet) => facet.enabled)
     if (!enabled.length) throw Object.assign(new Error('这条研究还没有细分描述'), { code: 'no_facets' })
     const wanted = Array.isArray(facetKeys) && facetKeys.length ? new Set(facetKeys) : null
-    const targets = wanted ? enabled.filter((facet) => wanted.has(facet.key)) : enabled
+    let targets = wanted ? enabled.filter((facet) => wanted.has(facet.key)) : enabled
     if (!targets.length) throw Object.assign(new Error('没有选中的细分描述'), { code: 'no_facets' })
+    if (retryFailed) {
+      // 只重跑上次没出链的细分描述；已经有链的不重复烧 token
+      const byFacet = themeChains(themeId).byFacet
+      targets = targets.filter((facet) => !byFacet.has(facet.key))
+      if (!targets.length) throw Object.assign(new Error('没有失败的细分描述需要重试'), { code: 'no_failed_facets' })
+    }
     const job = {
       id: `theme-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
       themeId,
@@ -72,6 +80,117 @@
     }
     themeQueue = themeQueue.then(() => runThemeChainJob(job, { facetKeys: wanted ? [...wanted] : [] })).catch(() => {})
     return job
+  }
+
+  /** 研究结论、研究综述这类长模型调用也走任务：立即返回 202，前端轮询 /themes/jobs。 */
+  function startThemeTextJob(kind, { theme, body = {} } = {}) {
+    const running = [...themeJobs.values()].find((item) => (item.kind || 'chain') === kind
+      && item.themeId === theme.id && (item.status === 'queued' || item.status === 'running'))
+    if (running) return running
+    const job = {
+      id: `theme-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      themeId: theme.id,
+      kind,
+      status: 'queued',
+      step: kind === 'summary' ? '生成研究结论' : '生成研究综述',
+      total: 1, done: 0, created: 0, failed: 0,
+      gaps: [], items: [], errors: [],
+      result: null,
+      abort: new AbortController(),
+      createdAt: new Date().toISOString(),
+      startedAt: new Date().toISOString(),
+      finishedAt: null,
+    }
+    themeJobs.set(job.id, job)
+    persistThemeJob(job, { kind })
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000
+    for (const [id, item] of themeJobs) {
+      if (item.status !== 'running' && item.status !== 'queued' && Date.parse(item.finishedAt || item.startedAt) < cutoff) themeJobs.delete(id)
+    }
+    themeQueue = themeQueue.then(() => runThemeTextJob(job, body)).catch(() => {})
+    return job
+  }
+
+  function textJobCanceled(job) {
+    return job.status === 'canceled' || job.abort.signal.aborted
+  }
+
+  /** 综述落稿：重复生成覆盖同一篇，不再产生同名重复稿。 */
+  function attachReviewDraft(theme, review, mode) {
+    const bound = theme.draftId ? readDraft(theme.draftId) : null
+    const sameReview = Boolean(bound) && String(bound.title || '') === `${theme.title} · 研究综述`
+    let draft = null
+    if (mode === 'new' && sameReview) {
+      draft = saveDraft(bound.id, { body: review.markdown })
+    } else if (mode !== 'new' && theme.draftId) {
+      const current = readDraft(theme.draftId)
+      if (current) {
+        const next = mode === 'append'
+          ? `${String(current.body || '').trimEnd()}\n\n${review.markdown}`
+          : review.markdown
+        draft = saveDraft(theme.draftId, { body: next })
+      }
+    }
+    if (!draft) {
+      draft = createDraft({ title: `${theme.title} · 研究综述`, type: '综述', body: review.markdown })
+      bindThemeDraft(theme.id, draft.id)
+    }
+    return draft
+  }
+
+  async function runThemeTextJob(job, body = {}) {
+    job.status = 'running'
+    try {
+      const theme = readTheme(job.themeId)
+      if (!theme) throw Object.assign(new Error('研究不存在'), { code: 'not_found' })
+      const chains = themeChains(theme.id).list
+      if (textJobCanceled(job)) { job.step = '已取消'; return }
+      if (job.kind === 'summary') {
+        const summary = await polishSummary({ ctx: pluginCtx, theme, chains, signal: job.abort.signal })
+        if (textJobCanceled(job)) { job.step = '已取消'; return }
+        job.result = { summary, promptVersion: SUMMARY_PROMPT_VERSION }
+      } else {
+        job.step = '按研究内容成文'
+        const review = await composeReview({
+          ctx: pluginCtx, theme, chains, polish: body.polish !== false, signal: job.abort.signal,
+        })
+        if (textJobCanceled(job)) { job.step = '已取消'; return }
+        const mode = ['new', 'append', 'replace'].includes(body.mode) ? body.mode : 'new'
+        const draft = attachReviewDraft(theme, review, mode)
+        job.result = reviewPayload(review, draft)
+      }
+      job.done = 1
+      job.status = 'done'
+      job.step = '完成'
+    } catch (error) {
+      if (textJobCanceled(job)) {
+        job.step = '已取消'
+      } else {
+        job.status = 'failed'
+        job.step = '失败'
+        job.errors.push({ message: String(error?.message || error), code: error?.code || 'error' })
+      }
+    } finally {
+      job.finishedAt = new Date().toISOString()
+      clearPersistedJob(job.id)
+    }
+  }
+
+  /** 综述的统一响应体（同步 preview 与任务结果共用）。 */
+  function reviewPayload(review, draft) {
+    return {
+      markdown: review.markdown,
+      chars: String(review.markdown).length,
+      citations: review.citations,
+      chains: review.chains,
+      covered: review.covered,
+      total: review.total,
+      missing: review.missing || [],
+      polished: review.polished || 0,
+      warnings: review.warnings || [],
+      draft: draft ? { id: draft.id, title: draft.title, chars: String(draft.body || '').length } : null,
+      promptVersion: REVIEW_PROMPT_VERSION,
+    }
   }
 
   async function runThemeChainJob(job, options) {
@@ -132,6 +251,8 @@
     return {
       id: job.id,
       themeId: job.themeId,
+      kind: job.kind || 'chain',
+      result: job.result || null,
       status: job.status,
       step: job.step,
       total: job.total,
@@ -278,495 +399,356 @@
     lastAnalysisJob.set(theme.id, job)
   }
 
-  webServer.register({
-    kind: 'exact',
-    path: '/api/litkb/themes/analyze',
-    handler: async (req, res) => {
-      try {
-        const body = JSON.parse((await readBody(req, 64 * 1024)).toString('utf8') || '{}')
-        const job = startThemeAnalysisJob({
-          themeId: String(body.id || ''),
-          paperIds: Array.isArray(body.paperIds) ? body.paperIds.map(String) : [],
-          facetKeys: Array.isArray(body.facetKeys) ? body.facetKeys.map(String) : [],
-          retryFailed: body.retryFailed === true,
-        })
-        json(res, 202, { ok: true, job: publicAnalysisJob(job) })
-      } catch (error) {
-        json(res, themeErrorStatus(error), { ok: false, code: error?.code || 'error', error: String(error?.message || error) })
-      }
-    },
+  route('/api/litkb/themes/analyze', async (req, res) => {
+    try {
+      const body = JSON.parse((await readBody(req, 64 * 1024)).toString('utf8') || '{}')
+      const job = startThemeAnalysisJob({
+        themeId: String(body.id || ''),
+        paperIds: Array.isArray(body.paperIds) ? body.paperIds.map(String) : [],
+        facetKeys: Array.isArray(body.facetKeys) ? body.facetKeys.map(String) : [],
+        retryFailed: body.retryFailed === true,
+      })
+      json(res, 202, { ok: true, job: publicAnalysisJob(job) })
+    } catch (error) {
+      json(res, themeErrorStatus(error), { ok: false, code: error?.code || 'error', error: String(error?.message || error) })
+    }
   })
 
-  webServer.register({
-    kind: 'exact',
-    path: '/api/litkb/themes/analysis',
-    handler: async (req, res) => {
-      try {
-        const id = queryParam(req, 'id')
-        const theme = readTheme(id)
-        if (!theme) { json(res, 404, { ok: false, error: '研究不存在' }); return }
-        let analysis = readAnalysis(theme.id)
-        if (analysis) {
-          // 只裁剪返回，不落盘：论文只是「移出参考论文」，随时可以恢复。
-          // 真正落盘发生在重新分析时（run 路径）。
-          analysis = pruneAnalysis(analysis, analysisScope(theme)).analysis
-        }
-        const job = lastAnalysisJob.get(theme.id) || null
-        json(res, 200, {
-          ok: true,
-          analysis,
-          stats: analysisStats(analysis),
-          job: publicAnalysisJob(job),
-        })
-      } catch (error) {
-        json(res, 500, { ok: false, error: String(error?.message || error) })
-      }
-    },
+  route('/api/litkb/themes/analysis', async (req, res) => {
+    const id = queryParam(req, 'id')
+    const theme = readTheme(id)
+    if (!theme) { json(res, 404, { ok: false, error: '研究不存在' }); return }
+    let analysis = readAnalysis(theme.id)
+    if (analysis) {
+      // 只裁剪返回，不落盘：论文只是「移出参考论文」，随时可以恢复。
+      // 真正落盘发生在重新分析时（run 路径）。
+      analysis = pruneAnalysis(analysis, analysisScope(theme)).analysis
+    }
+    const job = lastAnalysisJob.get(theme.id) || null
+    json(res, 200, {
+      ok: true,
+      analysis,
+      stats: analysisStats(analysis),
+      job: publicAnalysisJob(job),
+    })
   })
 
-  webServer.register({
-    kind: 'exact',
-    path: '/api/litkb/themes/analysis/cancel',
-    handler: async (req, res) => {
-      try {
-        const body = JSON.parse((await readBody(req, 16 * 1024)).toString('utf8') || '{}')
-        const job = analysisJobs.get(String(body.id || ''))
-        if (!job) { json(res, 404, { ok: false, error: '分析任务不存在' }); return }
-        if (job.status === 'queued' || job.status === 'running') {
-          job.status = 'cancelled'
-          job.step = '已取消'
-          job.finishedAt = new Date().toISOString()
-        }
-        json(res, 200, { ok: true, job: publicAnalysisJob(job) })
-      } catch (error) {
-        json(res, 500, { ok: false, error: String(error?.message || error) })
-      }
-    },
+  route('/api/litkb/themes/analysis/cancel', async (req, res) => {
+    const body = JSON.parse((await readBody(req, 16 * 1024)).toString('utf8') || '{}')
+    const job = analysisJobs.get(String(body.id || ''))
+    if (!job) { json(res, 404, { ok: false, error: '分析任务不存在' }); return }
+    if (job.status === 'queued' || job.status === 'running') {
+      job.status = 'cancelled'
+      job.step = '已取消'
+      job.finishedAt = new Date().toISOString()
+    }
+    json(res, 200, { ok: true, job: publicAnalysisJob(job) })
   })
 
-  webServer.register({
-    kind: 'exact',
-    path: '/api/litkb/themes/analysis/chain',
-    handler: async (req, res) => {
-      try {
-        const body = JSON.parse((await readBody(req, 64 * 1024)).toString('utf8') || '{}')
-        const chain = createViewpointChain({
-          themeId: String(body.id || ''),
-          facetKey: String(body.facetKey || ''),
-          viewpointId: String(body.viewpointId || ''),
-        })
-        json(res, 200, { ok: true, chain })
-      } catch (error) {
-        const code = error?.code
-        const status = code === 'not_found' ? 404 : code === 'no_analysis' || code === 'no_evidence' ? 422 : 500
-        json(res, status, { ok: false, code: code || 'error', error: String(error?.message || error) })
-      }
-    },
+  route('/api/litkb/themes/analysis/chain', async (req, res) => {
+    try {
+      const body = JSON.parse((await readBody(req, 64 * 1024)).toString('utf8') || '{}')
+      const chain = createViewpointChain({
+        themeId: String(body.id || ''),
+        facetKey: String(body.facetKey || ''),
+        viewpointId: String(body.viewpointId || ''),
+      })
+      json(res, 200, { ok: true, chain })
+    } catch (error) {
+      const code = error?.code
+      const status = code === 'not_found' ? 404 : code === 'no_analysis' || code === 'no_evidence' ? 422 : 500
+      json(res, status, { ok: false, code: code || 'error', error: String(error?.message || error) })
+    }
   })
 
-  webServer.register({
-    kind: 'exact',
-    path: '/api/litkb/themes',
-    handler: async (req, res) => {
-      try {
-        json(res, 200, { ok: true, themes: listThemes() })
-      } catch (error) {
-        json(res, 500, { ok: false, error: String(error?.message || error) })
-      }
-    },
+  route('/api/litkb/themes', async (req, res) => {
+    json(res, 200, { ok: true, themes: listThemes() })
   })
 
-  webServer.register({
-    kind: 'exact',
-    path: '/api/litkb/themes/read',
-    handler: async (req, res) => {
-      try {
-        const theme = readTheme(queryParam(req, 'id'))
-        if (!theme) { json(res, 404, { ok: false, error: '研究不存在' }); return }
-        const chains = themeChains(theme.id)
-        const facetChains = theme.facets.map((facet) => {
-          const chain = chains.byFacet.get(facet.key) || null
-          return {
-            facetKey: facet.key,
-            chain: chain ? {
-              id: chain.id, status: chain.status, confidence: chain.confidence,
-              nodes: (chain.nodes || []).length, title: chain.title,
-            } : null,
-          }
-        })
-        const draft = theme.draftId ? readDraft(theme.draftId) : null
-        const parsed = draft ? draftCitations(draft.id) : null
-        const draftInfo = draft ? {
-          id: draft.id,
-          title: draft.title,
-          chars: String(draft.body || '').length,
-          citations: parsed?.citations?.length || 0,
-          missing: parsed?.missing?.length || 0,
-          updated: draft.updated,
-        } : null
-        json(res, 200, {
-          ok: true,
-          theme,
-          chains: chains.list,
-          facetChains,
-          stats: themeStats(theme, chains.list),
-          papers: themePapers(theme, chains.list),
-          summaryState: summaryState(theme, chains.list),
-          draft: draftInfo,
-        })
-      } catch (error) {
-        json(res, 500, { ok: false, error: String(error?.message || error) })
+  route('/api/litkb/themes/read', async (req, res) => {
+    const theme = readTheme(queryParam(req, 'id'))
+    if (!theme) { json(res, 404, { ok: false, error: '研究不存在' }); return }
+    const chains = themeChains(theme.id)
+    const facetChains = theme.facets.map((facet) => {
+      const chain = chains.byFacet.get(facet.key) || null
+      return {
+        facetKey: facet.key,
+        chain: chain ? {
+          id: chain.id, status: chain.status, confidence: chain.confidence,
+          nodes: (chain.nodes || []).length, title: chain.title,
+        } : null,
       }
-    },
+    })
+    const draft = theme.draftId ? readDraft(theme.draftId) : null
+    const parsed = draft ? draftCitations(draft.id) : null
+    const draftInfo = draft ? {
+      id: draft.id,
+      title: draft.title,
+      chars: String(draft.body || '').length,
+      citations: parsed?.citations?.length || 0,
+      missing: parsed?.missing?.length || 0,
+      updated: draft.updated,
+    } : null
+    json(res, 200, {
+      ok: true,
+      theme,
+      chains: chains.list,
+      facetChains,
+      stats: themeStats(theme, chains.list),
+      papers: themePapers(theme, chains.list),
+      summaryState: summaryState(theme, chains.list),
+      draft: draftInfo,
+    })
   })
 
-  webServer.register({
-    kind: 'exact',
-    path: '/api/litkb/themes/save',
-    handler: async (req, res) => {
-      try {
-        const body = JSON.parse((await readBody(req, 256 * 1024)).toString('utf8') || '{}')
-        const theme = saveTheme(body)
-        json(res, 200, { ok: true, theme })
-      } catch (error) {
-        json(res, themeErrorStatus(error), { ok: false, code: error?.code || 'error', error: String(error?.message || error) })
-      }
-    },
+  route('/api/litkb/themes/save', async (req, res) => {
+    try {
+      const body = JSON.parse((await readBody(req, 256 * 1024)).toString('utf8') || '{}')
+      const theme = saveTheme(body)
+      json(res, 200, { ok: true, theme })
+    } catch (error) {
+      json(res, themeErrorStatus(error), { ok: false, code: error?.code || 'error', error: String(error?.message || error) })
+    }
   })
 
-  webServer.register({
-    kind: 'exact',
-    path: '/api/litkb/themes/delete',
-    handler: async (req, res) => {
-      try {
-        const body = JSON.parse((await readBody(req, 256 * 1024)).toString('utf8') || '{}')
-        const id = String(body.id || '')
-        const theme = readTheme(id)
-        if (!theme) { json(res, 404, { ok: false, error: '研究不存在' }); return }
-        const chains = themeChains(id).list.length
-        deleteTheme(id)
-        json(res, 200, {
-          ok: true, id,
-          chainsKept: chains,
-          draftKept: theme.draftId || '',
-          note: chains ? '关联证据链与文稿已保留，可在图谱/写作里继续使用' : '',
-        })
-      } catch (error) {
-        json(res, themeErrorStatus(error), { ok: false, code: error?.code || 'error', error: String(error?.message || error) })
-      }
-    },
+  route('/api/litkb/themes/delete', async (req, res) => {
+    try {
+      const body = JSON.parse((await readBody(req, 256 * 1024)).toString('utf8') || '{}')
+      const id = String(body.id || '')
+      const theme = readTheme(id)
+      if (!theme) { json(res, 404, { ok: false, error: '研究不存在' }); return }
+      const chains = themeChains(id).list.length
+      deleteTheme(id)
+      json(res, 200, {
+        ok: true, id,
+        chainsKept: chains,
+        draftKept: theme.draftId || '',
+        note: chains ? '关联证据链与文稿已保留，可在图谱/写作里继续使用' : '',
+      })
+    } catch (error) {
+      json(res, themeErrorStatus(error), { ok: false, code: error?.code || 'error', error: String(error?.message || error) })
+    }
   })
 
-  webServer.register({
-    kind: 'exact',
-    path: '/api/litkb/themes/match',
-    handler: async (req, res) => {
-      try {
-        const body = JSON.parse((await readBody(req, 256 * 1024)).toString('utf8') || '{}')
-        const theme = readTheme(body.id)
-        if (!theme) { json(res, 404, { ok: false, error: '研究不存在' }); return }
-        const facetKeys = Array.isArray(body.facetKeys) ? body.facetKeys.map(String) : []
-        const result = matchTheme(theme, { facetKeys })
-        if (body.persist) recordThemeMatch(theme.id, result.papers)
-        json(res, 200, { ok: true, ...result })
-      } catch (error) {
-        json(res, themeErrorStatus(error), { ok: false, code: error?.code || 'error', error: String(error?.message || error) })
-      }
-    },
+  route('/api/litkb/themes/match', async (req, res) => {
+    try {
+      const body = JSON.parse((await readBody(req, 256 * 1024)).toString('utf8') || '{}')
+      const theme = readTheme(body.id)
+      if (!theme) { json(res, 404, { ok: false, error: '研究不存在' }); return }
+      const facetKeys = Array.isArray(body.facetKeys) ? body.facetKeys.map(String) : []
+      const result = matchTheme(theme, { facetKeys })
+      if (body.persist) recordThemeMatch(theme.id, result.papers)
+      json(res, 200, { ok: true, ...result })
+    } catch (error) {
+      json(res, themeErrorStatus(error), { ok: false, code: error?.code || 'error', error: String(error?.message || error) })
+    }
   })
 
-  webServer.register({
-    kind: 'exact',
-    path: '/api/litkb/themes/chain',
-    handler: async (req, res) => {
-      try {
-        const body = JSON.parse((await readBody(req, 256 * 1024)).toString('utf8') || '{}')
-        const job = startThemeChainJob({
-          themeId: String(body.id || ''),
-          facetKeys: Array.isArray(body.facetKeys) ? body.facetKeys.map(String) : [],
-          retryFailed: body.retryFailed === true,
-        })
-        json(res, 200, { ok: true, job: publicThemeJob(job) })
-      } catch (error) {
-        json(res, themeErrorStatus(error), { ok: false, code: error?.code || 'error', error: String(error?.message || error) })
-      }
-    },
+  route('/api/litkb/themes/chain', async (req, res) => {
+    try {
+      const body = JSON.parse((await readBody(req, 256 * 1024)).toString('utf8') || '{}')
+      const job = startThemeChainJob({
+        themeId: String(body.id || ''),
+        facetKeys: Array.isArray(body.facetKeys) ? body.facetKeys.map(String) : [],
+        retryFailed: body.retryFailed === true,
+      })
+      json(res, 200, { ok: true, job: publicThemeJob(job) })
+    } catch (error) {
+      json(res, themeErrorStatus(error), { ok: false, code: error?.code || 'error', error: String(error?.message || error) })
+    }
   })
 
-  webServer.register({
-    kind: 'exact',
-    path: '/api/litkb/themes/explore',
-    handler: async (req, res) => {
-      try {
-        const body = JSON.parse((await readBody(req, 256 * 1024)).toString('utf8') || '{}')
-        const theme = readTheme(body.id)
-        if (!theme) { json(res, 404, { ok: false, error: '研究不存在' }); return }
-        const facetKeys = Array.isArray(body.facetKeys) ? body.facetKeys.map(String) : []
-        const match = matchTheme(theme, { facetKeys })
-        if (!match.results.length) { json(res, 422, { ok: false, code: 'no_facets', error: '这条研究还没有细分描述' }); return }
-        recordThemeMatch(theme.id, match.papers)
-        const job = startThemeChainJob({ themeId: theme.id, facetKeys })
-        json(res, 200, {
-          ok: true,
-          match: { themeId: theme.id, results: match.results, papers: match.papers },
-          job: publicThemeJob(job),
-        })
-      } catch (error) {
-        json(res, themeErrorStatus(error), { ok: false, code: error?.code || 'error', error: String(error?.message || error) })
-      }
-    },
+  route('/api/litkb/themes/explore', async (req, res) => {
+    try {
+      const body = JSON.parse((await readBody(req, 256 * 1024)).toString('utf8') || '{}')
+      const theme = readTheme(body.id)
+      if (!theme) { json(res, 404, { ok: false, error: '研究不存在' }); return }
+      const facetKeys = Array.isArray(body.facetKeys) ? body.facetKeys.map(String) : []
+      const match = matchTheme(theme, { facetKeys })
+      if (!match.results.length) { json(res, 422, { ok: false, code: 'no_facets', error: '这条研究还没有细分描述' }); return }
+      recordThemeMatch(theme.id, match.papers)
+      const job = startThemeChainJob({ themeId: theme.id, facetKeys })
+      json(res, 200, {
+        ok: true,
+        match: { themeId: theme.id, results: match.results, papers: match.papers },
+        job: publicThemeJob(job),
+      })
+    } catch (error) {
+      json(res, themeErrorStatus(error), { ok: false, code: error?.code || 'error', error: String(error?.message || error) })
+    }
   })
 
-  webServer.register({
-    kind: 'exact',
-    path: '/api/litkb/themes/jobs/cancel',
-    handler: async (req, res) => {
-      try {
-        const body = JSON.parse((await readBody(req, 16 * 1024)).toString('utf8') || '{}')
-        const id = String(body.id || '')
-        const job = themeJobs.get(id)
-        if (!job) { json(res, 404, { ok: false, error: '任务不存在' }); return }
-        if (job.status === 'queued' || job.status === 'running') {
-          job.status = 'canceled'
-          job.step = '已取消'
-          job.finishedAt = new Date().toISOString()
-          clearPersistedJob(job.id)
-        }
-        json(res, 200, { ok: true, job: publicThemeJob(job) })
-      } catch (error) {
-        json(res, 500, { ok: false, error: String(error?.message || error) })
-      }
-    },
+  route('/api/litkb/themes/jobs/cancel', async (req, res) => {
+    const body = JSON.parse((await readBody(req, 16 * 1024)).toString('utf8') || '{}')
+    const id = String(body.id || '')
+    const job = themeJobs.get(id)
+    if (!job) { json(res, 404, { ok: false, error: '任务不存在' }); return }
+    if (job.status === 'queued' || job.status === 'running') {
+      job.status = 'canceled'
+      job.step = '已取消'
+      job.finishedAt = new Date().toISOString()
+      try { job.abort?.abort() } catch { /* 已在结束时清理 */ }
+      clearPersistedJob(job.id)
+    }
+    json(res, 200, { ok: true, job: publicThemeJob(job) })
   })
 
-  webServer.register({
-    kind: 'exact',
-    path: '/api/litkb/themes/jobs',
-    handler: async (req, res) => {
+  route('/api/litkb/themes/jobs', async (req, res) => {
+    const id = queryParam(req, 'id')
+    if (id) {
+      const job = themeJobs.get(id)
+      if (!job) { json(res, 404, { ok: false, error: '任务不存在' }); return }
+      json(res, 200, { ok: true, job: publicThemeJob(job) })
+      return
+    }
+    const list = [...themeJobs.values()]
+      .sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt))
+      .slice(0, 20)
+      .map((job) => publicThemeJob(job))
+    json(res, 200, { ok: true, jobs: list })
+  })
+
+  route('/api/litkb/themes/papers', async (req, res) => {
+    try {
+      const body = JSON.parse((await readBody(req, 256 * 1024)).toString('utf8') || '{}')
+      const action = ['include', 'exclude', 'restore'].includes(body.action) ? body.action : 'include'
+      const theme = setThemePaper(String(body.id || ''), { paperId: String(body.paperId || ''), action })
+      const chains = themeChains(theme.id)
+      const raw = readAnalysis(theme.id)
+      const analysis = raw ? pruneAnalysis(raw, analysisScope(theme)).analysis : null
+      json(res, 200, {
+        ok: true,
+        action,
+        theme,
+        papers: themePapers(theme, chains.list),
+        stats: themeStats(theme, chains.list),
+        analysis,
+      })
+    } catch (error) {
+      json(res, themeErrorStatus(error), { ok: false, code: error?.code || 'error', error: String(error?.message || error) })
+    }
+  })
+
+  route('/api/litkb/themes/outline', async (req, res) => {
+    try {
+      const body = JSON.parse((await readBody(req, 256 * 1024)).toString('utf8') || '{}')
+      const theme = readTheme(body.id)
+      if (!theme) { json(res, 404, { ok: false, error: '研究不存在' }); return }
+      const outline = buildThemeOutline(theme)
+      const mode = ['append', 'replace', 'new'].includes(body.mode) ? body.mode : ''
+      const warnings = []
+      let draft = null
+      if (!mode) {
+        warnings.push(theme.draftId ? '已有绑定文稿，未写入；可选择追加、覆盖或新建' : '尚未绑定文稿')
+      } else if (mode === 'append' && theme.draftId) {
+        const current = readDraft(theme.draftId)
+        if (!current) warnings.push('绑定的文稿已不存在，将新建')
+        else draft = saveDraft(theme.draftId, { body: `${String(current.body || '').trimEnd()}\n\n${outline.markdown}` })
+      } else if (mode === 'replace' && theme.draftId) {
+        draft = saveDraft(theme.draftId, { body: outline.markdown })
+      }
+      if (mode && !draft && mode !== 'new') {
+        draft = createDraft({ title: `${theme.title} · 初稿`, body: outline.markdown })
+        bindThemeDraft(theme.id, draft.id)
+      } else if (mode === 'new') {
+        draft = createDraft({ title: `${theme.title} · 初稿`, body: outline.markdown })
+        bindThemeDraft(theme.id, draft.id)
+      }
+      json(res, 200, {
+        ok: true,
+        markdown: outline.markdown,
+        citations: outline.citations,
+        missing: outline.missing,
+        chains: outline.chains,
+        draft: draft ? { id: draft.id, title: draft.title, chars: String(draft.body || '').length } : null,
+        warnings,
+      })
+    } catch (error) {
+      json(res, themeErrorStatus(error), { ok: false, code: error?.code || 'error', error: String(error?.message || error) })
+    }
+  })
+
+  route('/api/litkb/themes/summary', async (req, res) => {
+    const body = JSON.parse((await readBody(req, 256 * 1024)).toString('utf8') || '{}')
+    const theme = readTheme(body.id)
+    if (!theme) { json(res, 404, { ok: false, error: '研究不存在' }); return }
+    if (typeof body.text === 'string') {
+      const summary = updateThemeSummary(theme.id, { text: body.text, model: null })
+      json(res, 200, { ok: true, summary })
+      return
+    }
+    const chains = themeChains(theme.id).list
+    if (body.polish === false) {
+      json(res, 200, { ok: true, summary: buildThemeSummary(theme, chains) })
+      return
+    }
+    // 结论润色是长模型调用：交给任务，立刻返回 202，前端轮询 /themes/jobs
+    const job = startThemeTextJob('summary', { theme })
+    json(res, 202, { ok: true, job: publicThemeJob(job) })
+  })
+
+  route('/api/litkb/themes/review', async (req, res) => {
+    const body = JSON.parse((await readBody(req, 256 * 1024)).toString('utf8') || '{}')
+    const theme = readTheme(body.id)
+    if (!theme) { json(res, 404, { ok: false, error: '研究不存在' }); return }
+    if (body.preview) {
+      const review = buildThemeReview(theme, themeChains(theme.id).list)
+      json(res, 200, { ok: true, ...reviewPayload(review, null) })
+      return
+    }
+    // 综述成文可能跑几分钟：交给任务，立刻返回 202，前端轮询 /themes/jobs
+    const job = startThemeTextJob('review', { theme, body })
+    json(res, 202, { ok: true, job: publicThemeJob(job) })
+  })
+
+  route('/api/litkb/themes/suggest', async (req, res) => {
+    const body = JSON.parse((await readBody(req, 256 * 1024)).toString('utf8') || '{}')
+    const title = String(body.title || '').trim()
+    const description = String(body.description || '').trim()
+    if (!title) { json(res, 422, { ok: false, code: 'empty_title', error: '先写研究标题' }); return }
+    const status = llmStatus(pluginCtx)
+    if (status.available && status.route) {
       try {
-        const id = queryParam(req, 'id')
-        if (id) {
-          const job = themeJobs.get(id)
-          if (!job) { json(res, 404, { ok: false, error: '任务不存在' }); return }
-          json(res, 200, { ok: true, job: publicThemeJob(job) })
+        const system = '你是文献研究助理。只输出 JSON，不要解释。'
+        const user = [
+          `研究标题：${title}`,
+          description ? `研究描述：${description}` : '',
+          '请把这个研究主题拆成 3-6 条可分别检索文献的细分描述（研究问题的一个侧面）。',
+          '每条给 title（不超过 30 字）、description（具体要论证什么）、keywords（0-4 个检索词，中英文均可）。',
+          '输出格式：{"facets":[{"title":"...","description":"...","keywords":["..."]}]}',
+        ].filter(Boolean).join('\n')
+        const result = await callModel(pluginCtx, status.route, system, user, null, { maxTokens: 4096, reasoningEffort: 'off' })
+        const parsed = parseModelJson(result.text)
+        const list = Array.isArray(parsed?.facets) ? parsed.facets : []
+        const facets = list
+          .filter((item) => item && String(item.title || '').trim())
+          .slice(0, 6)
+          .map((item, index) => ({
+            key: `f${index + 1}`,
+            title: String(item.title).trim().slice(0, 80),
+            description: String(item.description || '').trim().slice(0, 500),
+            keywords: Array.isArray(item.keywords) ? item.keywords.map((k) => String(k).trim()).filter(Boolean).slice(0, 4) : [],
+            mode: 'compare',
+            enabled: true,
+          }))
+        if (facets.length) {
+          json(res, 200, { ok: true, facets, source: 'model', model: `${status.route.provider}/${status.route.model}`, note: '' })
           return
         }
-        const list = [...themeJobs.values()]
-          .sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt))
-          .slice(0, 20)
-          .map((job) => publicThemeJob(job))
-        json(res, 200, { ok: true, jobs: list })
       } catch (error) {
-        json(res, 500, { ok: false, error: String(error?.message || error) })
+        // 模型失败退回模板，不阻塞新建研究
       }
-    },
-  })
-
-  webServer.register({
-    kind: 'exact',
-    path: '/api/litkb/themes/papers',
-    handler: async (req, res) => {
-      try {
-        const body = JSON.parse((await readBody(req, 256 * 1024)).toString('utf8') || '{}')
-        const action = ['include', 'exclude', 'restore'].includes(body.action) ? body.action : 'include'
-        const theme = setThemePaper(String(body.id || ''), { paperId: String(body.paperId || ''), action })
-        const chains = themeChains(theme.id)
-        const raw = readAnalysis(theme.id)
-        const analysis = raw ? pruneAnalysis(raw, analysisScope(theme)).analysis : null
-        json(res, 200, {
-          ok: true,
-          action,
-          theme,
-          papers: themePapers(theme, chains.list),
-          stats: themeStats(theme, chains.list),
-          analysis,
-        })
-      } catch (error) {
-        json(res, themeErrorStatus(error), { ok: false, code: error?.code || 'error', error: String(error?.message || error) })
-      }
-    },
-  })
-
-  webServer.register({
-    kind: 'exact',
-    path: '/api/litkb/themes/outline',
-    handler: async (req, res) => {
-      try {
-        const body = JSON.parse((await readBody(req, 256 * 1024)).toString('utf8') || '{}')
-        const theme = readTheme(body.id)
-        if (!theme) { json(res, 404, { ok: false, error: '研究不存在' }); return }
-        const outline = buildThemeOutline(theme)
-        const mode = ['append', 'replace', 'new'].includes(body.mode) ? body.mode : ''
-        const warnings = []
-        let draft = null
-        if (!mode) {
-          warnings.push(theme.draftId ? '已有绑定文稿，未写入；可选择追加、覆盖或新建' : '尚未绑定文稿')
-        } else if (mode === 'append' && theme.draftId) {
-          const current = readDraft(theme.draftId)
-          if (!current) warnings.push('绑定的文稿已不存在，将新建')
-          else draft = saveDraft(theme.draftId, { body: `${String(current.body || '').trimEnd()}\n\n${outline.markdown}` })
-        } else if (mode === 'replace' && theme.draftId) {
-          draft = saveDraft(theme.draftId, { body: outline.markdown })
-        }
-        if (mode && !draft && mode !== 'new') {
-          draft = createDraft({ title: `${theme.title} · 初稿`, body: outline.markdown })
-          bindThemeDraft(theme.id, draft.id)
-        } else if (mode === 'new') {
-          draft = createDraft({ title: `${theme.title} · 初稿`, body: outline.markdown })
-          bindThemeDraft(theme.id, draft.id)
-        }
-        json(res, 200, {
-          ok: true,
-          markdown: outline.markdown,
-          citations: outline.citations,
-          missing: outline.missing,
-          chains: outline.chains,
-          draft: draft ? { id: draft.id, title: draft.title, chars: String(draft.body || '').length } : null,
-          warnings,
-        })
-      } catch (error) {
-        json(res, themeErrorStatus(error), { ok: false, code: error?.code || 'error', error: String(error?.message || error) })
-      }
-    },
-  })
-
-  webServer.register({
-    kind: 'exact',
-    path: '/api/litkb/themes/summary',
-    handler: async (req, res) => {
-      try {
-        const body = JSON.parse((await readBody(req, 256 * 1024)).toString('utf8') || '{}')
-        const theme = readTheme(body.id)
-        if (!theme) { json(res, 404, { ok: false, error: '研究不存在' }); return }
-        if (typeof body.text === 'string') {
-          const summary = updateThemeSummary(theme.id, { text: body.text, model: null })
-          json(res, 200, { ok: true, summary })
-          return
-        }
-        const chains = themeChains(theme.id).list
-        if (body.polish === false) {
-          json(res, 200, { ok: true, summary: buildThemeSummary(theme, chains) })
-          return
-        }
-        // 研究结论：模型压到 500 字内；没有模型时自动退回确定性摘要
-        const summary = await polishSummary({ ctx: pluginCtx, theme, chains })
-        json(res, 200, { ok: true, summary, promptVersion: SUMMARY_PROMPT_VERSION })
-      } catch (error) {
-        json(res, themeErrorStatus(error), { ok: false, code: error?.code || 'error', error: String(error?.message || error) })
-      }
-    },
-  })
-
-  webServer.register({
-    kind: 'exact',
-    path: '/api/litkb/themes/review',
-    handler: async (req, res) => {
-      try {
-        const body = JSON.parse((await readBody(req, 256 * 1024)).toString('utf8') || '{}')
-        const theme = readTheme(body.id)
-        if (!theme) { json(res, 404, { ok: false, error: '研究不存在' }); return }
-        const chains = themeChains(theme.id).list
-        const review = body.preview
-          ? buildThemeReview(theme, chains)
-          : await composeReview({ ctx: pluginCtx, theme, chains, polish: body.polish !== false })
-        const mode = ['new', 'append', 'replace'].includes(body.mode) ? body.mode : 'new'
-        let draft = null
-        if (!body.preview) {
-          // 重复点「生成综述」时覆盖同一篇，不再产生同名的重复稿
-          const bound = theme.draftId ? readDraft(theme.draftId) : null
-          const sameReview = Boolean(bound) && String(bound.title || '') === `${theme.title} · 研究综述`
-          if (mode === 'new' && sameReview) {
-            draft = saveDraft(bound.id, { body: review.markdown })
-          } else if (mode !== 'new' && theme.draftId) {
-            const current = readDraft(theme.draftId)
-            if (current) {
-              const next = mode === 'append'
-                ? `${String(current.body || '').trimEnd()}\n\n${review.markdown}`
-                : review.markdown
-              draft = saveDraft(theme.draftId, { body: next })
-            }
-          }
-          if (!draft) {
-            draft = createDraft({ title: `${theme.title} · 研究综述`, type: '综述', body: review.markdown })
-            bindThemeDraft(theme.id, draft.id)
-          }
-        }
-        json(res, 200, {
-          ok: true,
-          markdown: review.markdown,
-          chars: String(review.markdown).length,
-          citations: review.citations,
-          chains: review.chains,
-          covered: review.covered,
-          total: review.total,
-          missing: review.missing || [],
-          polished: review.polished || 0,
-          warnings: review.warnings || [],
-          draft: draft ? { id: draft.id, title: draft.title, chars: String(draft.body || '').length } : null,
-          promptVersion: REVIEW_PROMPT_VERSION,
-        })
-      } catch (error) {
-        json(res, themeErrorStatus(error), { ok: false, code: error?.code || 'error', error: String(error?.message || error) })
-      }
-    },
-  })
-
-  webServer.register({
-    kind: 'exact',
-    path: '/api/litkb/themes/suggest',
-    handler: async (req, res) => {
-      try {
-        const body = JSON.parse((await readBody(req, 256 * 1024)).toString('utf8') || '{}')
-        const title = String(body.title || '').trim()
-        const description = String(body.description || '').trim()
-        if (!title) { json(res, 422, { ok: false, code: 'empty_title', error: '先写研究标题' }); return }
-        const status = llmStatus(pluginCtx)
-        if (status.available && status.route) {
-          try {
-            const system = '你是文献研究助理。只输出 JSON，不要解释。'
-            const user = [
-              `研究标题：${title}`,
-              description ? `研究描述：${description}` : '',
-              '请把这个研究主题拆成 3-6 条可分别检索文献的细分描述（研究问题的一个侧面）。',
-              '每条给 title（不超过 30 字）、description（具体要论证什么）、keywords（0-4 个检索词，中英文均可）。',
-              '输出格式：{"facets":[{"title":"...","description":"...","keywords":["..."]}]}',
-            ].filter(Boolean).join('\n')
-            const result = await callModel(pluginCtx, status.route, system, user, null, { maxTokens: 4096, reasoningEffort: 'off' })
-            const parsed = parseModelJson(result.text)
-            const list = Array.isArray(parsed?.facets) ? parsed.facets : []
-            const facets = list
-              .filter((item) => item && String(item.title || '').trim())
-              .slice(0, 6)
-              .map((item, index) => ({
-                key: `f${index + 1}`,
-                title: String(item.title).trim().slice(0, 80),
-                description: String(item.description || '').trim().slice(0, 500),
-                keywords: Array.isArray(item.keywords) ? item.keywords.map((k) => String(k).trim()).filter(Boolean).slice(0, 4) : [],
-                mode: 'compare',
-                enabled: true,
-              }))
-            if (facets.length) {
-              json(res, 200, { ok: true, facets, source: 'model', model: `${status.route.provider}/${status.route.model}`, note: '' })
-              return
-            }
-          } catch (error) {
-            // 模型失败退回模板，不阻塞新建研究
-          }
-        }
-        const template = ['研究背景与问题', '方法与技术路线', '数据与实验设置', '主要结果与指标', '局限与失败模式']
-        const facets = template.map((name, index) => ({
-          key: `f${index + 1}`,
-          title: name,
-          description: '',
-          keywords: [],
-          mode: 'compare',
-          enabled: true,
-        }))
-        json(res, 200, { ok: true, facets, source: 'template', model: null, note: '模型不可用或输出无效，已用模板' })
-      } catch (error) {
-        json(res, 500, { ok: false, error: String(error?.message || error) })
-      }
-    },
+    }
+    const template = ['研究背景与问题', '方法与技术路线', '数据与实验设置', '主要结果与指标', '局限与失败模式']
+    const facets = template.map((name, index) => ({
+      key: `f${index + 1}`,
+      title: name,
+      description: '',
+      keywords: [],
+      mode: 'compare',
+      enabled: true,
+    }))
+    json(res, 200, { ok: true, facets, source: 'template', model: null, note: '模型不可用或输出无效，已用模板' })
   })
 
   // 重启续跑：上次进程中断时留下的 running/queued 主题任务，重新入队。

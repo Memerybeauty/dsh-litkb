@@ -12,17 +12,29 @@ function readBody(req, limit = 80 * 1024 * 1024) {
   return new Promise((resolve, reject) => {
     const chunks = []
     let size = 0
+    let settled = false
+    const fail = (error) => {
+      if (settled) return
+      settled = true
+      reject(error)
+      // 只停止读，不 destroy：让上层还能正常写回 413，而不是直接断连。
+      if (typeof req.pause === 'function') req.pause()
+    }
     req.on('data', (chunk) => {
+      if (settled) return
       size += chunk.length
       if (size > limit) {
-        reject(Object.assign(new Error('payload too large'), { code: 'TOO_LARGE' }))
-        req.destroy()
+        fail(Object.assign(new Error('payload too large'), { code: 'TOO_LARGE' }))
         return
       }
       chunks.push(chunk)
     })
-    req.on('end', () => resolve(Buffer.concat(chunks)))
-    req.on('error', reject)
+    req.on('end', () => {
+      if (settled) return
+      settled = true
+      resolve(Buffer.concat(chunks))
+    })
+    req.on('error', fail)
   })
 }
 
@@ -30,6 +42,22 @@ function tagCounts(rows) {
   const counts = {}
   for (const row of rows) for (const t of row.topics || []) counts[t] = (counts[t] || 0) + 1
   return counts
+}
+
+/** 统一错误 → HTTP 状态。默认 500，保留各 handler 历史上“抛错即 500”的语义。 */
+function errorStatus(error) {
+  const explicit = Number(error?.status || error?.statusCode)
+  if (Number.isFinite(explicit) && explicit >= 400 && explicit <= 599) return explicit
+  if (error?.code === 'TOO_LARGE') return 413
+  if (error instanceof SyntaxError) return 400
+  return 500
+}
+
+/** 统一错误 → 机器可读 code。 */
+function errorCode(error) {
+  if (error?.code) return String(error.code)
+  if (error instanceof SyntaxError) return 'bad_json'
+  return 'error'
 }
 
 function listTags() {

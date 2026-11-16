@@ -708,21 +708,25 @@
         }
       }, [])
 
-      if (!active) return null
-
+      // 搜索 + 筛选 + 计数：每次渲染要跑 ~9 遍全表，缓存起来，
+      // 让「导入轮询 / toast / 选中」这类无关渲染不再重算。
       const needle = query.trim().toLowerCase()
-      const searched = needle
-        ? papers.filter((p) => `${p.title || ''} ${p.authors || ''} ${p.venue || ''} ${(p.topics || []).join(' ')} ${p.doi || ''}`.toLowerCase().includes(needle))
-        : papers
-      const untagged = searched.filter((p) => !(p.topics || []).length)
-      const filterCounts = { 全部: papers.length, 未归类: papers.filter((p) => !(p.topics || []).length).length }
-      for (const status of STATUS) filterCounts[status] = papers.filter((p) => (p.status || '待读') === status).length
-      const shown = filter === '全部'
-        ? searched
-        : filter === '未归类'
-          ? untagged
-          : searched.filter((p) => (p.status || '待读') === filter)
-      const tagNames = tags.map((t) => t.name)
+      const { filterCounts, shown, tagNames } = useMemo(() => {
+        const searched = needle
+          ? papers.filter((p) => `${p.title || ''} ${p.authors || ''} ${p.venue || ''} ${(p.topics || []).join(' ')} ${p.doi || ''}`.toLowerCase().includes(needle))
+          : papers
+        const untagged = searched.filter((p) => !(p.topics || []).length)
+        const counts = { 全部: papers.length, 未归类: papers.filter((p) => !(p.topics || []).length).length }
+        for (const status of STATUS) counts[status] = papers.filter((p) => (p.status || '待读') === status).length
+        const visible = filter === '全部'
+          ? searched
+          : filter === '未归类'
+            ? untagged
+            : searched.filter((p) => (p.status || '待读') === filter)
+        return { filterCounts: counts, shown: visible, tagNames: tags.map((t) => t.name) }
+      }, [papers, needle, filter, tags])
+
+      if (!active) return null
       const splitTab = tab === '论文库' && libraryView === '论文'
       const showList = !splitTab || !panelWidth || panelWidth >= 1260
       const narrow = splitTab && panelWidth > 0 && panelWidth < 980
@@ -730,15 +734,23 @@
       const activeIngest = ingestJobs.filter((job) => job.status === 'queued' || job.status === 'running')
       const currentIngest = activeIngest.find((job) => job.status === 'running') || activeIngest[0] || null
       const showRail = Boolean(reader) && !narrow
+      // 列表行重建很贵（几百篇时每次都是上千个元素），回调保持稳定引用，
+      // 让 PaperList 里的 rows useMemo 能真正命中。
+      const openPaperRow = useCallback((paper) => { setSelected(paper); setManaging(false); setListDrawer(false) }, [])
+      const importFromPicker = useCallback(() => { fileRef.current?.click() }, [])
+      const autoChainForPaper = useCallback((paper) => setAutoChain({ paperId: paper.id, paperTitle: paper.title || '', reviewOnly: false }), [])
+      const openReviewQueue = useCallback(() => setAutoChain({ paperId: '', paperTitle: '', reviewOnly: true }), [])
+      const openManage = useCallback(() => setManaging(true), [])
+
       const listView = h(PaperList, {
         papers: shown, loading, filter, onFilter: setFilter, filterCounts,
         emptyText: needle ? `没有匹配「${query.trim()}」的论文` : (filter === '全部' ? '还没有论文，点右上角导入或把 PDF 拖进来' : `没有「${filter}」论文`),
         emptyDesc: needle ? '换个关键词，或清空搜索。' : (filter === '全部' ? '支持多选；中文 PDF 与扫描件会做质量评分。' : '换个筛选条件，或导入新论文。'),
-        onOpen: (paper) => { setSelected(paper); setManaging(false); setListDrawer(false) }, onImport: () => fileRef.current?.click(),
-        onAutoChain: (paper) => setAutoChain({ paperId: paper.id, paperTitle: paper.title || '', reviewOnly: false }),
-        onReview: () => setAutoChain({ paperId: '', paperTitle: '', reviewOnly: true }),
+        onOpen: openPaperRow, onImport: importFromPicker,
+        onAutoChain: autoChainForPaper,
+        onReview: openReviewQueue,
         onIngest: startIngest,
-        onManage: () => setManaging(true),
+        onManage: openManage,
         toolbar: true,
         selectedId: reader?.id,
       })
@@ -1234,7 +1246,7 @@
     }
 
     function PaperList({ papers, loading, emptyText, emptyDesc, onOpen, onImport, onManage, onAutoChain, onReview, onIngest, toolbar, selectedId, filter = '全部', onFilter, filterCounts = {} }) {
-      const rows = papers.map((p) => {
+      const rows = useMemo(() => papers.map((p) => {
         const status = p.status || '待读'
         const topics = p.topics || []
         return h('div', {
@@ -1279,7 +1291,7 @@
                   onClick: (event) => { event.stopPropagation(); onReview() },
                 }, '审核队列') : null)
             : null))
-      })
+      }), [papers, selectedId, onOpen, onIngest, onAutoChain, onReview])
 
       return h('div', { className: 'litkb-listWrap' },
         h('div', { className: 'litkb-filters', role: 'tablist' },

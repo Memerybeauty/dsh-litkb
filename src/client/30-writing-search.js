@@ -229,6 +229,8 @@
       const pendingTextRef = useRef(null)
       const pendingAssistRef = useRef(null)
       const textRef = useRef(null)
+      const loadSeqRef = useRef(0)
+      const latestRef = useRef(null)
 
       const loadList = useCallback(async () => {
         const data = await api('/api/litkb/drafts')
@@ -239,7 +241,11 @@
       }, [])
 
       const loadDraft = useCallback(async (id) => {
+        const seq = loadSeqRef.current + 1
+        loadSeqRef.current = seq
         const data = await api('/api/litkb/drafts/read?id=' + encodeURIComponent(id))
+        // 期间又切了稿、或用户已经开始输入：丢弃这次响应，别把新内容盖掉
+        if (seq !== loadSeqRef.current || dirtyRef.current) return
         setDraft(data.draft)
         setTitle(data.draft.title || '')
         setBody(data.draft.body || '')
@@ -258,7 +264,12 @@
       useEffect(() => {
         if (!focus) return
         if (focus.themeId) setResearchFilter(focus.themeId)
-        if (focus.draftId) setActiveId(focus.draftId)
+        if (!focus.draftId) return
+        if (!dirtyRef.current) { setActiveId(focus.draftId); return }
+        saveNow().then((saved) => {
+          if (saved) setActiveId(focus.draftId)
+          else setNotice('当前文稿保存失败，未切换；请重试')
+        })
       }, [focus])
       useEffect(() => { if (activeId) loadDraft(activeId).catch((e) => setErr(String(e.message || e))) }, [activeId, loadDraft])
 
@@ -285,11 +296,23 @@
         }
       }, [draft, title, body, loadList])
 
+      // 始终保留最新编辑值：卸载时已经没有 await 的机会了
+      latestRef.current = { draft, title, body }
+
       useEffect(() => {
         if (!draft || !dirtyRef.current) return undefined
         const timer = setTimeout(() => { saveNow() }, 1200)
         return () => clearTimeout(timer)
       }, [title, body, draft, saveNow])
+
+      // 关面板 / 切页 / 整个插件卸载时，把最后 ≤1.2s 的输入补发出去
+      useEffect(() => () => {
+        const latest = latestRef.current
+        if (!latest?.draft || !dirtyRef.current) return
+        if (saveOnExit('/api/litkb/drafts/save', { id: latest.draft.id, title: latest.title, body: latest.body })) {
+          dirtyRef.current = false
+        }
+      }, [])
 
       const create = async () => {
         setErr('')
@@ -530,7 +553,13 @@
 
       const selectDraft = async (id) => {
         if (id === activeId) return
-        if (dirtyRef.current) await saveNow()
+        if (dirtyRef.current) {
+          const saved = await saveNow()
+          if (!saved) {
+            setNotice('保存失败，已停在当前文稿；请重试或先复制内容')
+            return
+          }
+        }
         setActiveId(id)
       }
 
@@ -559,10 +588,17 @@
         }
       }
 
-      const openCitation = async (paperId, page) => {
+      const openCitation = useCallback(async (paperId, page) => {
         if (dirtyRef.current) await saveNow()
         if (onOpenPaper) onOpenPaper(paperId, page)
-      }
+      }, [saveNow, onOpenPaper])
+
+      // 预览是整篇 Markdown 重解析；只在正文或引用回调变化时重算，
+      // 保存状态、提示、搜索面板这些无关渲染不再触发。
+      const preview = useMemo(
+        () => (body.trim() ? renderMarkdown(body, { onOpenPaper: openCitation }) : null),
+        [body, openCitation],
+      )
 
       const citations = citationInfo?.citations || []
       const references = citationInfo?.references || []
@@ -700,9 +736,7 @@
                     : null,
                   mode !== 'edit'
                     ? h('div', { className: 'litkb-mdPreview' },
-                        body.trim()
-                          ? renderMarkdown(body, { onOpenPaper: openCitation })
-                          : h('span', { className: 'litkb-muted' }, '（空文稿）'))
+                        preview || h('span', { className: 'litkb-muted' }, '（空文稿）'))
                     : null),
                 h('div', { className: 'litkb-writeFoot' },
                   h('span', { className: 'litkb-muted' }, `${chars} 字 · ${citations.length} 引用`),

@@ -116,20 +116,44 @@
           try {
             const data = await api(`/api/litkb/themes/jobs?id=${encodeURIComponent(job.id)}`)
             setJob(data.job)
+            const kind = data.job.kind || 'chain'
             if (data.job.status === 'done') {
               await refreshList()
               await openTheme(selectedId, true)
-              setNotice(`探索完成：${data.job.created} 条证据链${data.job.gaps.length ? `，${data.job.gaps.length} 条缺口` : ''}`)
+              if (kind === 'summary') {
+                const result = data.job.result || {}
+                const text = String(result.summary?.text || '')
+                setSummaryDraft(text)
+                setSummaryEditing(true)
+                setSummaryBusy('')
+                setNotice(!text
+                  ? '还没有已确认的链，先审核'
+                  : (result.summary?.mode === 'model' ? `已润色为 ${text.length} 字，可修改后保存` : `已生成摘要 ${text.length} 字（未配置模型，未润色）`))
+              } else if (kind === 'review') {
+                const result = data.job.result || {}
+                setSummaryBusy('')
+                if (result.draft) {
+                  setNotice(`研究综述已写入文稿：${result.draft.title}（${result.chars} 字 · ${result.citations} 条引用）`)
+                  if (onOpenDraft) onOpenDraft({ themeId: selectedId, draftId: result.draft.id })
+                } else {
+                  setNotice((result.warnings || [])[0] || '已生成综述')
+                }
+              } else {
+                setNotice(`探索完成：${data.job.created} 条证据链${data.job.gaps.length ? `，${data.job.gaps.length} 条缺口` : ''}`)
+              }
             }
             if (data.job.status === 'failed') {
-              setNotice('探索失败：' + (data.job.errors[0]?.message || '未知错误'))
+              setSummaryBusy('')
+              const label = kind === 'review' ? '综述' : kind === 'summary' ? '结论' : '探索'
+              setNotice(`${label}失败：` + (data.job.errors[0]?.message || '未知错误'))
             }
+            if (data.job.status === 'canceled') setSummaryBusy('')
           } catch (e) {
             setErr(String(e.message || e))
           }
         }, 700)
         return () => clearTimeout(timer)
-      }, [job, selectedId, refreshList, openTheme])
+      }, [job, selectedId, refreshList, openTheme, onOpenDraft])
 
       useEffect(() => {
         if (!analysisJob || !['queued', 'running'].includes(analysisJob.status) || !selectedId) return undefined
@@ -294,6 +318,21 @@
         }
       }
 
+      const runChain = async (facetKeys) => {
+        if (!selectedId || busy) return
+        setBusy('chain')
+        setErr('')
+        try {
+          const data = await post('/api/litkb/themes/chain', { id: selectedId, facetKeys })
+          setJob(data.job)
+          setNotice(`建链中：${facetKeys.length} 个研究内容…`)
+        } catch (e) {
+          setErr(String(e.message || e))
+        } finally {
+          setBusy('')
+        }
+      }
+
       const setPaper = async (pid, action) => {
         try {
           const data = await post('/api/litkb/themes/papers', { id: selectedId, paperId: pid, action })
@@ -449,8 +488,16 @@
       const generateSummary = async () => {
         if (summaryBusy) return
         setSummaryBusy('summary')
+        let started = false
         try {
           const data = await post('/api/litkb/themes/summary', { id: selectedId })
+          if (data.job) {
+            // 结论润色是长任务：转成后台任务，由上面的轮询收尾
+            started = true
+            setJob(data.job)
+            setNotice('正在润色结论…')
+            return
+          }
           setSummaryDraft(data.summary.text || '')
           setSummaryEditing(true)
           const chars = String(data.summary.text || '').length
@@ -460,15 +507,23 @@
         } catch (e) {
           setErr(String(e.message || e))
         } finally {
-          setSummaryBusy('')
+          if (!started) setSummaryBusy('')
         }
       }
 
       const generateReview = async () => {
         if (summaryBusy) return
         setSummaryBusy('review')
+        let started = false
         try {
           const data = await post('/api/litkb/themes/review', { id: selectedId, mode: 'new' })
+          if (data.job) {
+            // 综述成文可能跑几分钟：转成后台任务，由上面的轮询收尾
+            started = true
+            setJob(data.job)
+            setNotice('正在生成研究综述…')
+            return
+          }
           if (!data.draft) {
             setNotice(data.warnings?.[0] || '已生成综述')
             return
@@ -479,7 +534,7 @@
         } catch (e) {
           setErr(String(e.message || e))
         } finally {
-          setSummaryBusy('')
+          if (!started) setSummaryBusy('')
         }
       }
 

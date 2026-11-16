@@ -19,8 +19,14 @@ jobs:
           cache: npm
       - name: Install
         run: npm ci
+      - name: Version check
+        run: npm run version:check
       - name: Syntax check
         run: npm run check
+      - name: Artifacts in sync
+        run: npm run artifacts:check
+      - name: Pack size
+        run: npm run pack:check
       - name: Format check
         run: npm run format:check
       - name: Lint

@@ -36,6 +36,7 @@ const ReactStub = {
   },
   useEffect: () => {},
   useCallback: (fn) => fn,
+  useMemo: (fn) => fn(),
   useRef: (v) => ({ current: v }),
 }
 const mod = captured.factory((name) => {

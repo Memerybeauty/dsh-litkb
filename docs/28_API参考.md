@@ -1,6 +1,6 @@
-# API 参考（v0.16.3）
+# API 参考（v0.18.2）
 
-所有接口前缀：`/api/litkb`；v0.16.3 共注册 **90** 条。请求/响应均为 JSON；PDF 上传为原始 body + `x-filename`；备份恢复为原始 zip body；错误统一为：
+所有接口前缀：`/api/litkb`；v0.17.2 共注册 **91** 条。请求/响应均为 JSON；PDF 上传为原始 body + `x-filename`；备份恢复为原始 zip body；错误统一为：
 
 ```json
 { "ok": false, "code": "error_code", "error": "人类可读信息" }
@@ -14,6 +14,7 @@
 | GET | `/backup` | 整库 zip 下载（含 manifest；排除 settings.json 与 cache/） |
 | POST | `/restore?confirm=restore` | 原始 zip body；校验后覆盖，覆盖前自动快照 |
 | GET | `/diag` | 版本、模型、任务、运行时、库计数、最近快照 |
+| GET/POST | `/maintenance` | 维护：`rebuild-index` / `clear-pages` / `clear-history` |
 
 恢复错误码：`confirm_required`(428)、`restore_busy`(409)、`too_large`(413)、`bad_zip`/`bad_entry`/`bad_manifest`/`no_data`(422)。
 
@@ -111,6 +112,7 @@
 | GET | `/papers` | 论文列表 + stats |
 | GET | `/settings` / POST | 设置读取/保存 |
 | GET | `/tags` / POST | 标签读取/创建 |
+| POST | `/tags/create` | 新建标签（旧入口，等价 POST /tags） |
 | POST | `/tags/delete` | 删除标签 |
 | POST | `/reclassify` | 重新打标 |
 | POST | `/update` | 更新论文元数据/状态 |
@@ -136,6 +138,7 @@
 | POST | `/card/generate` | 整卡生成/重生成 |
 | POST | `/card/section` | 单段编辑 |
 | POST | `/card/annotate` | 批注 |
+| POST | `/card/evidence` | 手动补一条证据（quote/page/block，成功返回 q-id） |
 | POST | `/card/status` | 卡片状态 |
 | POST | `/card/regenerate` | 整卡/单段重生成 |
 | GET | `/card/versions` | 版本列表 |
@@ -215,10 +218,11 @@
 | POST | `/themes/chain` | 生成主题链草稿（任务），返回 job |
 | POST | `/themes/explore` | 一次完成匹配 + 建链，返回 match 与 job；使用 theme.match |
 | GET | `/themes/jobs?id=` | 任务进度；不带 id 返回最近 20 条 |
-| POST | `/themes/jobs/cancel` | `{id}` 取消排队/运行中的主题任务 |
+| POST | `/themes/jobs/cancel` | `{id}` 取消排队/运行中的主题任务（结论/综述任务会同时 abort 模型调用） |
 | POST | `/themes/papers` | 手动加入/移出/恢复论文（`action`） |
 | POST | `/themes/outline` | 生成提纲；`mode`=new/append/replace 写入文稿 |
-| POST | `/themes/summary` | 不带 text 生成结论；带 text 保存 |
+| POST | `/themes/summary` | 不带 text 生成结论（**202 + job**，轮询 `/themes/jobs?id=`，kind=`summary`）；带 text 直接保存（200） |
+| POST | `/themes/review` | 生成研究综述并写入文稿（**202 + job**，kind=`review`；`mode`=new/append/replace；`preview:true` 同步预览并返回 200） |
 | POST | `/themes/suggest` | 拆分细分描述（有模型走模型，无模型模板） |
 
 **研究对象**

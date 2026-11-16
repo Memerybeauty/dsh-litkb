@@ -6,7 +6,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFile
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
-  PATHS, TYPES, ensureLibrary, findByDoi, findByHash, readIndex, readTags, sha256, stats, upsert,
+  PATHS, TYPES, ensureLibrary, findByDoi, findByHash, indexBadLines, readIndex, readTags, sha256, stats, upsert,
   writeIndex, writeTags,
 } from './library.js'
 import { addAnnotation, addQuoteEvidence, cardSummary, listVersions, readCard, readVersion, recomputeCardStatus, renderCardMarkdown, writeCard } from './cards.js'

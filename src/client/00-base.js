@@ -6,7 +6,7 @@ window.__ModuleLoader__.load({
   id: 'dsh-litkb',
   factory: (require) => {
     const React = require('react')
-    const { useState, useEffect, useCallback, useRef } = React
+    const { useState, useEffect, useCallback, useMemo, useRef } = React
     const h = React.createElement
 
     /* ---------------- 全局开关 ---------------- */
@@ -52,6 +52,25 @@ window.__ModuleLoader__.load({
       return `${shortAuthors(paper.authors)} ${paper.year || ''}, p.${page}`
     }
 
+    /**
+     * 内联 Markdown 链接的协议白名单。
+     * 正文链接来自模型输出与 PDF，不能直接信任：只放行 http(s)、mailto、站内相对路径与锚点，
+     * 其余（javascript:、data:、vbscript: 等）一律拒绝，渲染层退回纯文本。
+     */
+    const SAFE_LINK_PROTOCOLS = ['http:', 'https:', 'mailto:']
+    function safeHref(raw) {
+      const url = String(raw || '').trim()
+      if (!url) return null
+      if (/[\u0000-\u001f\u007f]/.test(url)) return null
+      if (/^(?:#|\/(?!\/)|\.{1,2}\/)/.test(url)) return url
+      try {
+        const parsed = new URL(url, 'https://local.invalid/')
+        return SAFE_LINK_PROTOCOLS.includes(parsed.protocol) ? url : null
+      } catch {
+        return null
+      }
+    }
+
     function tagTone(name) {
       let hash = 0
       for (const ch of String(name || '')) hash = ((hash * 31) + ch.charCodeAt(0)) >>> 0
@@ -85,5 +104,31 @@ window.__ModuleLoader__.load({
         throw err
       }
       return body
+    }
+
+    /**
+     * 组件卸载/切页时把未保存的编辑发出去。
+     * 这时已经不能 await：优先 sendBeacon，其次 fetch(keepalive)；
+     * 两者都没有就返回 false，由调用方提示「未保存」。
+     */
+    function saveOnExit(path, payload) {
+      const body = JSON.stringify(payload)
+      try {
+        if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+          if (navigator.sendBeacon(path, new Blob([body], { type: 'application/json' }))) return true
+        }
+      } catch { /* 退回 fetch */ }
+      try {
+        if (typeof fetch === 'function') {
+          fetch(path, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body,
+            keepalive: true,
+          }).catch(() => {})
+          return true
+        }
+      } catch { /* ignore */ }
+      return false
     }
 
