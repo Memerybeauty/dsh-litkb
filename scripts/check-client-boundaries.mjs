@@ -29,7 +29,9 @@ const eslintScope = require('eslint-scope')
 const BASE = '00-base.js'
 const update = process.argv.includes('--update')
 
-const files = readdirSync(clientDir).filter((name) => name.endsWith('.js')).sort()
+const files = readdirSync(clientDir)
+  .filter((name) => name.endsWith('.js'))
+  .sort()
 if (!files.length) {
   console.error('[boundaries] src/client 下没有分片')
   process.exit(1)
@@ -44,7 +46,8 @@ const factory = (() => {
   let found = null
   const walk = (node, parent) => {
     if (!node || typeof node.type !== 'string') return
-    if (node.type === 'ArrowFunctionExpression' && parent?.type === 'Property' && parent.key?.name === 'factory') found = node
+    if (node.type === 'ArrowFunctionExpression' && parent?.type === 'Property' && parent.key?.name === 'factory')
+      found = node
     for (const key of Object.keys(node)) {
       const value = node[key]
       if (Array.isArray(value)) for (const child of value) walk(child, node)
@@ -99,7 +102,10 @@ for (let i = 0; i < files.length; i += 1) {
   const name = files[i]
   const text = parts[i]
   for (const match of text.matchAll(/Object\.assign\(\s*SHARED\s*,\s*\{([\s\S]*?)\}\s*\)/g)) {
-    const names = match[1].split(',').map((item) => item.trim()).filter(Boolean)
+    const names = match[1]
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
     declaredProviders[name] = [...new Set([...(declaredProviders[name] || []), ...names])].sort()
   }
   const used = [...new Set([...text.matchAll(/\bSHARED\.([A-Za-z_$][\w$]*)/g)].map((match) => match[1]))].sort()
@@ -123,7 +129,13 @@ for (const [consumer, names] of Object.entries(declaredConsumers)) {
 
 // 3. Object.assign 里登记的必须是本片定义的名字
 for (const [name, names] of Object.entries(declaredProviders)) {
-  const defined = new Set([...parts[files.indexOf(name)].matchAll(/^    (?:async )?function ([A-Za-z0-9_$]+)|^    (?:const|let) ([A-Za-z0-9_$]+)/gm)].map((match) => match[1] || match[2]))
+  const defined = new Set(
+    [
+      ...parts[files.indexOf(name)].matchAll(
+        /^    (?:async )?function ([A-Za-z0-9_$]+)|^    (?:const|let) ([A-Za-z0-9_$]+)/gm,
+      ),
+    ].map((match) => match[1] || match[2]),
+  )
   for (const n of names) if (!defined.has(n)) problems.push(`${name} 登记了 SHARED.${n}，但本片没有定义 ${n}`)
 }
 
@@ -155,12 +167,14 @@ for (const [consumer, names] of Object.entries(declaredConsumers)) {
 for (const [consumer, names] of Object.entries(contract.consumers || {})) {
   const actual = new Set(declaredConsumers[consumer] || [])
   for (const name of names) {
-    if (!actual.has(name)) problems.push(`${consumer} 的契约里有 SHARED.${name}，但代码已不再使用，请用 --update 收紧契约`)
+    if (!actual.has(name))
+      problems.push(`${consumer} 的契约里有 SHARED.${name}，但代码已不再使用，请用 --update 收紧契约`)
   }
 }
 for (const [provider, names] of Object.entries(declaredProviders)) {
   const declared = new Set(contract.providers?.[provider] || [])
-  for (const name of names) if (!declared.has(name)) problems.push(`${provider} 新登记了 SHARED.${name}，请用 --update 写回契约`)
+  for (const name of names)
+    if (!declared.has(name)) problems.push(`${provider} 新登记了 SHARED.${name}，请用 --update 写回契约`)
 }
 
 if (problems.length) {

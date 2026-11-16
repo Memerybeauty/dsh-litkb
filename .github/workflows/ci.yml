@@ -26,8 +26,6 @@ jobs:
 
       - name: Client boundaries
         run: npm run check:boundaries
-      - name: Artifacts in sync
-        run: npm run artifacts:check
       - name: Pack size
         run: npm run pack:check
       - name: Format check

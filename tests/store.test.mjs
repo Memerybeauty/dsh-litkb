@@ -40,10 +40,17 @@ useStore(b)
 ensureLibrary()
 assert.deepEqual(readIndex(), [], '切换库后不能命中 A 库的索引缓存')
 upsert({ id: 'p-b', title: 'B 库论文', sha256: 'bbb' })
-assert.deepEqual(readIndex().map((row) => row.id), ['p-b'])
+assert.deepEqual(
+  readIndex().map((row) => row.id),
+  ['p-b'],
+)
 
 useStore(a)
-assert.deepEqual(readIndex().map((row) => row.id), ['p-a'], '切回 A 库读到自己的数据')
+assert.deepEqual(
+  readIndex().map((row) => row.id),
+  ['p-a'],
+  '切回 A 库读到自己的数据',
+)
 assert.match(readFileSync(PATHS.index, 'utf8'), /p-a/)
 assert.doesNotMatch(readFileSync(join(libraryB, 'index.jsonl'), 'utf8'), /p-a/)
 
@@ -51,7 +58,13 @@ assert.doesNotMatch(readFileSync(join(libraryB, 'index.jsonl'), 'utf8'), /p-a/)
 const seenRoot = withStore(b, (store) => store.root)
 assert.equal(seenRoot, libraryB)
 assert.equal(currentStore().root, libraryA, 'withStore 结束后回到原库')
-assert.throws(() => withStore(b, () => { throw new Error('boom') }), /boom/)
+assert.throws(
+  () =>
+    withStore(b, () => {
+      throw new Error('boom')
+    }),
+  /boom/,
+)
 assert.equal(currentStore().root, libraryA, '抛错也要还原')
 
 // 6. resetStore 回到默认库（环境变量指定的那个）

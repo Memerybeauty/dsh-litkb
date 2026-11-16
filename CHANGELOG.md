@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.19.0 — 解耦改造：路由分域、存储端口、分片契约、prompt 单一来源（2026-11-16）
+
+四层结构落地（入口层 → 路由域 → 领域模块 → 端口层），行为不变，均为内部重构。
+
+- **P0 路由分域**：`apply()` 从 2,264 行降到 **60 行**，91 条路由归入 6 个 `registerXxxRoutes({ route })`；新增 `05-http.js`（JSON 响应 / 请求体 / 错误码映射 / `createRouter`）与 `10-library-service.js`（导入管线、标签、状态）；每个域独立 `try/catch`，单域装配失败只记 `route group X skipped`，不再连累插件启动；
+- **P1 存储端口**：新增 `lib/store.js`（`createStore` / `currentStore` / `useStore` / `withStore` / `resetStore` + `PATHS` 兼容视图），21 个领域模块与 `src/server` 的路径依赖统一改指端口；`library.js` 不再自建 `PATHS`，索引缓存 key 带上库根，切换库不会命中上一库的缓存；新增 `tests/store.test.mjs` 覆盖多库隔离、`withStore` 还原与抛错还原；
+- **P2 客户端分片契约**：用 `espree + eslint-scope` 作用域分析把 60 处兄弟分片裸引用改为 `SHARED.xxx`；每个分片末尾 `Object.assign(SHARED, …)` 登记对外名字；新增 `src/client/contracts.json` 固化 provider / consumer；新增 `scripts/check-client-boundaries.mjs` 与 `npm run check:boundaries`（CI + verify 均已接入），新增未登记依赖直接失败；
+- **P3 prompt 统一**：9 处各自拼 `join(HERE, '..', 'prompts', …)` 收敛为 `lib/prompts.js` 的版本总表 + `loadPrompt()`；文件缺失抛 `prompt_missing` 而不是返回空串；新增 `tests/prompts.test.mjs` 校验「总表 ↔ 文件」一一对应、各模块常量与总表一致；
+- **构建产物单一真相**：`lib/index.js` 与 `lib/client.js` 不再入库（`.gitignore` 忽略；`lib/` 其余 40 个手写模块照常入库），`src/` 是两个产物的唯一可编辑来源；新增 `prepare` 脚本，`npm ci` / git 安装自动构建；删除失效的 `artifacts:check`；
+- **文档**：新增 [49 解耦与模块边界](docs/49_解耦与模块边界.md)；README、文档索引、安装文档同步到 v0.19.0；
+- 测试：`npm test` 44 个文件全绿（新增 store / prompts），91 条路由注册数不变。
+
 ## v0.18.2 — P2 收尾：任务表回收、dist/ 收纳、retryFailed 真正生效（2026-11-11）
 
 - **历史发布包收纳**：根目录 55 个 `.tgz`（262MB）移入 `dist/`；安装器优先在 `dist/` 找包，`npm pack` 产物也自动收进 `dist/`；新增 `npm run clean:dist -- --keep 5 [--dry-run]`，默认只保留最近 5 个（本次只做了收纳，没有自动删包）；

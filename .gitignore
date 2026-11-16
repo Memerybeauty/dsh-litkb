@@ -7,3 +7,5 @@ coverage/
 dist/
 .eslintcache
 eval/
+lib/index.js
+lib/client.js

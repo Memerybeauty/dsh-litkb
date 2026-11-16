@@ -1,6 +1,6 @@
 {
   "name": "dsh-litkb",
-  "version": "0.18.2",
+  "version": "0.19.0",
   "private": false,
   "type": "module",
   "description": "文献工作台：个人工作台 + 论文库 + 写作",
@@ -12,11 +12,10 @@
   },
   "scripts": {
     "check": "node scripts/check.mjs",
-    "test": "node tests/plugin-smoke.mjs && node tests/core.test.mjs && node tests/layout.test.mjs && node tests/paragraphs.test.mjs && node tests/paddle.test.mjs && node tests/cardgen.test.mjs && node tests/translate.test.mjs && node tests/cardops.test.mjs && node tests/evidence.test.mjs && node tests/cardui.test.mjs && node tests/graph.test.mjs && node tests/ask.test.mjs && node tests/graphui.test.mjs && node tests/shellui.test.mjs && node tests/export.test.mjs && node tests/writing.test.mjs && node tests/deepread.test.mjs && node tests/review.test.mjs && node tests/chain.test.mjs && node tests/chain-routes.test.mjs && node tests/search.test.mjs && node tests/answer.test.mjs && node tests/search-routes.test.mjs && node tests/tools.test.mjs && node tests/scale.test.mjs && node tests/cross.test.mjs && node tests/history.test.mjs && node tests/link-import.test.mjs && node tests/compare.test.mjs && node tests/theme.test.mjs && node tests/theme-routes.test.mjs && node tests/themeui.test.mjs && node tests/product.test.mjs && node tests/productui.test.mjs && node tests/ingest.test.mjs && node tests/delete.test.mjs && node tests/llm-route.test.mjs && node tests/paper-status.test.mjs && node tests/theme-analysis.test.mjs && node tests/markdown-link.test.mjs && node tests/writing-save.test.mjs && node tests/library-safety.test.mjs && node tests/store.test.mjs",
+    "test": "node tests/plugin-smoke.mjs && node tests/core.test.mjs && node tests/layout.test.mjs && node tests/paragraphs.test.mjs && node tests/paddle.test.mjs && node tests/cardgen.test.mjs && node tests/translate.test.mjs && node tests/cardops.test.mjs && node tests/evidence.test.mjs && node tests/cardui.test.mjs && node tests/graph.test.mjs && node tests/ask.test.mjs && node tests/graphui.test.mjs && node tests/shellui.test.mjs && node tests/export.test.mjs && node tests/writing.test.mjs && node tests/deepread.test.mjs && node tests/review.test.mjs && node tests/chain.test.mjs && node tests/chain-routes.test.mjs && node tests/search.test.mjs && node tests/answer.test.mjs && node tests/search-routes.test.mjs && node tests/tools.test.mjs && node tests/scale.test.mjs && node tests/cross.test.mjs && node tests/history.test.mjs && node tests/link-import.test.mjs && node tests/compare.test.mjs && node tests/theme.test.mjs && node tests/theme-routes.test.mjs && node tests/themeui.test.mjs && node tests/product.test.mjs && node tests/productui.test.mjs && node tests/ingest.test.mjs && node tests/delete.test.mjs && node tests/llm-route.test.mjs && node tests/paper-status.test.mjs && node tests/theme-analysis.test.mjs && node tests/markdown-link.test.mjs && node tests/writing-save.test.mjs && node tests/library-safety.test.mjs && node tests/store.test.mjs && node tests/prompts.test.mjs",
     "build:client": "node scripts/build-client.mjs",
     "build:server": "node scripts/build-server.mjs",
     "build": "npm run build:client && npm run build:server",
-    "artifacts:check": "git diff --exit-code -- lib/",
     "pack:check": "node scripts/check-pack.mjs",
     "clean:dist": "node scripts/clean-dist.mjs",
     "pretest": "npm run build",
@@ -30,7 +29,8 @@
     "plugin:install": "node scripts/install.mjs",
     "version:check": "node scripts/check-version.mjs",
     "eval": "node scripts/eval-quality.mjs",
-    "check:boundaries": "node scripts/check-client-boundaries.mjs"
+    "check:boundaries": "node scripts/check-client-boundaries.mjs",
+    "prepare": "npm run build"
   },
   "dsh": {
     "bundle": {

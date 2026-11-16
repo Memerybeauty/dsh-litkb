@@ -2,7 +2,7 @@
 
 > 装进 DeepSeek Harness 的本地文献知识库：收文 → 精读/七段卡 → 证据链 → 横向对比/图谱 → 可追溯问答 → 写作。
 
-**版本**：**0.18.2**
+**版本**：**0.19.0**
 **状态**：P0–P5 已交付，并完成产品化收口（上手引导 / 数据备份恢复 / 安装器 / 关于与诊断）；产品形态为**个人工作台 + 论文库 + 写作**三块。
 
 **代码仓库**：https://github.com/Memerybeauty/dsh-litkb（private）  
@@ -66,25 +66,26 @@
 - 数据目录：默认 `~/Documents/文献库`，可用 `LITKB_LIBRARY` 覆盖；
 - 安装：`npm run plugin:install -- --profile desktop`（默认安装本版本 tgz；开发模式加 `--link`），**完全重启 DSH**；
 - 前端缓存：重启后 `Cmd+Shift+R`；
-- 健康检查：`GET /api/litkb/health` 应显示 `0.18.2`；
+- 健康检查：`GET /api/litkb/health` 应显示 `0.19.0`；
 - 升级前：在「设置 → 文献工作台 → 数据与备份」下载整库备份；恢复前会自动快照当前库。
 
 ## 开发
 
 ```bash
 npm run build     # 从 src/ 生成 lib/
-npm test          # 42 个测试文件（含客户端 UI / 路由 / 建链 / 数据安全）
-npm run verify    # check + lint + format + version + pack + test
+npm test          # 44 个测试文件（含客户端 UI / 路由 / 建链 / 数据安全 / 存储端口 / prompt 版本）
+npm run verify    # check + 分片边界 + lint + format + version + pack + test
+npm run check:boundaries  # 客户端分片契约校验（新增跨片依赖必须显式登记）
 npm run clean:dist -- --keep 5   # dist/ 只保留最近 5 个发布包
-npm pack          # 产出 dsh-litkb-0.18.2.tgz
+npm pack          # 产出 dsh-litkb-0.19.0.tgz
 ```
 
 目录：
 
 ```text
-lib/         生成产物（服务端 + 客户端；由 src/ 拼接生成）
+lib/         领域模块（手写） + index.js/client.js（由 src/ 拼接生成，不入版本库）
 src/         客户端/服务端源码分片 + 构建脚本
-scripts/     build-client.mjs / build-server.mjs
+scripts/     build-client.mjs / build-server.mjs / check-client-boundaries.mjs
 prompts/     prompt 版本化
 tests/       假 React / 临时库 / 真实库干跑
 docs/        方案、交付单、验收记录、对照图
