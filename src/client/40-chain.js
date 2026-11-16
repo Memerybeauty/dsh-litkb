@@ -654,7 +654,7 @@
             ? h(TagsEditor, { tags, onChanged })
             : terms === null
               ? h('div', { className: 'litkb-muted' }, '术语表加载中…')
-              : h(GlossaryEditor, {
+              : h(SHARED.GlossaryEditor, {
                   terms, embedded: true,
                   onClose: () => setTab('tags'),
                   onSaved: (next, changed) => {
@@ -850,3 +850,6 @@
     const GRAPH_EDGE_COLOR = { uses: '#4f8ef7', improves_on: '#3fb950', evaluates_on: '#d29922', reports: '#a371f7' }
     const GRAPH_KIND_COLOR = { method: '#3fb950', dataset: '#d29922', metric: '#a371f7' }
 
+
+    /* P2 分片契约：本片对外提供的名字，供其它分片经 SHARED 取用。 */
+    Object.assign(SHARED, { AskPanel, BacklinksButton, ChainDialog, GRAPH_EDGE_COLOR, GRAPH_EDGE_LABEL, GRAPH_KIND_COLOR, GRAPH_KIND_LABEL, ManagePanel, ResultsPanel, Toast, field, metaLine })

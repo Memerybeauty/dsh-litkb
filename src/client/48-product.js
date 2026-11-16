@@ -110,3 +110,6 @@
       if (!job?.steps) return ''
       return INGEST_STEPS.map(([key, label]) => `${label} ${ingestMark(job.steps[key]?.status)}`).join(' · ')
     }
+
+    /* P2 分片契约：本片对外提供的名字，供其它分片经 SHARED 取用。 */
+    Object.assign(SHARED, { OnboardingPanel, formatBytes, guideStoredDismissed, ingestSummary, notifyGuide, setGuideStoredDismissed })

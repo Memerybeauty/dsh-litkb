@@ -323,7 +323,7 @@
                   type: 'button', className: 'litkb-miniBtn',
                   onClick: () => toggleContext(ev.id),
                 }, expanded[ev.id] ? '收起上下文' : '上下文'),
-                h(BacklinksButton, { paperId: paper.id, quoteId: ev.id }),
+                h(SHARED.BacklinksButton, { paperId: paper.id, quoteId: ev.id }),
                 onCite ? h('button', {
                   type: 'button', className: 'litkb-miniBtn',
                   onClick: () => onCite({
@@ -785,7 +785,7 @@
 
       const askBody = h('div', { className: 'litkb-railPane litkb-askRail' },
         askSelection
-          ? h(AskPanel, {
+          ? h(SHARED.AskPanel, {
               key: `${paper.id}-${askSelection.page || 0}-${String(askSelection.text || '').slice(0, 24)}`,
               inline: true,
               paper,
@@ -1457,3 +1457,6 @@
       return blocks
     }
 
+
+    /* P2 分片契约：本片对外提供的名字，供其它分片经 SHARED 取用。 */
+    Object.assign(SHARED, { CardPanel, GlossaryEditor, ParsePanel, PdfRail, renderMarkdown })

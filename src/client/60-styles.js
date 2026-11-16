@@ -1369,3 +1369,6 @@
       '.litkb-aboutPrivacy{padding:10px 12px;border-radius:10px;background:var(--litkb-fill-1);font-size:11px;line-height:1.8;color:var(--litkb-text-3)}',
     ].join('\n')
 
+
+    /* P2 分片契约：本片对外提供的名字，供其它分片经 SHARED 取用。 */
+    Object.assign(SHARED, { CSS })

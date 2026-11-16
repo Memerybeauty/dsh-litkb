@@ -152,7 +152,7 @@
           `dsh-litkb ${info?.version || ''}`,
           `库：${info?.library?.path || snapshot?.settings?.library || ''}`,
           `论文 ${counts.papers || 0} · 卡片 ${counts.cards || 0} · 链 ${counts.chains || 0}（已确认 ${counts.confirmedChains || 0}）· 研究 ${counts.themes || 0} · 文稿 ${counts.drafts || 0}`,
-          `数据体积：${formatBytes(info?.library?.bytes || 0)}`,
+          `数据体积：${SHARED.formatBytes(info?.library?.bytes || 0)}`,
           `模型：${route ? `${route.provider} / ${route.model}` : (llm.available ? '未选择默认模型' : '宿主未提供')}`,
           `运行：Node ${info?.runtime?.node || ''} / ${info?.runtime?.platform || ''} · 启动于 ${info?.runtime?.startedAt || ''}`,
         ].join('\n')
@@ -204,7 +204,7 @@
             stat('证据链', counts.chains || 0),
             stat('研究', counts.themes || 0),
             stat('文稿', counts.drafts || 0),
-            stat('体积', formatBytes(info?.library?.bytes || 0))),
+            stat('体积', SHARED.formatBytes(info?.library?.bytes || 0))),
           h('div', { className: 'litkb-settingsMini' },
             h('a', {
               className: 'litkb-btn', href: '/api/litkb/backup', download: '',
@@ -220,7 +220,7 @@
             })),
           h('div', { className: 'litkb-settingsHint' },
             latest
-              ? `最近快照：${latest.name} · ${formatLocal(latest.mtime)} · ${formatBytes(latest.bytes)}（共 ${info?.library?.backups || 0} 个）`
+              ? `最近快照：${latest.name} · ${formatLocal(latest.mtime)} · ${SHARED.formatBytes(latest.bytes)}（共 ${info?.library?.backups || 0} 个）`
               : '还没有自动快照；恢复前会自动生成一个。'),
           restoreNote ? h('div', { className: 'litkb-settingsHint' }, restoreNote) : null),
         h('section', { className: 'litkb-settingsSection' },
@@ -294,7 +294,7 @@
           h('div', { className: 'litkb-settingsMini' },
             h('button', {
               type: 'button', className: 'litkb-miniBtn',
-              onClick: () => { notifyGuide(false); setNotice('已重新显示上手引导') },
+              onClick: () => { SHARED.notifyGuide(false); setNotice('已重新显示上手引导') },
             }, '重新显示上手引导'))),
         h('section', { className: 'litkb-settingsSection' },
           h('div', { className: 'litkb-settingsTitle' }, '关于'),
@@ -304,7 +304,7 @@
             h('span', null, info?.runtime ? `Node ${info.runtime.node} · ${info.runtime.platform}` : '—')),
           h('div', { className: 'litkb-aboutLine' },
             h('span', null, '数据体积'),
-            h('span', null, formatBytes(info?.library?.bytes || 0))),
+            h('span', null, SHARED.formatBytes(info?.library?.bytes || 0))),
           h('div', { className: 'litkb-aboutPrivacy' },
             '本地优先：论文、卡片、证据链、研究与文稿都保存在本机库目录；只有调用模型 / OCR 时，必要的文本才会发送给你配置的服务商。插件不上传遥测。'),
           h('div', { className: 'litkb-settingsMini' },
@@ -368,7 +368,7 @@
         return saved < 460 ? 520 : saved
       })
       const [guide, setGuide] = useState(null)
-      const [guideHidden, setGuideHidden] = useState(() => guideStoredDismissed())
+      const [guideHidden, setGuideHidden] = useState(() => SHARED.guideStoredDismissed())
       const [guideForce, setGuideForce] = useState(false)
       const [ingestJobs, setIngestJobs] = useState([])
       const fileRef = useRef(null)
@@ -401,14 +401,14 @@
       const dismissGuide = useCallback(() => {
         setGuideHidden(true)
         setGuideForce(false)
-        notifyGuide(true)
+        SHARED.notifyGuide(true)
       }, [])
 
       useEffect(() => {
         const onGuide = (event) => {
           const hidden = event?.detail?.dismissed !== false
           setGuideHidden(hidden)
-          setGuideStoredDismissed(hidden)
+          SHARED.setGuideStoredDismissed(hidden)
           if (hidden) setGuideForce(false)
           else {
             setGuideForce(true)
@@ -791,7 +791,7 @@
           : (showRail ? `${leftWidth}px 6px minmax(0,1fr) 6px ${rightWidth}px` : `${leftWidth}px 6px minmax(0,1fr)`),
       }
       const railNode = showRail
-        ? h(PdfRail, {
+        ? h(SHARED.PdfRail, {
             paper: reader, page: railPage, blockId: railBlock, blockIds: railBlockIds, nonce: pdfView?.nonce,
             askSelection, onClearAsk: () => setAskSelection(null), cardRevision,
             chainRevision,
@@ -808,7 +808,7 @@
         }) : null,
         h('div', { className: 'litkb-readPane' },
           managing
-            ? h(ManagePanel, { tags, onClose: () => setManaging(false), onChanged: load })
+            ? h(SHARED.ManagePanel, { tags, onClose: () => setManaging(false), onChanged: load })
             : reader
               ? h(Detail, {
                   paper: reader, tags: tagNames, types, inline: true,
@@ -825,7 +825,7 @@
                   onDelete: removePaper,
                   cardRevision,
                 })
-              : h(Empty, {
+              : h(SHARED.Empty, {
                   icon: '▤', title: '左边选一篇论文',
                   desc: '卡片、解析稿在中间，原文常驻在右侧；打开解析稿后默认平铺。',
                 })),
@@ -1015,7 +1015,7 @@
                 h('div', { className: 'litkb-ingestTitle' },
                   `自动处理《${currentIngest.title || currentIngest.paperId}》`),
                 h('div', { className: 'litkb-ingestStage' },
-                  `${currentIngest.step || '排队中'} · ${ingestSummary(currentIngest)}`)),
+                  `${currentIngest.step || '排队中'} · ${SHARED.ingestSummary(currentIngest)}`)),
               activeIngest.length > 1
                 ? h('span', { className: 'litkb-ingestMore' }, `另 ${activeIngest.length - 1} 篇排队`)
                 : null,
@@ -1029,7 +1029,7 @@
               }, '查看'))
           : null,
         h('div', { className: 'litkb-module' + (tab === '个人工作台' ? '' : ' is-hidden') },
-          h(ThemePage, {
+          h(SHARED.ThemePage, {
             papers,
             tags: tagNames,
             paperActions,
@@ -1054,7 +1054,7 @@
           })),
         h('div', { className: 'litkb-module' + (tab === '论文库' ? '' : ' is-hidden') },
           libraryView === '横向精读'
-            ? h(ComparePanel, {
+            ? h(SHARED.ComparePanel, {
                 papers,
                 onOpenPaper: (paperId, page, blockId) => {
                   const target = papers.find((paper) => paper.id === paperId)
@@ -1076,7 +1076,7 @@
                 },
               })
             : libraryView === '图谱'
-            ? h(GraphPanel, {
+            ? h(SHARED.GraphPanel, {
                 papers,
                 chainRevision,
                 onOpenPaper: (id) => { setManaging(false); setFilter('全部'); setSelected(papers.find((p) => p.id === id) || null); goLibrary() },
@@ -1092,7 +1092,7 @@
                 onGoLibrary: goLibrary,
               })
             : libraryView === '检索'
-            ? h(SearchPage, {
+            ? h(SHARED.SearchPage, {
                 papers,
                 tags,
                 onOpenPaper: (paperId, page, blockId) => {
@@ -1115,7 +1115,7 @@
               })
             : splitView),
         h('div', { className: 'litkb-module' + (tab === '写作' ? '' : ' is-hidden') },
-          h(WritingPage, {
+          h(SHARED.WritingPage, {
             insertRequest,
             focus: writingFocus,
             onConsumed: () => setInsertRequest(null),
@@ -1139,13 +1139,13 @@
         style: { display: 'none' },
         onChange: (e) => { runImport(e.target.files); e.target.value = '' },
       }),
-      toast ? h(Toast, {
+      toast ? h(SHARED.Toast, {
         toast,
         onClose: () => setToast(null),
         onOpen: (p) => { setSelected(p); setToast(null) },
         onResults: () => { setShowResults(true); setToast(null) },
       }) : null,
-      showResults && results ? h(ResultsPanel, {
+      showResults && results ? h(SHARED.ResultsPanel, {
         items: results,
         onClose: () => setShowResults(false),
         onRetry: retryItem,
@@ -1179,7 +1179,7 @@
             railNode))
         : null,
       autoChain
-        ? h(AutoChainPanel, {
+        ? h(SHARED.AutoChainPanel, {
             contextPaperId: autoChain.paperId || '',
             contextPaperTitle: autoChain.paperTitle || '',
             onClose: () => setAutoChain(null),
@@ -1215,7 +1215,7 @@
           )
         : null,
       chainDialog
-        ? h(ChainDialog, {
+        ? h(SHARED.ChainDialog, {
             key: chainDialog.nonce,
             seed: chainDialog,
             paper: reader || papers.find((paper) => paper.id === chainDialog.paperId) || null,
@@ -1308,7 +1308,7 @@
         loading && !papers.length
           ? h(SkeletonRows, { rows: 5 })
           : papers.length === 0
-            ? h(Empty, { icon: '▤', title: emptyText, desc: emptyDesc })
+            ? h(SHARED.Empty, { icon: '▤', title: emptyText, desc: emptyDesc })
             : h('div', { className: 'litkb-table' }, rows))
     }
 
@@ -1391,20 +1391,20 @@
 
       const infoBody = h('div', { className: 'litkb-drawerBody' },
         err ? h('div', { className: 'litkb-error' }, err) : null,
-        field('标题', h('input', {
+        SHARED.field('标题', h('input', {
           className: 'litkb-input', value: form.title,
           onChange: (e) => setForm({ ...form, title: e.target.value }),
         })),
         h('div', { className: 'litkb-grid2' },
-          field('年份', h('input', {
+          SHARED.field('年份', h('input', {
             className: 'litkb-input', type: 'number', value: form.year,
             onChange: (e) => setForm({ ...form, year: e.target.value }),
           })),
-          field('大类', h('select', {
+          SHARED.field('大类', h('select', {
             className: 'litkb-input', value: form.type,
             onChange: (e) => setForm({ ...form, type: e.target.value }),
           }, types.map((t) => h('option', { key: t, value: t }, t))))),
-        field('主题标签（可多选）', h('div', { className: 'litkb-chips' },
+        SHARED.field('主题标签（可多选）', h('div', { className: 'litkb-chips' },
           allTags.map((t) => h('button', {
             key: t, type: 'button',
             className: 'litkb-chip is-select is-tag tone-' + tagTone(t) + (form.topics.includes(t) ? ' is-on' : ''),
@@ -1418,11 +1418,11 @@
           }),
           h('button', { type: 'button', className: 'litkb-btn litkb-btnGhost', onClick: createAndTag }, '新建')),
         h('div', { className: 'litkb-metaBlock' },
-          metaLine('DOI', paper.doi || '—'),
-          metaLine('期刊/会议', paper.venue || '—'),
-          metaLine('页数 / 字符', `${paper.pages ?? '—'} / ${paper.chars ?? '—'}`),
-          metaLine('解析质量', String(paper.quality ?? '—')),
-          metaLine('原始文件', paper.originalName || '—')))
+          SHARED.metaLine('DOI', paper.doi || '—'),
+          SHARED.metaLine('期刊/会议', paper.venue || '—'),
+          SHARED.metaLine('页数 / 字符', `${paper.pages ?? '—'} / ${paper.chars ?? '—'}`),
+          SHARED.metaLine('解析质量', String(paper.quality ?? '—')),
+          SHARED.metaLine('原始文件', paper.originalName || '—')))
 
       const commentSelection = async (selection) => {
         const text = typeof window !== 'undefined' && window.prompt
@@ -1463,10 +1463,10 @@
       const body = view === 'info'
         ? infoBody
         : view === 'card'
-          ? h('div', { className: 'litkb-drawerBody' }, h(CardPanel, { key: paper.id, paper, onChanged: onRefresh, onOpenPdf, onAsk, onCite, cardRevision }))
+          ? h('div', { className: 'litkb-drawerBody' }, h(SHARED.CardPanel, { key: paper.id, paper, onChanged: onRefresh, onOpenPdf, onAsk, onCite, cardRevision }))
           : view === 'deep'
             ? h('div', { className: 'litkb-drawerBody' }, h(DeepReadPanel, { key: paper.id, paper, onOpenPdf, onBuildChain }))
-            : h('div', { className: 'litkb-drawerBody is-flush' }, h(ParsePanel, { key: paper.id, paper, onOpenPdf, onLocate: (page, blockId, blockIds) => onOpenPdf(page, blockId, blockIds), onAsk, onComment: commentSelection, onBuildChain, onDeep: () => setView('deep'), flat: inline }))
+            : h('div', { className: 'litkb-drawerBody is-flush' }, h(SHARED.ParsePanel, { key: paper.id, paper, onOpenPdf, onLocate: (page, blockId, blockIds) => onOpenPdf(page, blockId, blockIds), onAsk, onComment: commentSelection, onBuildChain, onDeep: () => setView('deep'), flat: inline }))
       const foot = view === 'info'
         ? h('div', { className: 'litkb-drawerFoot' },
             h('button', { type: 'button', className: 'litkb-btn', disabled: saving, onClick: () => save() },
@@ -1729,13 +1729,16 @@
                         h('button', { type: 'button', className: 'litkb-btn', disabled: savingSection, onClick: saveSection },
                           savingSection ? '保存中…' : '保存本段'),
                         h('button', { type: 'button', className: 'litkb-btnGhost', onClick: () => setEditingSection('') }, '取消')))
-                  : h('div', { className: 'litkb-deepSectionBody' }, renderMarkdown(section.markdown || '原文未说明。', mdOptions)))),
+                  : h('div', { className: 'litkb-deepSectionBody' }, SHARED.renderMarkdown(section.markdown || '原文未说明。', mdOptions)))),
                 numbersBlock,
                 claimsBlock))
           : h('div', null,
-              h('div', { className: 'litkb-deepMd' }, renderMarkdown(markdown, mdOptions)),
+              h('div', { className: 'litkb-deepMd' }, SHARED.renderMarkdown(markdown, mdOptions)),
               numbersBlock,
               claimsBlock))
     }
 
     /* ---------------- 七段卡 ---------------- */
+
+    /* P2 分片契约：本片对外提供的名字，供其它分片经 SHARED 取用。 */
+    Object.assign(SHARED, { DeepReadPanel, Detail, LibraryPage, LitkbIcon, LitkbSettings })

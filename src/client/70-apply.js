@@ -2,7 +2,7 @@
       ctx.effect(() => {
         const style = document.createElement('style')
         style.setAttribute('data-dsh-plugin', 'dsh-litkb')
-        style.textContent = CSS
+        style.textContent = SHARED.CSS
         document.head.appendChild(style)
         return () => style.remove()
       }, 'dsh-litkb: styles')
@@ -14,13 +14,13 @@
           id: 'dsh-litkb',
           order: 20,
           label: () => '文献工作台',
-        }, LitkbIcon),
+        }, SHARED.LitkbIcon),
         'dsh-litkb: sidebar panel icon'
       )
 
       ctx.slots.inject(
         'main',
-        () => ctx.slots.register({ name: 'main', key: 'dsh-litkb' }, LibraryPage),
+        () => ctx.slots.register({ name: 'main', key: 'dsh-litkb' }, SHARED.LibraryPage),
         'dsh-litkb: native main panel'
       )
 
@@ -31,7 +31,7 @@
           id: 'dsh-litkb',
           order: 30,
           label: () => '文献工作台',
-        }, LitkbSettings),
+        }, SHARED.LitkbSettings),
         'dsh-litkb: settings section'
       )
     }

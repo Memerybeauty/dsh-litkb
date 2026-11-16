@@ -1,5 +1,5 @@
     function graphEdgeColor(type) {
-      return GRAPH_EDGE_COLOR[type] || '#6b7280'
+      return SHARED.GRAPH_EDGE_COLOR[type] || '#6b7280'
     }
 
     /** 简易力导向布局：斥力 O(n²) + 边弹簧 + 向心；300 节点一次算完。 */
@@ -173,7 +173,7 @@
         if (!pos) continue
         const paper = node.type === 'paper'
         const radius = paper ? 9 : 5 + Math.min(5, node.degree || 0)
-        const color = paper ? '#4f8ef7' : (GRAPH_KIND_COLOR[node.kind] || '#9aa4b2')
+        const color = paper ? '#4f8ef7' : (SHARED.GRAPH_KIND_COLOR[node.kind] || '#9aa4b2')
         ctx.beginPath()
         ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2)
         ctx.fillStyle = color
@@ -1174,7 +1174,7 @@
                                     }, value)))
                                   : null,
                                 cell?.markdown
-                                  ? renderMarkdown(cell.markdown, { onOpenPaper: (paperId, page) => onOpenPaper && onOpenPaper(paperId, page) })
+                                  ? SHARED.renderMarkdown(cell.markdown, { onOpenPaper: (paperId, page) => onOpenPaper && onOpenPaper(paperId, page) })
                                   : h('span', { className: 'litkb-muted' }, paper.available ? '—' : '未精读'))
                             }))
                     })))))
@@ -1275,7 +1275,7 @@
         ...filtered.edges.map((edge) => ({
           data: {
             id: edge.id, source: edge.source, target: edge.target,
-            kind: edge.type, label: GRAPH_EDGE_LABEL[edge.type] || edge.type,
+            kind: edge.type, label: SHARED.GRAPH_EDGE_LABEL[edge.type] || edge.type,
           },
         })),
       ]
@@ -1500,7 +1500,7 @@
             key: kind, type: 'button',
             className: 'litkb-chip is-select' + (filters.kinds[kind] ? ' is-on' : ''),
             onClick: () => setFilters({ ...filters, kinds: { ...filters.kinds, [kind]: !filters.kinds[kind] } }),
-          }, GRAPH_KIND_LABEL[kind]))),
+          }, SHARED.GRAPH_KIND_LABEL[kind]))),
         h('input', {
           className: 'litkb-input litkb-graphSearch', placeholder: '搜概念 / 论文…', value: filters.q,
           onChange: (e) => setFilters({ ...filters, q: e.target.value }),
@@ -1513,14 +1513,14 @@
       const detail = selectedNode
         ? h('div', { className: 'litkb-graphDetail' },
             h('div', { className: 'litkb-graphDetailHead' },
-              h('span', { className: 'litkb-graphDot', style: { background: selectedNode.type === 'paper' ? '#4f8ef7' : GRAPH_KIND_COLOR[selectedNode.kind] } }),
+              h('span', { className: 'litkb-graphDot', style: { background: selectedNode.type === 'paper' ? '#4f8ef7' : SHARED.GRAPH_KIND_COLOR[selectedNode.kind] } }),
               h('span', { className: 'litkb-blockTitle' }, selectedNode.name),
               h('span', { className: 'litkb-spacer' }),
               h('button', { type: 'button', className: 'litkb-link', onClick: () => setSelected(null) }, '收起')),
             h('div', { className: 'litkb-muted' },
               selectedNode.type === 'paper'
                 ? `${selectedNode.year || '年份未知'} · ${selectedNode.paperType || ''} · ${selectedNode.cardStatus || '无卡片'}`
-                : `${GRAPH_KIND_LABEL[selectedNode.kind] || selectedNode.kind} · 度数 ${selectedNode.degree || 0}`),
+                : `${SHARED.GRAPH_KIND_LABEL[selectedNode.kind] || selectedNode.kind} · 度数 ${selectedNode.degree || 0}`),
             selectedNode.type === 'paper'
               ? h('div', { className: 'litkb-inline' },
                   h('button', {
@@ -1537,7 +1537,7 @@
                 onClick: () => setSelected({ kind: 'edge', id: edge.id }),
               },
                 h('span', { className: 'litkb-graphEdgeType', style: { color: graphEdgeColor(edge.type) } },
-                  GRAPH_EDGE_LABEL[edge.type] || edge.type),
+                  SHARED.GRAPH_EDGE_LABEL[edge.type] || edge.type),
                 h('span', { className: 'litkb-graphRelName' },
                   edge.source === selectedNode.id ? edge.targetName : edge.sourceName),
                 h('span', { className: 'litkb-muted' }, `p.${edge.page}`)))))
@@ -1547,7 +1547,7 @@
         ? h('div', { className: 'litkb-graphDetail' },
             h('div', { className: 'litkb-graphDetailHead' },
               h('span', { className: 'litkb-graphDot', style: { background: graphEdgeColor(selectedEdge.type) } }),
-              h('span', { className: 'litkb-blockTitle' }, GRAPH_EDGE_LABEL[selectedEdge.type] || selectedEdge.type),
+              h('span', { className: 'litkb-blockTitle' }, SHARED.GRAPH_EDGE_LABEL[selectedEdge.type] || selectedEdge.type),
               h('span', { className: 'litkb-spacer' }),
               h('button', { type: 'button', className: 'litkb-link', onClick: () => setSelected(null) }, '收起')),
             h('div', { className: 'litkb-graphEdgeLine' },
@@ -1622,7 +1622,7 @@
                       className: 'litkb-graphLegendLine',
                       style: { background: conceptPalette[{ uses: 'uses', improves_on: 'improves', evaluates_on: 'evaluates', reports: 'reports' }[type]] },
                     }),
-                    GRAPH_EDGE_LABEL[type]))),
+                    SHARED.GRAPH_EDGE_LABEL[type]))),
                 running
                   ? h('div', { className: 'litkb-progress litkb-graphProgress' },
                       h('span', { className: 'litkb-pulse', 'aria-hidden': 'true' }),
@@ -1678,7 +1678,7 @@
         view === 'graph' ? filterBar : null,
         view === 'graph' ? graphBody : compareBody,
         queueOpen
-          ? h(ConceptQueue, {
+          ? h(SHARED.ConceptQueue, {
               data: concepts,
               onClose: () => setQueueOpen(false),
               onChanged: async () => { setQueueOpen(false); await load() },
@@ -1686,3 +1686,6 @@
           : null)
     }
 
+
+    /* P2 分片契约：本片对外提供的名字，供其它分片经 SHARED 取用。 */
+    Object.assign(SHARED, { AutoChainPanel, ComparePanel, GraphPanel })

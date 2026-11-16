@@ -151,7 +151,7 @@
                 data.answer && onSaveAnswer ? h('button', { type: 'button', className: 'litkb-miniBtn', disabled: saving, onClick: saveAnswer }, saving ? '保存中…' : '存为文稿') : null),
               data.warnings?.length ? h('div', { className: 'litkb-searchWarn' }, data.warnings.join('；')) : null,
               data.answer
-                ? h('div', { className: 'litkb-searchAnswer' }, renderMarkdown(data.answer, {
+                ? h('div', { className: 'litkb-searchAnswer' }, SHARED.renderMarkdown(data.answer, {
                     onOpenPaper: (paperId, page) => (onOpenPaper ? onOpenPaper(paperId, page) : null),
                     onOpenPage: (page, paperId) => (onOpenPaper ? onOpenPaper(paperId, page) : null),
                   }))
@@ -596,7 +596,7 @@
       // 预览是整篇 Markdown 重解析；只在正文或引用回调变化时重算，
       // 保存状态、提示、搜索面板这些无关渲染不再触发。
       const preview = useMemo(
-        () => (body.trim() ? renderMarkdown(body, { onOpenPaper: openCitation }) : null),
+        () => (body.trim() ? SHARED.renderMarkdown(body, { onOpenPaper: openCitation }) : null),
         [body, openCitation],
       )
 
@@ -790,3 +790,6 @@
     }
 
     /* ---------------- 证据链弹窗（P4.10 / v0.17.0） ---------------- */
+
+    /* P2 分片契约：本片对外提供的名字，供其它分片经 SHARED 取用。 */
+    Object.assign(SHARED, { SearchPage, WritingPage })

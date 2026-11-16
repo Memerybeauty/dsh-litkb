@@ -9,6 +9,12 @@ window.__ModuleLoader__.load({
     const { useState, useEffect, useCallback, useMemo, useRef } = React
     const h = React.createElement
 
+    /* ---------------- 分片契约（P2） ----------------
+     * 分片之间不直接引用彼此作用域里的名字，一律经 SHARED 取值；
+     * 每片在文件末尾 Object.assign 登记自己对外提供的名字。
+     * 契约固化在 src/client/contracts.json，由 scripts/check-client-boundaries.mjs 校验。 */
+    const SHARED = {}
+
     /* ---------------- 全局开关 ---------------- */
     let openState = false
     const listeners = new Set()

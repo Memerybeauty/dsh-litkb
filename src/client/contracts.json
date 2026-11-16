@@ -1,0 +1,126 @@
+{
+  "version": 1,
+  "providers": {
+    "10-library.js": [
+      "DeepReadPanel",
+      "Detail",
+      "LibraryPage",
+      "LitkbIcon",
+      "LitkbSettings"
+    ],
+    "20-reading.js": [
+      "CardPanel",
+      "GlossaryEditor",
+      "ParsePanel",
+      "PdfRail",
+      "renderMarkdown"
+    ],
+    "30-writing-search.js": [
+      "SearchPage",
+      "WritingPage"
+    ],
+    "40-chain.js": [
+      "AskPanel",
+      "BacklinksButton",
+      "ChainDialog",
+      "GRAPH_EDGE_COLOR",
+      "GRAPH_EDGE_LABEL",
+      "GRAPH_KIND_COLOR",
+      "GRAPH_KIND_LABEL",
+      "ManagePanel",
+      "ResultsPanel",
+      "Toast",
+      "field",
+      "metaLine"
+    ],
+    "45-graph.js": [
+      "AutoChainPanel",
+      "ComparePanel",
+      "GraphPanel"
+    ],
+    "47-theme.js": [
+      "ThemePage"
+    ],
+    "48-analysis.js": [
+      "AnalysisView"
+    ],
+    "48-product.js": [
+      "OnboardingPanel",
+      "formatBytes",
+      "guideStoredDismissed",
+      "ingestSummary",
+      "notifyGuide",
+      "setGuideStoredDismissed"
+    ],
+    "50-misc.js": [
+      "ConceptQueue",
+      "Empty"
+    ],
+    "60-styles.js": [
+      "CSS"
+    ]
+  },
+  "consumers": {
+    "00-base.js": [],
+    "10-library.js": [
+      "AutoChainPanel",
+      "CardPanel",
+      "ChainDialog",
+      "ComparePanel",
+      "Empty",
+      "GraphPanel",
+      "ManagePanel",
+      "ParsePanel",
+      "PdfRail",
+      "ResultsPanel",
+      "SearchPage",
+      "ThemePage",
+      "Toast",
+      "WritingPage",
+      "field",
+      "formatBytes",
+      "guideStoredDismissed",
+      "ingestSummary",
+      "metaLine",
+      "notifyGuide",
+      "renderMarkdown",
+      "setGuideStoredDismissed"
+    ],
+    "20-reading.js": [
+      "AskPanel",
+      "BacklinksButton"
+    ],
+    "30-writing-search.js": [
+      "renderMarkdown"
+    ],
+    "40-chain.js": [
+      "GlossaryEditor"
+    ],
+    "45-graph.js": [
+      "ConceptQueue",
+      "GRAPH_EDGE_COLOR",
+      "GRAPH_EDGE_LABEL",
+      "GRAPH_KIND_COLOR",
+      "GRAPH_KIND_LABEL",
+      "renderMarkdown"
+    ],
+    "47-theme.js": [
+      "AnalysisView",
+      "DeepReadPanel",
+      "Detail",
+      "OnboardingPanel"
+    ],
+    "48-analysis.js": [],
+    "48-product.js": [],
+    "50-misc.js": [
+      "GRAPH_KIND_LABEL"
+    ],
+    "60-styles.js": [],
+    "70-apply.js": [
+      "CSS",
+      "LibraryPage",
+      "LitkbIcon",
+      "LitkbSettings"
+    ]
+  }
+}

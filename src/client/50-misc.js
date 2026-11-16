@@ -54,7 +54,7 @@
             pending.length
               ? pending.map((concept) => h('div', { key: concept.id, className: 'litkb-queueRow' },
                   h('div', { className: 'litkb-queueName' },
-                    h('span', { className: 'litkb-chip is-type' }, GRAPH_KIND_LABEL[concept.kind] || concept.kind),
+                    h('span', { className: 'litkb-chip is-type' }, SHARED.GRAPH_KIND_LABEL[concept.kind] || concept.kind),
                     h('span', {}, concept.name),
                     concept.aliases?.length ? h('span', { className: 'litkb-muted' }, concept.aliases.join(' / ')) : null),
                   h('div', { className: 'litkb-queueActions' },
@@ -85,3 +85,6 @@
         h('p', { className: 'litkb-emptyText' }, desc))
     }
 
+
+    /* P2 分片契约：本片对外提供的名字，供其它分片经 SHARED 取用。 */
+    Object.assign(SHARED, { ConceptQueue, Empty })

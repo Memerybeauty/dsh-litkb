@@ -768,7 +768,7 @@
             h('button', { type: 'button', className: 'litkb-btn', onClick: startNew }, '＋ 新建研究')),
           err ? h('div', { className: 'litkb-error' }, err) : null,
           notice ? h('div', { className: 'litkb-themeNotice' }, notice) : null,
-          h(OnboardingPanel, {
+          h(SHARED.OnboardingPanel, {
             guide,
             dismissed: guideDismissed,
             force: guideForce,
@@ -971,7 +971,7 @@
               }, '×'))))),
         h('div', { className: 'litkb-rpDetail' },
           activePaper
-            ? h(Detail, {
+            ? h(SHARED.Detail, {
                 key: activePaper.id,
                 paper: activePaper,
                 tags: paperActions.tags || tags,
@@ -1170,7 +1170,7 @@
         : (section === 'chains'
           ? chainsView
           : (section === 'analysis'
-            ? h(AnalysisView, {
+            ? h(SHARED.AnalysisView, {
                 theme,
                 analysis,
                 job: analysisJob,
@@ -1233,7 +1233,7 @@
             h('span', { className: 'litkb-spacer' }),
             h('button', { type: 'button', className: 'litkb-close', onClick: () => setDeepreadPaper(null), 'aria-label': '关闭' }, '×')),
           h('div', { className: 'litkb-drawerBody' },
-            h(DeepReadPanel, {
+            h(SHARED.DeepReadPanel, {
               key: deepreadPaper.id,
               paper: deepreadPaper,
               onOpenPdf: (page, blockId) => onOpenPaper && onOpenPaper(deepreadPaper.id, page, blockId),
@@ -1287,3 +1287,6 @@
           : null,
         modal)
     }
+
+    /* P2 分片契约：本片对外提供的名字，供其它分片经 SHARED 取用。 */
+    Object.assign(SHARED, { ThemePage })

@@ -23,6 +23,9 @@ jobs:
         run: npm run version:check
       - name: Syntax check
         run: npm run check
+
+      - name: Client boundaries
+        run: npm run check:boundaries
       - name: Artifacts in sync
         run: npm run artifacts:check
       - name: Pack size
