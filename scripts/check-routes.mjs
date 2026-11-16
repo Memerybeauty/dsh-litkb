@@ -85,20 +85,34 @@ for (const file of Object.keys(manifest.groups || {})) {
 }
 if (Number(manifest.count) !== count) problems.push(`清单总数 ${manifest.count} ≠ 实际 ${count}`)
 
-// 3. 与文档交叉校验
-let docs = ''
+// 3. 与文档交叉校验：三份文档都要跟着路由总数走
+const DOC_COUNTS = [
+  { file: 'docs/28_API参考.md', re: /共注册 \*\*(\d+)\*\* 条/, label: '「共注册 **N** 条」' },
+  { file: 'docs/19_功能清单.md', re: /接口清单（(\d+) 条）/, label: '「接口清单（N 条）」' },
+  { file: 'docs/05_插件技术方案.md', re: /注册 (?:\*\*)?(\d+)(?:\*\*)? 条/, label: '「注册 N 条」' },
+]
+for (const doc of DOC_COUNTS) {
+  let text = ''
+  try {
+    text = readFileSync(join(root, doc.file), 'utf8')
+  } catch {
+    problems.push(`缺少 ${doc.file}`)
+    continue
+  }
+  const match = text.match(doc.re)
+  if (!match) problems.push(`${doc.file} 里找不到 ${doc.label}`)
+  else if (Number(match[1]) !== count) problems.push(`${doc.file} 写的是 ${match[1]} 条，实际 ${count} 条`)
+}
+
+// 路由域文件必须在 API 文档的「实现位置」表里出现
+let apiDoc = ''
 try {
-  docs = readFileSync(docsPath, 'utf8')
+  apiDoc = readFileSync(docsPath, 'utf8')
 } catch {
   problems.push('缺少 docs/28_API参考.md')
 }
-const documentedCount = docs.match(/共注册 \*\*(\d+)\*\* 条/)
-if (!documentedCount) problems.push('docs/28 里找不到「共注册 **N** 条」')
-else if (Number(documentedCount[1]) !== count)
-  problems.push(`docs/28 写的是 ${documentedCount[1]} 条，实际 ${count} 条`)
-
 for (const file of files) {
-  if (!docs.includes(file)) problems.push(`docs/28 的「实现位置」表没有提到 ${file}`)
+  if (!apiDoc.includes(file)) problems.push(`docs/28 的「实现位置」表没有提到 ${file}`)
 }
 
 if (problems.length) {

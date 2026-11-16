@@ -13,6 +13,7 @@
 - **死代码清理**：删除客户端 4 处确认无引用的实现（`Entry`、`navIcon`、`PdfViewer`、`distanceToSegment`）与 4 处死状态/死映射（`TABS`、`byId`、`edges`、`positions`），净减约 130 行；`computeForceLayout` / `drawGraph` 保留（`graphui` 测试仍直接调用，属于回退路径），ESLint 警告 **12 → 3**；
 - **路由归位**：`/tags/create`、`/tags/delete`、`/reclassify` 三条旧入口从写作域移回论文库域（`40-routes-library.js`），域边界更一致；客户端 `showPage` 已确认自 v0.1.0 起 setter 从未被调用，改为只读 state，语义不变；
 - **路由归属守门**：新增 `scripts/check-routes.mjs` 与 `src/server/routes.json`，把「路径 → 域文件」固化，交叉校验代码、清单、`docs/28` 路由总数三处一致；CI 与 `verify` 已接入，新路由加错文件或文档没跟上会直接失败；
+- **文档同步**：[32 已完成工作总览](docs/32_已完成工作总览.md)、[19 功能清单](docs/19_功能清单.md)、[05 插件技术方案](docs/05_插件技术方案.md) 对齐到 v0.19.0（91 条路由 / 44 个测试入口 / 12 个 Agent 工具 / 新包结构与分发形态），`check:routes` 扩展到三份文档的路由总数校验；
 - 测试：`npm test` 44 个文件全绿（新增 store / prompts），91 条路由注册数不变。
 
 ## v0.18.2 — P2 收尾：任务表回收、dist/ 收纳、retryFailed 真正生效（2026-11-11）
