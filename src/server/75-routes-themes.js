@@ -1,3 +1,5 @@
+/* 研究主题域路由与任务队列：主题 CRUD、匹配、建链、结论、提纲、方向分析、综述。 */
+function registerThemeRoutes({ route }) {
   /* ---------------- 研究工作台（P5） ---------------- */
   const themeJobs = new Map()
   let themeQueue = Promise.resolve()
@@ -767,3 +769,5 @@
       }
     }
   } catch { /* 没有缓存目录 */ }
+
+}

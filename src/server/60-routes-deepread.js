@@ -1,3 +1,5 @@
+/* 精读域路由：深读生成、解析稿、页图。 */
+function registerDeepReadRoutes({ route }) {
   /* ---------------- 精读（P4.9） ---------------- */
   route('/api/litkb/deepread/compare', async (req, res) => {
     const ids = String(queryParam(req, 'ids') || '').split(',').map((id) => id.trim()).filter(Boolean).slice(0, 6)
@@ -73,3 +75,5 @@
     json(res, 200, { ok: true, deepread, job: publicDeepJob(job) })
   })
 
+
+}

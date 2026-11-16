@@ -1,78 +1,5 @@
-export function apply(ctx) {
-  const webServer = ctx.webServer
-  pluginCtx = ctx
-  ctx.logger?.info?.(`[dsh-litkb] plugin loaded v${pkg.version}`)
-  try {
-    const tools = typeof ctx.get === 'function' ? ctx.get('tools') : ctx.tools
-    if (tools && typeof tools.register === 'function') {
-      if (typeof ctx.effect === 'function') {
-        ctx.effect(() => {
-          const disposers = registerAgentTools(ctx, tools)
-          return () => disposers.forEach((dispose) => { try { dispose() } catch { /* ignore */ } })
-        }, 'dsh-litkb: agent tools')
-      } else {
-        registerAgentTools(ctx, tools)
-      }
-      ctx.logger?.info?.(`[dsh-litkb] ${AGENT_TOOL_NAMES.length} agent tools registered`)
-    } else {
-      ctx.logger?.warn?.('[dsh-litkb] tools unavailable; agent tools skipped')
-    }
-  } catch (error) {
-    ctx.logger?.warn?.(`[dsh-litkb] agent tools skipped: ${String(error?.message || error)}`)
-  }
-  if (!webServer || typeof webServer.register !== 'function') {
-    ctx.logger?.warn?.('[dsh-litkb] webServer unavailable; routes skipped')
-    return
-  }
-
-  ensureLibrary()
-  try {
-    const bad = indexBadLines()
-    if (bad > 0) ctx.logger?.warn?.(`[dsh-litkb] index.jsonl 有 ${bad} 行无法解析，已保留 index.jsonl.bak`)
-  } catch { /* 诊断失败不影响启动 */ }
-  try {
-    const recovery = recoverInterruptedRestore()
-    if (recovery.recovered) {
-      ctx.logger?.warn?.(`[dsh-litkb] recovered ${recovery.recovered} data roots from an interrupted restore`)
-    }
-  } catch (error) {
-    ctx.logger?.warn?.(`[dsh-litkb] restore recovery skipped: ${String(error?.message || error)}`)
-  }
-  try {
-    const migrated = migrateAutoStatuses()
-    if (migrated) ctx.logger?.info?.(`[dsh-litkb] auto reading status migrated: ${migrated} paper(s)`)
-  } catch (error) {
-    ctx.logger?.warn?.(`[dsh-litkb] auto status migration skipped: ${String(error?.message || error)}`)
-  }
-
-  let routeCount = 0
-
-  /**
-   * 统一路由注册：可选方法白名单 + 统一 { ok, code, error } 错误返回。
-   * 不传 methods 时保持历史行为（由 handler 自行分派 GET/POST）。
-   */
-  function route(path, handler, methods) {
-    routeCount += 1
-    const allowed = methods ? [].concat(methods).map((method) => String(method).toUpperCase()) : null
-    webServer.register({
-      kind: 'exact',
-      path,
-      handler: async (req, res) => {
-        const method = String(req.method || 'GET').toUpperCase()
-        const effective = method === 'HEAD' ? 'GET' : method
-        if (allowed && !allowed.includes(effective)) {
-          json(res, 405, { ok: false, code: 'method_not_allowed', error: `不支持的方法 ${req.method}` })
-          return
-        }
-        try {
-          await handler(req, res)
-        } catch (error) {
-          json(res, errorStatus(error), { ok: false, code: errorCode(error), error: String(error?.message || error) })
-        }
-      },
-    })
-  }
-
+/* 论文库域路由：健康检查、论文列表、卡片、导入导出、备份、标签、删除。 */
+function registerLibraryRoutes({ route }) {
   route('/api/litkb/health', async (req, res) => {
     json(res, 200, {
       ok: true, plugin: name, version: pkg.version, stage: 'P5',
@@ -683,3 +610,5 @@ export function apply(ctx) {
     json(res, 202, { ok: true, job: publicTranslateJob(job) })
   })
 
+
+}

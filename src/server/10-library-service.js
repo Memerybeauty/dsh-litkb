@@ -1,63 +1,11 @@
-function json(res, status, body) {
-  const data = JSON.stringify(body)
-  res.writeHead(status, {
-    'content-type': 'application/json; charset=utf-8',
-    'cache-control': 'no-store',
-    'content-length': Buffer.byteLength(data),
-  })
-  res.end(data)
-}
-
-function readBody(req, limit = 80 * 1024 * 1024) {
-  return new Promise((resolve, reject) => {
-    const chunks = []
-    let size = 0
-    let settled = false
-    const fail = (error) => {
-      if (settled) return
-      settled = true
-      reject(error)
-      // 只停止读，不 destroy：让上层还能正常写回 413，而不是直接断连。
-      if (typeof req.pause === 'function') req.pause()
-    }
-    req.on('data', (chunk) => {
-      if (settled) return
-      size += chunk.length
-      if (size > limit) {
-        fail(Object.assign(new Error('payload too large'), { code: 'TOO_LARGE' }))
-        return
-      }
-      chunks.push(chunk)
-    })
-    req.on('end', () => {
-      if (settled) return
-      settled = true
-      resolve(Buffer.concat(chunks))
-    })
-    req.on('error', fail)
-  })
-}
-
+/**
+ * 论文库业务层：导入管线、标签与分类、元数据更新、阅读状态。
+ * 路由层只做参数校验与响应包装，业务规则都在这里。
+ */
 function tagCounts(rows) {
   const counts = {}
   for (const row of rows) for (const t of row.topics || []) counts[t] = (counts[t] || 0) + 1
   return counts
-}
-
-/** 统一错误 → HTTP 状态。默认 500，保留各 handler 历史上“抛错即 500”的语义。 */
-function errorStatus(error) {
-  const explicit = Number(error?.status || error?.statusCode)
-  if (Number.isFinite(explicit) && explicit >= 400 && explicit <= 599) return explicit
-  if (error?.code === 'TOO_LARGE') return 413
-  if (error instanceof SyntaxError) return 400
-  return 500
-}
-
-/** 统一错误 → 机器可读 code。 */
-function errorCode(error) {
-  if (error?.code) return String(error.code)
-  if (error instanceof SyntaxError) return 'bad_json'
-  return 'error'
 }
 
 function listTags() {
@@ -287,3 +235,37 @@ async function reclassify(req, res) {
   }
 }
 
+
+/* ---------------- 卡片编辑 / 批注 / 状态 ---------------- */
+const STATUSES = ['待读', '略读', '精读', '已引用', '弃读']
+
+async function updateStatus(req, res) {
+  try {
+    const body = JSON.parse((await readBody(req, 32 * 1024)).toString('utf8'))
+    const record = readIndex().find((r) => r.id === String(body.id || ''))
+    if (!record) {
+      json(res, 404, { ok: false, error: '论文不存在' })
+      return
+    }
+    const from = record.status || '待读'
+    const to = String(body.to || '').trim()
+    const reason = String(body.reason || '').trim()
+    if (!STATUSES.includes(to)) {
+      json(res, 422, { ok: false, error: '未知状态', from, to })
+      return
+    }
+    const nextRecord = { ...record, status: to, statusReason: reason, statusSource: 'manual' }
+    const card = readCard(record.id)
+    if (card) {
+      card.statusHistory = Array.isArray(card.statusHistory) ? card.statusHistory : []
+      card.statusHistory.push({ from, to, at: new Date().toISOString(), reason })
+      card.updatedAt = new Date().toISOString()
+      writeCard(card, nextRecord)
+    } else {
+      upsert(nextRecord)
+    }
+    json(res, 200, { ok: true, paper: nextRecord, card })
+  } catch (error) {
+    json(res, 500, { ok: false, error: String(error?.message || error) })
+  }
+}

@@ -1,3 +1,5 @@
+/* 论证链域路由：建链、候选、跨论文、布局。 */
+function registerChainRoutes({ route }) {
   /* ---------------- 论证链（P4.10） ---------------- */
   route('/api/litkb/chains', async (req, res) => {
     json(res, 200, { ok: true, chains: listChains() })
@@ -322,3 +324,5 @@
     }
   })
 
+
+}

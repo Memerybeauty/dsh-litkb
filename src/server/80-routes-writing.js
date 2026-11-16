@@ -1,3 +1,5 @@
+/* 写作与问答域路由：草稿、引文、导出、检索问答、链接导入。 */
+function registerWritingRoutes({ route }) {
   /* ---------------- 写作（P4.7） ---------------- */
   route('/api/litkb/drafts', async (req, res) => {
     const method = String(req.method || 'GET').toUpperCase()
@@ -217,5 +219,4 @@
   })
   route('/api/litkb/update', updatePaper)
 
-  ctx.logger?.info?.(`[dsh-litkb] ${routeCount} routes registered`)
 }

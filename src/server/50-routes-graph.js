@@ -1,3 +1,5 @@
+/* 图谱域路由：建图、抽取、归一化、概念合并。 */
+function registerGraphRoutes({ route }) {
   /* ---------------- 图谱（P3） ---------------- */
   route('/api/litkb/graph', async (req, res) => {
     json(res, 200, {
@@ -184,3 +186,5 @@
     res.end(data)
   })
 
+
+}
