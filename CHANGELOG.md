@@ -10,6 +10,7 @@
 - **P3 prompt 统一**：9 处各自拼 `join(HERE, '..', 'prompts', …)` 收敛为 `lib/prompts.js` 的版本总表 + `loadPrompt()`；文件缺失抛 `prompt_missing` 而不是返回空串；新增 `tests/prompts.test.mjs` 校验「总表 ↔ 文件」一一对应、各模块常量与总表一致；
 - **构建产物单一真相**：`lib/index.js` 与 `lib/client.js` 不再入库（`.gitignore` 忽略；`lib/` 其余 40 个手写模块照常入库），`src/` 是两个产物的唯一可编辑来源；新增 `prepare` 脚本，`npm ci` / git 安装自动构建；删除失效的 `artifacts:check`；
 - **文档**：新增 [49 解耦与模块边界](docs/49_解耦与模块边界.md)；README、文档索引、安装文档同步到 v0.19.0；
+- **死代码清理**：删除客户端 4 处确认无引用的实现（`Entry`、`navIcon`、`PdfViewer`、`distanceToSegment`）与 4 处死状态/死映射（`TABS`、`byId`、`edges`、`positions`），净减约 130 行；`computeForceLayout` / `drawGraph` 保留（`graphui` 测试仍直接调用，属于回退路径），ESLint 警告 **12 → 3**；
 - 测试：`npm test` 44 个文件全绿（新增 store / prompts），91 条路由注册数不变。
 
 ## v0.18.2 — P2 收尾：任务表回收、dist/ 收纳、retryFailed 真正生效（2026-11-11）

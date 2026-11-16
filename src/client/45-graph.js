@@ -117,16 +117,6 @@
       }
     }
 
-    function distanceToSegment(px, py, x1, y1, x2, y2) {
-      const dx = x2 - x1
-      const dy = y2 - y1
-      const length = dx * dx + dy * dy
-      if (!length) return Math.hypot(px - x1, py - y1)
-      let t = ((px - x1) * dx + (py - y1) * dy) / length
-      t = Math.max(0, Math.min(1, t))
-      return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy))
-    }
-
     function drawGraph(canvas, graph, positions, selected) {
       if (!canvas) return
       const width = canvas.clientWidth || 900
@@ -138,7 +128,6 @@
       if (!ctx) return
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       ctx.clearRect(0, 0, width, height)
-      const byId = new Map(graph.nodes.map((node) => [node.id, node]))
       const selectedEdgeId = selected?.kind === 'edge' ? selected.id : null
       const selectedNodeId = selected?.kind === 'node' ? selected.id : null
 
@@ -769,7 +758,6 @@
       }, [query, graph])
 
       const nodes = graph?.nodes || []
-      const edges = graph?.edges || []
       const stats = graph?.stats || {}
       const palette = GRAPH_PALETTES[themeMode] || GRAPH_PALETTES.dark
       const nodeById = (id) => nodes.find((node) => node.data.id === id)
@@ -1208,7 +1196,6 @@
       const [view, setView] = useState('graph')
       const [filters, setFilters] = useState({ topic: '', from: '', to: '', kinds: { method: true, dataset: true, metric: true }, q: '' })
       const [selected, setSelected] = useState(null)
-      const [positions, setPositions] = useState(new Map())
       const [queueOpen, setQueueOpen] = useState(false)
       const [groups, setGroups] = useState(null)
       const [groupKey, setGroupKey] = useState('')

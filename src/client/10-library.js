@@ -1,15 +1,3 @@
-    function Entry() {
-      const open = useOpen()
-      return h('button', {
-        type: 'button',
-        className: 'litkb-entry' + (open ? ' is-on' : ''),
-        title: '文献工作台',
-        onClick: () => setOpen(!open),
-      },
-      h('span', { className: 'litkb-entryIcon', 'aria-hidden': 'true' }, '▤'),
-      h('span', { className: 'litkb-entryText' }, '文献工作台'))
-    }
-
     function LitkbIcon({ size = 18, active = false }) {
       return h('svg', {
         width: size, height: size, viewBox: '0 0 24 24', fill: 'none',
@@ -874,30 +862,7 @@
           onClick,
         }, h('b', {}, String(value)), ' ', label)
       }
-      const navIcon = (kind) => {
-        const base = {
-          width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none',
-          stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round',
-          'aria-hidden': 'true',
-        }
-        if (kind === 'home') {
-          return h('svg', base,
-            h('path', { d: 'M3 10.5 12 3l9 7.5' }),
-            h('path', { d: 'M5 9.5V21h14V9.5' }),
-            h('path', { d: 'M9.5 21v-6h5v6' }))
-        }
-        if (kind === 'library') {
-          return h('svg', base,
-            h('rect', { x: 3, y: 4, width: 18, height: 16, rx: 2.5 }),
-            h('path', { d: 'M3 9h18' }),
-            h('path', { d: 'M8 13h8' }),
-            h('path', { d: 'M8 16.5h5' }))
-        }
-        return h('svg', base,
-          h('path', { d: 'M12 20h9' }),
-          h('path', { d: 'M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z' }))
-      }
-      const allTagsCount = Object.keys(stats.byTag || {}).length || tags.length
+const allTagsCount = Object.keys(stats.byTag || {}).length || tags.length
       const allUntagged = papers.filter((p) => !(p.topics || []).length).length
 
       return h('div', {
